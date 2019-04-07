@@ -1,6 +1,7 @@
 """This script creates the SAXS control GUI."""
 
 import tkinter as tk
+from tkinter import filedialog
 from widgets import FluidLevel
 import tkinter.ttk as ttk
 from configparser import SafeConfigParser
@@ -18,7 +19,8 @@ class main:
         self.buttons = tk.Frame(self.main_window)
         self.exit_button = tk.Button(self.buttons, text='Exit', command=self.main_window.destroy)
         self.stop_button = tk.Button(self.buttons, text='Stop', command=self.stop)
-        self.save_config_button = tk.Button(self.buttons, text='Save Config', command=lambda: self.save_config(filename=self.config_name_entry.get()))
+        self.save_config_button = tk.Button(self.buttons, text='Save Config', command=self.save_config)
+        self.load_config_button = tk.Button(self.buttons, text='Load Config', command=self.load_config)
         # Main Structures
         self.core = ttk.Notebook(self.main_window)
         self.main_page = tk.Frame(self.core)
@@ -32,7 +34,7 @@ class main:
         self.config_name_entry = tk.Entry(self.config_page)
 
         self.draw_static()
-        self.load_config()
+        self.load_config(filename='config.ini')
 
     def draw_static(self):
         """Define the geometry of the frames and objects."""
@@ -45,6 +47,7 @@ class main:
         self.exit_button.grid(row=0, column=0)
         self.stop_button.grid(row=0, column=1)
         self.save_config_button.grid(row=0, column=2)
+        self.load_config_button.grid(row=0, column=3)
         # Main Page
         self.oil_meter.grid(row=0, columnspan=2)
         self.oil_refill_button.grid(row=1, column=0)
@@ -56,16 +59,21 @@ class main:
         """Stop all running widgets."""
         self.oil_meter.stop()
 
-    def load_config(self, filename='config.ini'):
+    def load_config(self, filename=None):
         """Load a config.ini file."""
         self.config = SafeConfigParser()
-        self.config.read(filename)
-        self.config_name_entry.insert(0, self.config.get('Default', 'filename'))
+        if filename is None:
+            filename = filedialog.askopenfilename(initialdir=".", title="Select file", filetypes=(("config files", "*.ini"), ("all files", "*.*")))
+        if filename is not '':
+            self.config.read(filename)
+            self.config_name_entry.delete(0, 'end')
+            self.config_name_entry.insert(0, self.config.get('Default', 'filename'))
 
-    def save_config(self, filename='config.ini'):
+    def save_config(self):
         """Save a config.ini file."""
-        self.config.set('Default', 'filename', self.config_name_entry.get())
-        self.config.write(open(filename, 'w'))
+        filename = filedialog.asksaveasfilename(initialdir=".", title="Select file", filetypes=(("config files", "*.ini"), ("all files", "*.*")))
+        if filename is not '':
+            self.config.write(open(filename, 'w'))
 
 
 if __name__ == "__main__":
