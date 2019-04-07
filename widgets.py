@@ -1,3 +1,5 @@
+"""This module implements custom tkinter widgets for the SAXS control panel."""
+
 import tkinter as tk
 
 
@@ -5,6 +7,7 @@ class FluidLevel(tk.Canvas):
     """Build a widget to show the fluid level in a syringe."""
 
     def __init__(self, window,  **kwargs):
+        """Start the FluidLevel object with default paramaters."""
         self.color = kwargs.pop('color', 'blue')
         border = kwargs.pop('border', 10)
         self.ticksize = kwargs.pop('ticksize', tk.IntVar(value=1))
@@ -17,8 +20,11 @@ class FluidLevel(tk.Canvas):
         self.create_rectangle(0, 0, width, height, fill="grey", outline="grey")
         self.max = self.create_rectangle(border, border, width-border, height-border, fill="white", outline="white")
         self.level = self.create_rectangle(border, border, border, height-border, fill='white', outline='white')
+        self.running = False
+        self.tick()
 
     def update(self, percent):
+        """Update the fluid level to s given value."""
         percent = min(percent, 100)
         percent = max(percent, 0)
         x0, y0, x1, y1 = self.coords(self.max)
@@ -31,6 +37,17 @@ class FluidLevel(tk.Canvas):
             self.itemconfig(self.level, fill=self.color, outline=self.color)
 
     def tick(self):
-        percent = self.percent - self.ticksize.get()
-        self.update(percent)
-        self.percent = percent
+        """Remove a tick worth of fluid from the gauge."""
+        if self.running:
+            percent = self.percent - self.ticksize.get()
+            self.update(percent)
+            self.percent = percent
+        self.after(self.tickperiod, self.tick)
+
+    def start(self):
+        """Turn on ticking behavior."""
+        self.running = True
+
+    def stop(self):
+        """Turn off ticking behavior."""
+        self.running = False
