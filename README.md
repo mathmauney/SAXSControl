@@ -5,7 +5,7 @@ A GUI written in Python to control and monitor beamtime setups
 ## What is implemented or in progress
 
 - oil level display (alex-dev branch)
-- oil syringe (JosueSanEmeterio fork)
+- oil syringe 
 - logging items into a file (derrick-dev branch)
 
 ## TODO
