@@ -34,7 +34,8 @@ class main:
         self.oil_refill_button = tk.Button(self.main_page, text='Refill Oil', command=lambda: self.oil_meter.update(100))
         self.oil_start_button = tk.Button(self.main_page, text='Start Oil', command=self.oil_meter.start)
         # Config Entrys
-        self.config_name_entry = tk.Entry(self.config_page)
+        self.config_oil_tick_size_label = tk.Label(self.config_page, text='Oil Use (mL/min)')
+        self.config_oil_tick_size = tk.Spinbox(self.config_page, from_=0, to=10, textvariable=self.oil_ticksize, increment=0.01)
 
         #
         # TODO: also autosave, as a backup in case of crashing
@@ -65,7 +66,8 @@ class main:
         self.oil_refill_button.grid(row=1, column=0)
         self.oil_start_button.grid(row=1, column=1)
         # Config page
-        self.config_name_entry.grid()
+        self.config_oil_tick_size_label.grid(row=0, column=0)
+        self.config_oil_tick_size.grid(row=0, column=1)
 
     def stop(self):
         """Stop all running widgets."""
@@ -78,8 +80,8 @@ class main:
             filename = filedialog.askopenfilename(initialdir=".", title="Select file", filetypes=(("config files", "*.ini"), ("all files", "*.*")))
         if filename is not '':
             self.config.read(filename)
-            self.config_name_entry.delete(0, 'end')
-            self.config_name_entry.insert(0, self.config.get('Default', 'filename'))
+            self.config_oil_tick_size.delete(0, 'end')
+            self.config_oil_tick_size.insert(0, self.config.get('Default', 'oil_tick_size'))
 
     def save_config(self):
         """Save a config.ini file."""
