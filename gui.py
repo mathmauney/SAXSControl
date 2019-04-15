@@ -26,7 +26,7 @@ class main:
         # Button Bar
         self.buttons = tk.Frame(self.main_window)
         self.exit_button = tk.Button(self.main_window, text='X', command=self.main_window.destroy)
-        self.stop_button = tk.Button(self.buttons, text='STOP', command=self.stop, fg='red', font='Arial 16 bold')
+        self.stop_button = tk.Button(self.main_window, text='STOP', command=self.stop, fg='red', font='Arial 16 bold')
         # Main Structures
         self.core = ttk.Notebook(self.main_window, width=core_width, height=core_height)
         self.auto_page = tk.Frame(self.core)
@@ -51,18 +51,17 @@ class main:
 
     def draw_static(self):
         """Define the geometry of the frames and objects."""
-        self.buttons.grid(row=0, column=0, columnspan='2')
+        self.stop_button.grid(row=0, column=0, columnspan=2, rowspan=2, sticky='N')
         self.exit_button.grid(row=0, column=1, sticky='NE')
         self.core.grid(row=1, column=0)
         self.log_frame.grid(row=1, column=1, sticky='S', pady=1)
         self.state_frame.grid(row=2, column=0, columnspan=2)
+        self.stop_button.lift()
         # Tab Bar
         self.core.add(self.auto_page, text='Auto')
         self.core.add(self.manual_page, text='Manual')
         self.core.add(self.config_page, text='Config')
         self.core.add(self.setup_page, text='Setup')
-        # Buttons
-        self.stop_button.grid(row=0, column=0)
         # Main Page
         self.oil_meter.grid(row=0, columnspan=2)
         self.oil_refill_button.grid(row=1, column=0)
