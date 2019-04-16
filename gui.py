@@ -4,9 +4,11 @@ import tkinter as tk
 from tkinter import filedialog
 from widgets import FluidLevel
 import tkinter.ttk as ttk
-from configparser import ConfigParser
 import csv
 import time
+from configparser import ConfigParser
+import FileIO
+
 
 class main:
     """Class for the main window of the SAXS Control."""
