@@ -65,7 +65,7 @@ class ElveflowHandler:
             return None
 
     def fetchAll(self):
-        """retrieve all element from the buffer. Afterwards, all elements returned are no longer in the buffer."""
+        """retrieve all elements from the buffer as a list. Afterwards, all elements returned are no longer in the buffer."""
         def generateElements():
             try:
                 while True:

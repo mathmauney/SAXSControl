@@ -2,7 +2,7 @@
 
 import tkinter as tk
 from tkinter import filedialog
-from widgets import FluidLevel
+from widgets import FluidLevel, ElveflowDisplay
 import tkinter.ttk as ttk
 import csv
 import time
@@ -27,6 +27,17 @@ class main:
         state_height = 300
         core_height = window_height - state_height - 50
         log_height = core_height
+        TEMP = True
+        if TEMP:
+            self.main_window.attributes("-fullscreen", False)  # Makes the window fullscreen
+            window_width = self.main_window.winfo_screenwidth() *2//3
+            window_height = self.main_window.winfo_screenheight() *2//3
+            state_height = 1
+            core_width = round(2*window_width/3)
+            log_width = window_width - core_width - 3
+            core_height = window_height - state_height - 50
+            log_height = core_height
+
         # Button Bar
         self.buttons = tk.Frame(self.main_window)
         self.exit_button = tk.Button(self.main_window, text='X', command=self.main_window.destroy)
@@ -60,6 +71,10 @@ class main:
         ]
         self.save_button = tk.Button(self.buttons, text='Save History', command=self.save_history) # TODO
         self.save_button.grid(row=0, column=4) # TODO
+        self.elveflow_display = ElveflowDisplay(self.setup_page)
+        self.elveflow_display.grid(row=0, column=0)
+        self.elveflow_button = tk.Button(self.setup_page, text='Start Graph', command=self.elveflow_display.start) # TODO
+        self.elveflow_button.grid(row=0, column=1)
 
         self.draw_static()
         self.load_config(filename='config.ini')
@@ -91,6 +106,7 @@ class main:
     def stop(self):
         """Stop all running widgets."""
         self.oil_meter.stop()
+        self.elveflow_display.stop()
 
     def load_config(self, filename=None):
         """Load a config.ini file."""
