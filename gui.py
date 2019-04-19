@@ -6,9 +6,12 @@ from widgets import FluidLevel, ElveflowDisplay
 import tkinter.ttk as ttk
 import csv
 import time
+import threading
 from configparser import ConfigParser
 import FileIO
 
+
+FULLSCREEN = True # For testing, turn this off
 
 class main:
     """Class for the main window of the SAXS Control."""
@@ -27,8 +30,7 @@ class main:
         state_height = 300
         core_height = window_height - state_height - 50
         log_height = core_height
-        TEMP = True
-        if TEMP:
+        if not FULLSCREEN:
             self.main_window.attributes("-fullscreen", False)  # Makes the window fullscreen
             window_width = self.main_window.winfo_screenwidth() *2//3
             window_height = self.main_window.winfo_screenheight() *2//3
@@ -40,7 +42,7 @@ class main:
 
         # Button Bar
         self.buttons = tk.Frame(self.main_window)
-        self.exit_button = tk.Button(self.main_window, text='X', command=self.main_window.destroy)
+        self.exit_button = tk.Button(self.main_window, text='X', command=self.exit)
         self.stop_button = tk.Button(self.buttons, text='STOP', command=self.stop, fg='red', font='Arial 16 bold')
 
         # Main Structures
@@ -70,11 +72,9 @@ class main:
             (time.time(), 44)
         ]
         self.save_button = tk.Button(self.buttons, text='Save History', command=self.save_history) # TODO
-        self.save_button.grid(row=0, column=4) # TODO
+        # self.save_button.grid(row=0, column=4) # TODO
         self.elveflow_display = ElveflowDisplay(self.setup_page)
         self.elveflow_display.grid(row=0, column=0)
-        self.elveflow_button = tk.Button(self.setup_page, text='Start Graph', command=self.elveflow_display.start) # TODO
-        self.elveflow_button.grid(row=0, column=1)
 
         self.draw_static()
         self.load_config(filename='config.ini')
@@ -106,7 +106,8 @@ class main:
     def stop(self):
         """Stop all running widgets."""
         self.oil_meter.stop()
-        self.elveflow_display.stop()
+        if self.elveflow_display.run_flag.is_set():
+            self.elveflow_display.stop()
 
     def load_config(self, filename=None):
         """Load a config.ini file."""
@@ -135,6 +136,10 @@ class main:
             csvwriter = csv.writer(f)
             csvwriter.writerow(main.CSV_HEADERS)
             csvwriter.writerows(self.history)
+
+    def exit(self):
+        self.stop()
+        self.main_window.destroy()
 
 
 if __name__ == "__main__":
