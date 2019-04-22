@@ -7,15 +7,20 @@ class connection(socket.socket):
 
     def __init__(self, *args, **kwargs):
         self.logger = kwargs.pop('logger')
+        self.connected = False
         super(connection, self).__init__(socket.AF_INET, socket.SOCK_STREAM, **kwargs)
 
     def command(self, string):
         self.send(string.encode())
+        self.logger.append('Sent: ' + string)
 
     def response(self, bytes=4096):
-        response = self.recv(bytes).decode()
-        return response
+        if self.connected:
+            response = self.recv(bytes).decode()
+            self.logger.append(response)
 
     def connect(self, *args, **kwargs):
         super(connection, self).connect(*args, **kwargs)
         self.logger.append('Connected!')
+        self.connected = True
+        self.settimeout(0.1)

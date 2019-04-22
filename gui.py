@@ -12,6 +12,8 @@ import tkinter.ttk as ttk
 import SPEC
 from configparser import ConfigParser
 import logging
+import socket
+import threading
 
 
 class main:
@@ -52,12 +54,13 @@ class main:
         self.oil_start_button = tk.Button(self.auto_page, text='Start Oil', command=self.oil_meter.start)
         self.spec_connect_button = tk.Button(self.auto_page, text='Connect to SPEC',
                                              command=lambda: self.SPEC_Connection.connect((self.spec_address.get(), self.spec_port.get())))
+        self.spec_test_button = tk.Button(self.auto_page, text='SPEC test', command=lambda: self.SPEC_Connection.command('test'))
         # Config page
         self.save_config_button = tk.Button(self.config_page, text='Save Config', command=self.save_config)
         self.load_config_button = tk.Button(self.config_page, text='Load Config', command=self.load_config)
         self.config_oil_tick_size_label = tk.Label(self.config_page, text='Oil Use (mL/min)')
         self.config_oil_tick_size = tk.Spinbox(self.config_page, from_=0, to=10, textvariable=self.oil_ticksize, increment=0.01)
-        self.spec_address = tk.StringVar(value='127.0.0.1')
+        self.spec_address = tk.StringVar(value='192.168.1.5')
         self.config_spec_address = tk.Entry(self.config_page, textvariable=self.spec_address)
         self.config_spec_address_label = tk.Label(self.config_page, text='SPEC Address')
         self.spec_port = tk.IntVar(value=7)
@@ -71,6 +74,8 @@ class main:
         # Initialize
         self.draw_static()
         self.load_config(filename='config.ini')
+        t = threading.Thread(target=self.check_response)
+        t.start()
 
     def draw_static(self):
         """Define the geometry of the frames and objects."""
@@ -93,6 +98,7 @@ class main:
         self.oil_refill_button.grid(row=1, column=0)
         self.oil_start_button.grid(row=1, column=1)
         self.spec_connect_button.grid(row=2, column=0)
+        self.spec_test_button.grid(row=3, column=0)
         # Config page
         self.save_config_button.grid(row=0, column=0)
         self.load_config_button.grid(row=0, column=1)
@@ -116,6 +122,13 @@ class main:
     def stop(self):
         """Stop all running widgets."""
         self.oil_meter.stop()
+
+    def check_response(self):
+        try:
+            self.SPEC_Connection.response()
+        except socket.timeout:
+            pass
+        self.SPEC_logger.after(500, self.check_response)
 
     def load_config(self, filename=None):
         """Load a config.ini file."""
