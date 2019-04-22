@@ -4,7 +4,7 @@ import time
 
 INFILE = "Elveflow/responsetime_noresist_01_15ul.txt"
 OUTFILE = "Elveflow/temp.txt"
-TIME_INTERVAL = 0.2 # in s
+TIME_INTERVAL = 0.2     # in s
 
 if __name__ == '__main__':
     with open(INFILE, 'r', newline='') as fr:
