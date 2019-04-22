@@ -7,17 +7,23 @@ Alex Mauney
 import tkinter as tk
 import tkinter.scrolledtext as ScrolledText
 from tkinter import filedialog
-from widgets import FluidLevel, TextHandler, MiscLogger
+from widgets import FluidLevel, ElveflowDisplay, TextHandler, MiscLogger
 import tkinter.ttk as ttk
+import csv
+import time
+import threading
 import SPEC
 from configparser import ConfigParser
+import FileIO
 import logging
 import socket
-import threading
 
+
+FULLSCREEN = True   # For testing, turn this off
 
 class main:
     """Class for the main window of the SAXS Control."""
+    CSV_HEADERS = ["Unix time (s)", "oil level (%)"]
 
     def __init__(self, window):
         """Set up the window and button variables."""
@@ -33,10 +39,21 @@ class main:
         state_height = 300
         core_height = window_height - state_height - 50
         log_height = core_height
+        if not FULLSCREEN:
+            self.main_window.attributes("-fullscreen", False)  # Makes the window fullscreen
+            window_width = self.main_window.winfo_screenwidth() * 2//3
+            window_height = self.main_window.winfo_screenheight() * 2//3
+            state_height = 1
+            core_width = round(2*window_width/3)
+            log_width = window_width - core_width - 3
+            core_height = window_height - state_height - 50
+            log_height = core_height
+
         # Button Bar
         self.buttons = tk.Frame(self.main_window)
-        self.exit_button = tk.Button(self.main_window, text='X', command=self.main_window.destroy)
-        self.stop_button = tk.Button(self.main_window, text='STOP', command=self.stop, fg='red', font='Arial 16 bold')
+        self.exit_button = tk.Button(self.main_window, text='X', command=self.exit)
+        self.stop_button = tk.Button(self.buttons, text='STOP', command=self.stop, fg='red', font='Arial 16 bold')
+
         # Main Structures
         self.core = ttk.Notebook(self.main_window, width=core_width, height=core_height)
         self.auto_page = tk.Frame(self.core)
@@ -71,7 +88,18 @@ class main:
         self.python_logger_gui.configure(font='TkFixedFont')
         self.SPEC_logger = MiscLogger(self.SPEC_logs, state='disabled', height=45)
         self.SPEC_logger.configure(font='TkFixedFont')
-        # Initialize
+        #
+        # TODO: also autosave, as a backup in case of crashing
+        # initialize an empty history
+        self.history = [
+            (time.time(), 99 if time.sleep(0.5) else 93),
+            (time.time(), 44)
+        ]
+        self.save_button = tk.Button(self.buttons, text='Save History', command=self.save_history) # TODO
+        # self.save_button.grid(row=0, column=4) # TODO
+        self.elveflow_display = ElveflowDisplay(self.setup_page)
+        self.elveflow_display.grid(row=0, column=0)
+
         self.draw_static()
         self.load_config(filename='config.ini')
         t = threading.Thread(target=self.check_response)
@@ -122,6 +150,8 @@ class main:
     def stop(self):
         """Stop all running widgets."""
         self.oil_meter.stop()
+        if self.elveflow_display.run_flag.is_set():
+            self.elveflow_display.stop()
 
     def check_response(self):
         try:
@@ -148,6 +178,22 @@ class main:
 
     def handle_exception(self, exception, value, traceback):
         self.python_logger.exception("Caught exception:")
+        
+    def save_history(self, filename=None):
+        """Save a csv file with the current state."""
+        if filename is None:
+            filename = filedialog.asksaveasfilename(initialdir=".", title="Save file", filetypes=(("comma-separated value", "*.csv"), ("all files", "*.*")))
+        if filename == '':
+            # empty filename: don't save
+            return
+        with open(filename, 'w') as f:
+            csvwriter = csv.writer(f)
+            csvwriter.writerow(main.CSV_HEADERS)
+            csvwriter.writerows(self.history)
+
+    def exit(self):
+        self.stop()
+        self.main_window.destroy()
 
 
 if __name__ == "__main__":
