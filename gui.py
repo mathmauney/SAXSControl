@@ -14,12 +14,12 @@ import time
 import threading
 import SPEC
 from configparser import ConfigParser
-import FileIO
 import logging
 import socket
 
 
 FULLSCREEN = True   # For testing, turn this off
+
 
 class main:
     """Class for the main window of the SAXS Control."""
@@ -95,7 +95,7 @@ class main:
             (time.time(), 99 if time.sleep(0.5) else 93),
             (time.time(), 44)
         ]
-        self.save_button = tk.Button(self.buttons, text='Save History', command=self.save_history) # TODO
+        self.save_button = tk.Button(self.buttons, text='Save History', command=self.save_history)  # TODO
         # self.save_button.grid(row=0, column=4) # TODO
         self.elveflow_display = ElveflowDisplay(self.setup_page)
         self.elveflow_display.grid(row=0, column=0)
@@ -178,7 +178,7 @@ class main:
 
     def handle_exception(self, exception, value, traceback):
         self.python_logger.exception("Caught exception:")
-        
+
     def save_history(self, filename=None):
         """Save a csv file with the current state."""
         if filename is None:
