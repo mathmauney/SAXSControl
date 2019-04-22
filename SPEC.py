@@ -1,5 +1,6 @@
 """This module has a class for controlling SPEC remotely over sockets."""
 import socket
+import threading
 
 
 class connection(socket.socket):
@@ -24,3 +25,12 @@ class connection(socket.socket):
         self.logger.append('Connected!')
         self.connected = True
         self.settimeout(0.1)
+        self.thread = threading.Thread(target=self.check_response)
+        self.thread.start()
+
+    def check_response(self):
+        try:
+            self.response()
+        except socket.timeout:
+            pass
+        self.logger.after(500, self.check_response)

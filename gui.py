@@ -11,11 +11,9 @@ from widgets import FluidLevel, ElveflowDisplay, TextHandler, MiscLogger
 import tkinter.ttk as ttk
 import csv
 import time
-import threading
 import SPEC
 from configparser import ConfigParser
 import logging
-import socket
 
 
 FULLSCREEN = True   # For testing, turn this off
@@ -77,7 +75,8 @@ class main:
         self.load_config_button = tk.Button(self.config_page, text='Load Config', command=self.load_config)
         self.config_oil_tick_size_label = tk.Label(self.config_page, text='Oil Use (mL/min)')
         self.config_oil_tick_size = tk.Spinbox(self.config_page, from_=0, to=10, textvariable=self.oil_ticksize, increment=0.01)
-        self.spec_address = tk.StringVar(value='192.168.1.5')
+        # self.spec_address = tk.StringVar(value='192.168.1.5')
+        self.spec_address = tk.StringVar(value='192.168.0.233')
         self.config_spec_address = tk.Entry(self.config_page, textvariable=self.spec_address)
         self.config_spec_address_label = tk.Label(self.config_page, text='SPEC Address')
         self.spec_port = tk.IntVar(value=7)
@@ -102,8 +101,6 @@ class main:
 
         self.draw_static()
         self.load_config(filename='config.ini')
-        t = threading.Thread(target=self.check_response)
-        t.start()
 
     def draw_static(self):
         """Define the geometry of the frames and objects."""
@@ -152,13 +149,6 @@ class main:
         self.oil_meter.stop()
         if self.elveflow_display.run_flag.is_set():
             self.elveflow_display.stop()
-
-    def check_response(self):
-        try:
-            self.SPEC_Connection.response()
-        except socket.timeout:
-            pass
-        self.SPEC_logger.after(500, self.check_response)
 
     def load_config(self, filename=None):
         """Load a config.ini file."""
