@@ -4,15 +4,13 @@
 import tkinter as tk
 import logging
 import tkinter.scrolledtext as ScrolledText
-import matplotlib
-matplotlib.use('TkAgg')
-import matplotlib.pyplot as plt
 import numpy as np
 import FileIO
 import threading
 import time
-
-
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt # noqa
 
 
 class FluidLevel(tk.Canvas):
