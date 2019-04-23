@@ -8,7 +8,7 @@ import serial #Needed for direct communication
 
 class Rheodyne:
 
-    def __init__(self,name="",valvetype=0 ,possition=0):
+    def __init__(self,name="",valvetype=0,possition=0):
         self.name=name                      #valve nickname
         self.valvetype=valvetype            #int to mark max number of valve possions 2 or 6
         self.possition=possition
@@ -20,14 +20,14 @@ class Rheodyne:
 
         ## TODO: error handler to  avoid using withouth port being configured!!!
 
-    def setport(self,number):
+    def setport(self,number): #will keep set port accross different classes
         if self.serialobject.is_open:
             self.serialobject.close()
         self.serialobject.port="COM"+str(number)
 
 
     #"""Now the function to actually control de valve."""
-    def switchvalve(self,possition): #Lets take intiger
+    def switchvalve(self,possition): #Lets take int
     #this function wont work for possitions>10
     #to add that functionality the number must be
     #in hex format => P##  so 10 P0A
@@ -35,9 +35,9 @@ class Rheodyne:
         if not self.serialobject.is_open:
             self.serialobject.open()
         self.serialobject.write("P0"+str(possition)+"\n\r")
-        ans=self.serialobject.readln()
+        ans=self.serialobject.read(1)
         self.serialobject.close()           #Trying to be polite and leaving the ports closed
-        if str(possition) in ans.decode():
+        if ans==b'\r': #pump returns this if command acknowledged
             self.possition=possition
             return 0    #Valve acknowledged commsnd
         else:
@@ -48,10 +48,10 @@ class Rheodyne:
         if not self.serialobject.is_open:
             self.serialobject.open()
         self.serialobject.write("S\n\r")
-        ans=self.serialobject.read(2) #need to ensure thwt buffer doesnt build up-> if so switch to readln
+        ans=self.serialobject.readln() #need to ensure thwt buffer doesnt build up-> if so switch to readln
         self.serialobject.close()
-        return ans.decode()   # TODO: ensure that decode returns an integer
-        # TODO: aDD A FUNCTION TO CHECK THAT CONFIRM VSLUE.
+        return int(ans)   #returns valve possition
+        # TODO: add error handlers
 
     def seti2caddress(self,address: int): #imput address in string format
     # TODO: change it to an int imput and a hex conversion....
