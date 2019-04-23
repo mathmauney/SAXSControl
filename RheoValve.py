@@ -41,7 +41,7 @@ class Rheodyne:
             self.possition=possition
             return 0    #Valve acknowledged commsnd
         else:
-            return -1   #errror valve didnt acknowledge
+            return -1   #error valve didnt acknowledge
 
         #todo maybe incorporate status check to confirm valve is in the right possition
     def statuscheck(self):
@@ -53,12 +53,15 @@ class Rheodyne:
         return int(ans)   #returns valve possition
         # TODO: add error handlers
 
-    def seti2caddress(self,address: int): #imput address in string format
-    # TODO: change it to an int imput and a hex conversion....
-        s=hex(address)
-        self.serialobject.open()
-        self.serialobject.write("N"+s[2:4]+"\n\r")
-        ans=self.serialobject.read(2) #need to ensure thwt buffer doesnt build up-> if so switch to readln
-        self.serialobject.close()
+    def seti2caddress(self,address: int): #Address is in int format
+    # Addres needs to be even int
+        if address%2==0:
+            s=hex(address)
+            self.serialobject.open()
+            self.serialobject.write("N"+s[2:4]+"\n\r")
+            self.serialobject.close()
+            return 0
+        else:
+            return -1 # TODO: Error because value is not even
 
         return ans
