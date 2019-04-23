@@ -7,14 +7,17 @@ A GUI written in Python to control and monitor beamtime setups
 - oil level display (alex-dev branch)
 - oil syringe 
 - logging items into a file (derrick-dev branch)
+- Syringe pump UART Control
+- Rheodyne valve USB(UART) Control
 
 ## TODO
 
 - interfacing with the following systems:
   - cleaning station
   - Elveflow
-  - valve control
+  - Arduino Controll 
   - CHESS systems
 - diplay elements
   - cleaning station
   - flow rates
+ 
