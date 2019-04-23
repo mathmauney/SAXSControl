@@ -67,16 +67,15 @@ class main:
         self.oil_meter = FluidLevel(self.auto_page, color='black', ticksize=self.oil_ticksize)
         self.oil_refill_button = tk.Button(self.auto_page, text='Refill Oil', command=lambda: self.oil_meter.update(100))
         self.oil_start_button = tk.Button(self.auto_page, text='Start Oil', command=self.oil_meter.start)
-        self.spec_connect_button = tk.Button(self.auto_page, text='Connect to SPEC',
-                                             command=lambda: self.SPEC_Connection.connect((self.spec_address.get(), self.spec_port.get())))
+        self.spec_connect_button = tk.Button(self.auto_page, text='Connect to SPEC', command=self.connect_to_spec)
         self.spec_test_button = tk.Button(self.auto_page, text='SPEC test', command=lambda: self.SPEC_Connection.command('test'))
         # Config page
         self.save_config_button = tk.Button(self.config_page, text='Save Config', command=self.save_config)
         self.load_config_button = tk.Button(self.config_page, text='Load Config', command=self.load_config)
         self.config_oil_tick_size_label = tk.Label(self.config_page, text='Oil Use (mL/min)')
         self.config_oil_tick_size = tk.Spinbox(self.config_page, from_=0, to=10, textvariable=self.oil_ticksize, increment=0.01)
-        # self.spec_address = tk.StringVar(value='192.168.1.5')
-        self.spec_address = tk.StringVar(value='192.168.0.233')
+        self.spec_address = tk.StringVar(value='192.168.1.5')
+        # self.spec_address = tk.StringVar(value='192.168.0.233')
         self.config_spec_address = tk.Entry(self.config_page, textvariable=self.spec_address)
         self.config_spec_address_label = tk.Label(self.config_page, text='SPEC Address')
         self.spec_port = tk.IntVar(value=7)
@@ -116,8 +115,8 @@ class main:
         self.core.add(self.config_page, text='Config')
         self.core.add(self.setup_page, text='Setup')
         # Log Tab Bar
-        self.logs.add(self.python_logs, text='Python')
         self.logs.add(self.SPEC_logs, text='SPEC')
+        self.logs.add(self.python_logs, text='Python')
         # Main Page
         self.oil_meter.grid(row=0, columnspan=2)
         self.oil_refill_button.grid(row=1, column=0)
@@ -142,13 +141,15 @@ class main:
         self.python_logger.addHandler(python_handler)
         # SPEC Log
         self.SPEC_logger.grid(row=0, column=0, sticky='NSEW')
-        self.SPEC_Connection = SPEC.connection(logger=self.SPEC_logger)
+        self.SPEC_Connection = SPEC.connection(logger=self.SPEC_logger, button=self.spec_connect_button)
 
     def stop(self):
         """Stop all running widgets."""
         self.oil_meter.stop()
         if self.elveflow_display.run_flag.is_set():
             self.elveflow_display.stop()
+        if self.SPEC_Connection.connected:
+            self.SPEC_Connection.stop()
 
     def load_config(self, filename=None):
         """Load a config.ini file."""
@@ -166,7 +167,12 @@ class main:
         if filename is not '':
             self.config.write(open(filename, 'w'))
 
+    def connect_to_spec(self):
+        """Connect to SPEC instance."""
+        self.SPEC_Connection.connect((self.spec_address.get(), self.spec_port.get()))
+
     def handle_exception(self, exception, value, traceback):
+        """Add python exceptions to the GUI log."""
         self.python_logger.exception("Caught exception:")
 
     def save_history(self, filename=None):
@@ -182,6 +188,7 @@ class main:
             csvwriter.writerows(self.history)
 
     def exit(self):
+        """Exit the GUI and stop all running things"""
         self.stop()
         self.main_window.destroy()
 

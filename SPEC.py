@@ -8,6 +8,7 @@ class connection(socket.socket):
 
     def __init__(self, *args, **kwargs):
         self.logger = kwargs.pop('logger')
+        self.button = kwargs.pop('button')
         self.connected = False
         super(connection, self).__init__(socket.AF_INET, socket.SOCK_STREAM, **kwargs)
 
@@ -21,16 +22,29 @@ class connection(socket.socket):
             self.logger.append(response)
 
     def connect(self, *args, **kwargs):
-        super(connection, self).connect(*args, **kwargs)
-        self.logger.append('Connected!')
-        self.connected = True
-        self.settimeout(0.1)
-        self.thread = threading.Thread(target=self.check_response)
-        self.thread.start()
+        try:
+            self.settimeout(2.0)
+            super(connection, self).connect(*args, **kwargs)
+            self.logger.append('Connected!')
+            self.connected = True
+            self.settimeout(0.1)
+            self.thread = threading.Thread(target=self.check_response)
+            self.thread.start()
+            self.button.config(state="disabled")
+        except socket.timeout:
+            self.logger.append('Unable to connect (timeout)')
+        except OSError:
+            self.logger.append('Already connected')
 
     def check_response(self):
-        try:
-            self.response()
-        except socket.timeout:
-            pass
-        self.logger.after(500, self.check_response)
+        while self.connected:
+            try:
+                self.response()
+            except socket.timeout:
+                pass
+        self.thread.exit()
+        self.button.config(state="normal")
+
+    def stop(self):
+        self.close()
+        self.thread.exit()
