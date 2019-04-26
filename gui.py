@@ -16,7 +16,7 @@ from configparser import ConfigParser
 import logging
 
 
-FULLSCREEN = True   # For testing, turn this off
+FULLSCREEN = False  # For easier testing, turn this off
 
 
 class main:
@@ -91,7 +91,7 @@ class main:
         # TODO: also autosave, as a backup in case of crashing
         # initialize an empty history
         self.history = [
-            (time.time(), 99 if time.sleep(0.5) else 93),
+            (time.time(), 99 if time.sleep(0.15) else 93),
             (time.time(), 44)
         ]
         self.save_button = tk.Button(self.buttons, text='Save History', command=self.save_history)  # TODO
