@@ -12,12 +12,14 @@ class ElveflowHandler:
     TESTING_FILENAME = 'Elveflow/temp.txt'
 
     def __init__(self, filename=None):
-        """Start actually trying to read in data from an Elveflow log"""
+        """Start actually trying to read in data from an Elveflow log. If the filename is
+        empty (even after selecting from a file dialog), this instance exists but does
+        nothing when you try to start it"""
         if filename is None:
             self.filename = filedialog.askopenfilename(initialdir=".", title="Choose file", filetypes=(("comma-separated value", "*.csv"), ("comma-separated value", "*.txt"), ("all files", "*.*")))
         else:
             self.filename = filename
-        if filename == '':
+        if self.filename == '':
             self.filename = None
         self.header = None
         self.buffer_deque = deque(maxlen=ElveflowHandler.DEQUE_MAXLEN)
@@ -57,15 +59,18 @@ class ElveflowHandler:
             for line in line_generator():
                 self.buffer_deque.append(line)
 
-        self.reading_thread = threading.Thread(target=start_thread)
-        self.reading_thread.start()
+        if self.filename is not None:
+            self.reading_thread = threading.Thread(target=start_thread)
+            self.reading_thread.start()
 
     def stop(self):
         """Stops the reading thread."""
         self.run_flag.clear()
 
     def fetchOne(self):
-        """retrieve the oldest element from the buffer. Afterwards, the element is no longer in the buffer."""
+        """retrieve the oldest element from the buffer. Afterwards, the element is no longer in the buffer.
+        If nothing is in there, return None. (You cannot tell the difference between the leftmost element of
+        the buffer holding None and the buffer being empty, but in this class, the former case should never happen)"""
         try:
             return self.buffer_deque.popleft()
         except IndexError:

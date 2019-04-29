@@ -131,6 +131,7 @@ class ElveflowDisplay(tk.Canvas):
 
                     time.sleep(ElveflowDisplay.POLLING_PERIOD)
             finally:
+                self.elveflow_handler.stop()
                 self._initialize_variables()
 
         self.the_thread = threading.Thread(target=pollElveflowThread, args=(self.run_flag,))
