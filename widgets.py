@@ -2,6 +2,8 @@
 """This module implements custom tkinter widgets for the SAXS control panel."""
 
 import tkinter as tk
+import logging
+import tkinter.scrolledtext as ScrolledText
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
@@ -9,6 +11,9 @@ import numpy as np
 import FileIO
 import threading
 import time
+
+
+
 
 class FluidLevel(tk.Canvas):
     """Build a widget to show the fluid level in a syringe."""
@@ -59,6 +64,39 @@ class FluidLevel(tk.Canvas):
         """Turn off ticking behavior."""
         self.running = False
 
+
+class TextHandler(logging.Handler):
+    # This class allows you to log to a Tkinter Text or ScrolledText widget
+    # Adapted from Moshe Kaplan: https://gist.github.com/moshekaplan/c425f861de7bbf28ef06
+
+    def __init__(self, text):
+        # run the regular Handler __init__
+        logging.Handler.__init__(self)
+        # Store a reference to the Text it will log to
+        self.text = text
+
+    def emit(self, record):
+        msg = self.format(record)
+
+        def append():
+            self.text.configure(state='normal')
+            self.text.insert(tk.END, msg + '\n')
+            self.text.configure(state='disabled')
+            # Autoscroll to the bottom
+            self.text.yview(tk.END)
+        # This is necessary because we can't modify the Text from other threads
+        self.text.after(0, append)
+
+
+class MiscLogger(ScrolledText.ScrolledText):
+    def append(self, msg):
+        self.configure(state='normal')
+        self.insert(tk.END, msg + '\n')
+        self.configure(state='disabled')
+        # Autoscroll to the bottom
+        self.yview(tk.END)
+
+
 class ElveflowDisplay(tk.Canvas):
     """Build a widget to show the Elveflow graph."""
     POLLING_PERIOD = 1
@@ -66,14 +104,14 @@ class ElveflowDisplay(tk.Canvas):
     def __init__(self, window, **kwargs):
         """Start the FluidLevel object with default paramaters."""
         super().__init__(window, **kwargs)
-        self.dataXLabel = tk.StringVar() #Time [s]
-        self.dataYLabel = tk.StringVar() #hplc(Read)[µl/min]
+        self.dataXLabel = tk.StringVar()    # Time [s]
+        self.dataYLabel = tk.StringVar()    # hplc(Read)[µl/min]
         self.dataTitle = "Elveflow data"
 
         # https://stackoverflow.com/questions/31440167/placing-plot-on-tkinter-main-window-in-python
-        self.the_fig = plt.Figure(figsize=(5,5))
+        self.the_fig = plt.Figure(figsize=(5, 5))
         self.ax = self.the_fig.add_subplot(111)
-        self.ax.set_title (self.dataTitle, fontsize=16)
+        self.ax.set_title(self.dataTitle, fontsize=16)
 
         self.canvas = matplotlib.backends.backend_tkagg.FigureCanvasTkAgg(self.the_fig, self)
         self.canvas.draw()
@@ -83,11 +121,11 @@ class ElveflowDisplay(tk.Canvas):
         self.elveflow_button.grid(row=0, column=1)
 
         self.dropdownX = tk.OptionMenu(self, self.dataXLabel, None)
-        tk.Label(self, text="X axis").grid(row = 1, column = 1)
-        self.dropdownX.grid(row = 1, column = 2)
+        tk.Label(self, text="X axis").grid(row=1, column=1)
+        self.dropdownX.grid(row=1, column=2)
         self.dropdownY = tk.OptionMenu(self, self.dataYLabel, None)
-        tk.Label(self, text="Y axis").grid(row = 2, column = 1)
-        self.dropdownY.grid(row = 2, column = 2)
+        tk.Label(self, text="Y axis").grid(row=2, column=1)
+        self.dropdownY.grid(row=2, column=2)
 
         self.run_flag = threading.Event()
         self._initialize_variables()
@@ -98,13 +136,13 @@ class ElveflowDisplay(tk.Canvas):
         self.data = []
         self.run_flag.clear()
         self.the_line = self.ax.plot([], [])[0]
-        #self.the_thread = None
+        # self.the_thread = None
 
     def populateDropdowns(self):
         self.dropdownX['menu'].delete(0, 'end')
         self.dropdownY['menu'].delete(0, 'end')
         for item in self.elveflow_handler.header:
-            self.dropdownX['menu'].add_command(label=item, command=lambda item=item: self.dataXLabel.set(item)) # weird default argument for scoping
+            self.dropdownX['menu'].add_command(label=item, command=lambda item=item: self.dataXLabel.set(item))     # weird default argument for scoping
             self.dropdownY['menu'].add_command(label=item, command=lambda item=item: self.dataYLabel.set(item))
 
     def start(self):
@@ -112,6 +150,7 @@ class ElveflowDisplay(tk.Canvas):
             raise RuntimeError("the elveflow_handler is already running!")
         self.elveflow_handler = FileIO.ElveflowHandler()
         self.elveflow_handler.start(getheader_handler=self.populateDropdowns)
+
         def pollElveflowThread(run_flag):
             run_flag.set()
             try:
