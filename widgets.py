@@ -117,8 +117,12 @@ class ElveflowDisplay(tk.Canvas):
         self.canvas.draw()
         self.canvas.get_tk_widget().grid(row=0, column=0, rowspan=4)
 
-        self.elveflow_button = tk.Button(self, text='Start Graph', command=self.start)
-        self.elveflow_button.grid(row=0, column=1)
+        self.start_button = tk.Button(self, text='Start Graph', command=self.start)
+        self.start_button.grid(row=0, column=1)
+        self.stop_button = tk.Button(self, text='Stop Graph', command=self.stop)
+        self.stop_button.grid(row=0, column=2)
+        self.stop_button = tk.Button(self, text='Clear Graph', command=self.clear_graph)
+        self.stop_button.grid(row=0, column=3)
 
         self.dropdownX = tk.OptionMenu(self, self.dataXLabel, None)
         tk.Label(self, text="X axis").grid(row=1, column=1)
@@ -126,6 +130,11 @@ class ElveflowDisplay(tk.Canvas):
         self.dropdownY = tk.OptionMenu(self, self.dataYLabel, None)
         tk.Label(self, text="Y axis").grid(row=2, column=1)
         self.dropdownY.grid(row=2, column=2)
+
+        tk.Label(self, text="Reading from:").grid(row=3, column=1)
+        self.reading_from_data = tk.StringVar()
+        self.reading_from_label = tk.Label(self, textvariable=self.reading_from_data, justify="left", wraplength=200)
+        self.reading_from_label.grid(row=3, column=2, columnspan=2)
 
         self.run_flag = threading.Event()
         self._initialize_variables()
@@ -136,6 +145,7 @@ class ElveflowDisplay(tk.Canvas):
         self.data = []
         self.run_flag.clear()
         self.the_line = self.ax.plot([], [])[0]
+        self.reading_from_data.set("None")
         # self.the_thread = None
 
     def populateDropdowns(self):
@@ -149,6 +159,7 @@ class ElveflowDisplay(tk.Canvas):
         if self.elveflow_handler is not None:
             raise RuntimeError("the elveflow_handler is already running!")
         self.elveflow_handler = FileIO.ElveflowHandler()
+        self.reading_from_data.set(str(self.elveflow_handler.filename))
         self.elveflow_handler.start(getheader_handler=self.populateDropdowns)
 
         def pollElveflowThread(run_flag):
@@ -170,11 +181,17 @@ class ElveflowDisplay(tk.Canvas):
 
                     time.sleep(ElveflowDisplay.POLLING_PERIOD)
             finally:
-                self._initialize_variables()
+                self.stop()
 
         self.the_thread = threading.Thread(target=pollElveflowThread, args=(self.run_flag,))
         self.the_thread.start()
 
     def stop(self):
         self.run_flag.clear()
-        self.elveflow_handler.stop()
+        if self.elveflow_handler is not None:
+            self.elveflow_handler.stop()
+        self._initialize_variables()
+
+    def clear_graph(self):
+        self.ax.clear()
+        print("graph CLEARED!")
