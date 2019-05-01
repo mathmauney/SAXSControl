@@ -4,10 +4,11 @@ import threading
 from collections import deque
 from tkinter import filedialog
 
+
 class ElveflowHandler:
     """a class that handles reading in Elveflow-generated log files"""
-    SLEEPTIME = 0.5 #if no line exists, wait this many seconds before trying again
-    DEQUE_MAXLEN = None #this can be a number if memory becomes an issue
+    SLEEPTIME = 0.5     # if no line exists, wait this many seconds before trying again
+    DEQUE_MAXLEN = None     # this can be a number if memory becomes an issue
 
     TESTING_FILENAME = 'Elveflow/temp.txt'
 
@@ -43,11 +44,11 @@ class ElveflowHandler:
                         else:
                             if self.header is None:
                                 # the first line should be the header
-                                self.header = next( csv.reader([line], delimiter='\t') )  #get the first (only) row from the iterator
+                                self.header = next(csv.reader([line], delimiter='\t'))  # get the first (only) row from the iterator
                                 getheader_handler()
                             else:
                                 # otherwise, we already have a header, so just read in data
-                                parsedline = next( csv.DictReader([line], fieldnames=self.header, delimiter='\t') )
+                                parsedline = next(csv.DictReader([line], fieldnames=self.header, delimiter='\t'))
                                 for key in parsedline:
                                     try:
                                         parsedline[key] = float(parsedline[key])
@@ -83,6 +84,7 @@ class ElveflowHandler:
 
     def getHeader(self):
         return self.header
+
 
 if __name__ == '__main__':
     print("STARTING")

@@ -50,7 +50,7 @@ class main:
         # Button Bar
         self.buttons = tk.Frame(self.main_window)
         self.exit_button = tk.Button(self.main_window, text='X', command=self.exit)
-        self.stop_button = tk.Button(self.buttons, text='STOP', command=self.stop, fg='red', font='Arial 16 bold')
+        self.stop_button = tk.Button(self.main_window, text='STOP', command=self.stop, fg='red', font='Arial 16 bold')
 
         # Main Structures
         self.core = ttk.Notebook(self.main_window, width=core_width, height=core_height)
@@ -68,7 +68,10 @@ class main:
         self.oil_refill_button = tk.Button(self.auto_page, text='Refill Oil', command=lambda: self.oil_meter.update(100))
         self.oil_start_button = tk.Button(self.auto_page, text='Start Oil', command=self.oil_meter.start)
         self.spec_connect_button = tk.Button(self.auto_page, text='Connect to SPEC', command=self.connect_to_spec)
-        self.spec_test_button = tk.Button(self.auto_page, text='SPEC test', command=lambda: self.SPEC_Connection.command('test'))
+        self.spec_send_button = tk.Button(self.auto_page, text='Send', command=lambda: self.SPEC_Connection.command(self.spec_command.get()))
+        self.spec_command = tk.StringVar(value='')
+        self.spec_command_entry = tk.Entry(self.auto_page, textvariable=self.spec_command)
+        self.spec_command_entry.bind("<Return>", lambda event: self.SPEC_Connection.command(self.spec_command.get()))
         # Config page
         self.save_config_button = tk.Button(self.config_page, text='Save Config', command=self.save_config)
         self.load_config_button = tk.Button(self.config_page, text='Load Config', command=self.load_config)
@@ -122,7 +125,8 @@ class main:
         self.oil_refill_button.grid(row=1, column=0)
         self.oil_start_button.grid(row=1, column=1)
         self.spec_connect_button.grid(row=2, column=0)
-        self.spec_test_button.grid(row=3, column=0)
+        self.spec_command_entry.grid(row=3, column=0)
+        self.spec_send_button.grid(row=3, column=1)
         # Config page
         self.save_config_button.grid(row=0, column=0)
         self.load_config_button.grid(row=0, column=1)
@@ -135,8 +139,7 @@ class main:
         # Python Log
         self.python_logger_gui.grid(row=0, column=0, sticky='NSEW')
         python_handler = TextHandler(self.python_logger_gui)
-        logging.basicConfig(level=logging.INFO,
-                            format='%(asctime)s - %(levelname)s - %(message)s')
+        logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
         self.python_logger = logging.getLogger()
         self.python_logger.addHandler(python_handler)
         # SPEC Log
@@ -148,7 +151,7 @@ class main:
         self.oil_meter.stop()
         if self.elveflow_display.run_flag.is_set():
             self.elveflow_display.stop()
-        if self.SPEC_Connection.connected:
+        if self.SPEC_Connection.run_flag.is_set():
             self.SPEC_Connection.stop()
 
     def load_config(self, filename=None):
@@ -190,6 +193,7 @@ class main:
     def exit(self):
         """Exit the GUI and stop all running things"""
         self.stop()
+        self.SPEC_Connection.stop()
         self.main_window.destroy()
 
 
