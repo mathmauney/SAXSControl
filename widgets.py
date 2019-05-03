@@ -121,7 +121,7 @@ class ElveflowDisplay(tk.Canvas):
         self.start_button.grid(row=0, column=1)
         self.stop_button = tk.Button(self, text='Stop Graph', command=self.stop)
         self.stop_button.grid(row=0, column=2)
-        self.stop_button = tk.Button(self, text='Clear Graph', command=self.clear_graph)
+        self.stop_button = tk.Button(self, text='Clear Graph\n(warning: buggy)', command=self.clear_graph)
         self.stop_button.grid(row=0, column=3)
 
         self.dropdownX = tk.OptionMenu(self, self.dataXLabel, None)
@@ -145,12 +145,17 @@ class ElveflowDisplay(tk.Canvas):
         self.data = []
         self.run_flag.clear()
         self.the_line = self.ax.plot([], [])[0]
-        self.reading_from_data.set("None")
+        try:
+            self.reading_from_data.set("None")
+        except RuntimeError as e:
+            # happens because the main window is closed
+            print("There was a RuntimeError. Ignoring it: %s" % e)
+            pass
         # self.the_thread = None
 
     def populateDropdowns(self):
         self.dropdownX['menu'].delete(0, 'end')
-        self.dropdownY['menu'].delete(0, 'end')
+        self.dropdownY['menu'].delete(0, 'end') # these two deletions shouldn't be necessary, but I'm afraid of weird race conditions that realistically won't happen even if they're possible
         for item in self.elveflow_handler.header:
             self.dropdownX['menu'].add_command(label=item, command=lambda item=item: self.dataXLabel.set(item))     # weird default argument for scoping
             self.dropdownY['menu'].add_command(label=item, command=lambda item=item: self.dataYLabel.set(item))
@@ -159,39 +164,59 @@ class ElveflowDisplay(tk.Canvas):
         if self.elveflow_handler is not None:
             raise RuntimeError("the elveflow_handler is already running!")
         self.elveflow_handler = FileIO.ElveflowHandler()
-        self.reading_from_data.set(str(self.elveflow_handler.filename))
+        if self.elveflow_handler.filename is None:
+            #abort if empty
+            self._initialize_variables()
+            return
+        self.reading_from_data.set(self.elveflow_handler.filename)
+        self.dropdownX['menu'].delete(0, 'end')
+        self.dropdownY['menu'].delete(0, 'end')
+        self.dataXLabel.set('')
+        self.dataYLabel.set('')
         self.elveflow_handler.start(getheader_handler=self.populateDropdowns)
 
         def pollElveflowThread(run_flag):
+            # technically a race condition here: what if the user tries to stop the thread right here, and then this thread resets it?
+            # in practice, I think it's not a concern...?
+            print("STARTING DISPLAY THREAD %s" % threading.current_thread())
             run_flag.set()
             try:
                 while run_flag.is_set():
                     newData = self.elveflow_handler.fetchAll()
                     self.data.extend(newData)
 
-                    dataX = [elt[self.dataXLabel.get()] for elt in self.data if not np.isnan(elt[self.dataXLabel.get()]) and not np.isnan(elt[self.dataYLabel.get()])]
-                    dataY = [elt[self.dataYLabel.get()] for elt in self.data if not np.isnan(elt[self.dataXLabel.get()]) and not np.isnan(elt[self.dataYLabel.get()])]
-                    if len(dataX) > 0:
-                        self.the_line.set_data(dataX, dataY)
-                        self.ax.set_xlim(np.nanmin(dataX), np.nanmax(dataX))
-                        self.ax.set_ylim(np.nanmin(dataY), np.nanmax(dataY))
-                        self.ax.set_xlabel(self.dataXLabel.get(), fontsize=14)
-                        self.ax.set_ylabel(self.dataYLabel.get(), fontsize=14)
-                        self.canvas.draw()
+                    dataXLabel = self.dataXLabel.get()
+                    dataYLabel = self.dataYLabel.get()
+
+                    if dataXLabel != '' and dataYLabel != '':
+
+                        dataX = [elt[dataXLabel] for elt in self.data if not np.isnan(elt[dataXLabel]) and not np.isnan(elt[dataYLabel])]
+                        dataY = [elt[dataYLabel] for elt in self.data if not np.isnan(elt[dataXLabel]) and not np.isnan(elt[dataYLabel])]
+                        # print(len(dataX))
+                        # print(len(dataY))
+                        if len(dataX) > 0:
+                            self.the_line.set_data(dataX, dataY)
+                            self.ax.set_xlim(np.nanmin(dataX), np.nanmax(dataX))
+                            self.ax.set_ylim(np.nanmin(dataY), np.nanmax(dataY))
+                            self.ax.set_xlabel(self.dataXLabel.get(), fontsize=14)
+                            self.ax.set_ylabel(self.dataYLabel.get(), fontsize=14)
+                            self.canvas.draw()
 
                     time.sleep(ElveflowDisplay.POLLING_PERIOD)
             finally:
                 self.stop()
+                print("DONE WITH THIS THREAD, %s" % threading.current_thread())
 
         self.the_thread = threading.Thread(target=pollElveflowThread, args=(self.run_flag,))
         self.the_thread.start()
 
     def stop(self):
         self.run_flag.clear()
+        # print("run flag cleared")
         if self.elveflow_handler is not None:
             self.elveflow_handler.stop()
         self._initialize_variables()
 
     def clear_graph(self):
         self.ax.clear()
-        print("graph CLEARED!")
+        print("graph CLEARED! (I think this doesn't actually work properly, though)")
