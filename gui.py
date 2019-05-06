@@ -16,7 +16,7 @@ from configparser import ConfigParser
 import logging
 
 
-FULLSCREEN = False  # For easier testing, turn this off
+FULLSCREEN = True  # For easier testing, turn this off
 
 
 class main:
@@ -46,6 +46,7 @@ class main:
             log_width = window_width - core_width - 3
             core_height = window_height - state_height - 50
             log_height = core_height
+        print(window_width)
 
         # Button Bar
         self.buttons = tk.Frame(self.main_window)
@@ -58,6 +59,7 @@ class main:
         self.config_page = tk.Frame(self.core)
         self.manual_page = tk.Frame(self.core)
         self.setup_page = tk.Frame(self.core)
+        self.elveflow_page = tk.Frame(self.core)
         self.logs = ttk.Notebook(self.main_window, width=log_width, height=log_height)
         self.python_logs = tk.Frame(self.logs)
         self.SPEC_logs = tk.Frame(self.logs)
@@ -96,7 +98,7 @@ class main:
         ]
         self.save_button = tk.Button(self.buttons, text='Save History', command=self.save_history)  # TODO
         # self.save_button.grid(row=0, column=4) # TODO
-        self.elveflow_display = ElveflowDisplay(self.setup_page)
+        self.elveflow_display = ElveflowDisplay(self.elveflow_page, core_height, core_width)
         self.elveflow_display.grid(row=0, column=0)
 
         self.draw_static()
@@ -115,6 +117,7 @@ class main:
         self.core.add(self.manual_page, text='Manual')
         self.core.add(self.config_page, text='Config')
         self.core.add(self.setup_page, text='Setup')
+        self.core.add(self.elveflow_page, text='Elveflow')
         # Log Tab Bar
         self.logs.add(self.python_logs, text='Python')
         self.logs.add(self.SPEC_logs, text='SPEC')
