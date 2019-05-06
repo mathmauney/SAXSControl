@@ -16,7 +16,7 @@ class ElveflowHandler:
         empty (even after selecting from a file dialog), this instance exists but does
         nothing when you try to start it"""
         if filename is None:
-            self.filename = filedialog.askopenfilename(initialdir=".", title="Choose file", filetypes=(("comma-separated value", "*.csv"), ("comma-separated value", "*.txt"), ("all files", "*.*")))
+            self.filename = filedialog.askopenfilename(initialdir=".", title="Choose file", filetypes=(("tab-separated value", "*.tsv"), ("tab-separated value", "*.txt"), ("all files", "*.*")))
         else:
             self.filename = filename
         if self.filename == '':
@@ -29,23 +29,26 @@ class ElveflowHandler:
     def start(self, getheader_handler=None):
         """Start actually trying to read in data from an Elveflow log. Do not call this function more than once"""
         def start_thread():
+            print("STARTING HANDLER THREAD %s" % threading.current_thread())
             def line_generator():
                 with open(self.filename, 'a+', encoding="latin-1", newline='') as f:
                     # a+ creates the file if it doesn't exist, or just reads it if not
                     # we can then jump to the beginning and then continue as though the mode is r
                     f.seek(0)
                     self.run_flag.set()
-
                     # continuously read
                     while self.run_flag.is_set():
                         line = f.readline()
-                        if not line:
+                        if not line.strip():
                             # wait a little before trying to find more lines
                             time.sleep(ElveflowHandler.SLEEPTIME)
                         else:
+                            # DANGER: next() can raise a StopIteration. If this does, this entire thread silently exits prematurely
+                            # I think I've avoided this with if statements, but you can't be sure.
                             if self.header is None:
                                 # the first line should be the header
                                 self.header = next( csv.reader([line], delimiter='\t') )  #get the first (only) row from the iterator
+                                print("SETTING HEADER %s" % threading.current_thread())
                                 getheader_handler()
                             else:
                                 # otherwise, we already have a header, so just read in data
@@ -56,8 +59,11 @@ class ElveflowHandler:
                                     except ValueError:
                                         parsedline[key] = float('nan')
                                 yield parsedline
-            for line in line_generator():
-                self.buffer_deque.append(line)
+            try:
+                for line in line_generator():
+                    self.buffer_deque.append(line)
+            finally:
+                print("ENDING HANDLER THREAD %s" % threading.current_thread())
 
         if self.filename is not None:
             self.reading_thread = threading.Thread(target=start_thread)
