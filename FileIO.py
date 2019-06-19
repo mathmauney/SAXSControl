@@ -4,7 +4,16 @@ import threading
 from collections import deque
 from tkinter import filedialog
 
-class ElveflowHandler:
+USE_SDK = True
+
+if USE_SDK:
+    import ctypes
+    import sys, os.path
+    sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "Elveflow_SDK"))#add the path of the LoadElveflow.py
+    import Elveflow64
+
+
+class ElveflowHandler_ESI:
     """a class that handles reading in Elveflow-generated log files"""
     SLEEPTIME = 0.5 #if no line exists, wait this many seconds before trying again
     DEQUE_MAXLEN = None #this can be a number if memory becomes an issue
@@ -22,7 +31,7 @@ class ElveflowHandler:
         if self.filename == '':
             self.filename = None
         self.header = None
-        self.buffer_deque = deque(maxlen=ElveflowHandler.DEQUE_MAXLEN)
+        self.buffer_deque = deque(maxlen=ElveflowHandler_ESI.DEQUE_MAXLEN)
         self.run_flag = threading.Event()
         self.run_flag.clear()
 
@@ -41,7 +50,7 @@ class ElveflowHandler:
                         line = f.readline()
                         if not line.strip():
                             # wait a little before trying to find more lines
-                            time.sleep(ElveflowHandler.SLEEPTIME)
+                            time.sleep(ElveflowHandler_ESI.SLEEPTIME)
                         else:
                             # DANGER: next() can raise a StopIteration. If this does, this entire thread silently exits prematurely
                             # I think I've avoided this with if statements, but you can't be sure.
@@ -95,17 +104,74 @@ class ElveflowHandler:
     def getHeader(self):
         return self.header
 
+class ElveflowHandler_SDK:
+    """a class that handles interfacing with the Elveflow directly"""
+    SLEEPTIME = 0.5 #how many seconds between each read of the Elveflow output
+    DEQUE_MAXLEN = None #this can be a number if memory becomes an issue
+
+    def __init__(self):
+        self.instr_name = None
+        #TODO: selectable
+        self.instr_name = b'01C9D9C3'
+        self.instr_ID = ctypes.c_int32()
+        print(self.instr_ID.value)
+
+        print("Initializing Elveflow")
+        err_code = Elveflow64.OB1_Initialization(self.instr_name, 0, 0, 0, 0, ctypes.byref(self.instr_ID))
+        print(err_code)
+        self.header = None
+        self.buffer_deque = deque(maxlen=ElveflowHandler_SDK.DEQUE_MAXLEN)
+        self.run_flag = threading.Event()
+        self.run_flag.clear()
+        print("Done initializing Elveflow")
+        # TODO: calibrations?
+
+    def start(self):
+        def start_thread():
+            self.run_flag.set()
+            while self.run_flag.is_set():
+                pass
+                data_sens=c_double()
+                get_pressure=c_double()
+
+                time.sleep(ElveflowHandler_SDK.SLEEPTIME)
+                #
+                # for i in range(1,5):
+                #     error=OB1_Get_Press(self.Instr_ID.value, i, 0, byref(Calib), byref(get_pressure), 1000) #Ch = i;  Acquire_data =0 -> Use the value acquired in OB1_Get_Press
+                #     print('error: ', error)
+                #     print('Press ch ', i,': ',get_pressure.value)
+                #
+                # for i in range(1,5):
+                #     error=OB1_Get_Sens_Data(self.Instr_ID.value, i, 0, byref(data_sens)) #Ch = i;  Acquire_data =0 -> Use the value acquired in OB1_Get_Press
+                #     print('error: ', error)
+                #     print('Sens ch ', i,': ',data_sens.value)
+
+
+        if self.instr_name is not None:
+            self.reading_thread = threading.Thread(target=start_thread)
+            self.reading_thread.start()
+
+    def stop(self):
+        """Stops the reading thread."""
+        self.run_flag.clear()
+
+if USE_SDK:
+    ElveflowHandler = ElveflowHandler_SDK
+else:
+    ElveflowHandler = ElveflowHandler_ESI
+
 if __name__ == '__main__':
-    print("STARTING")
     myhandler = ElveflowHandler()
-    myhandler.start()
-    time.sleep(4)
-    print("AFTER 4 SECONDS")
-    print(len(myhandler.fetchAll()))
-    time.sleep(4)
-    print("AFTER 8 SECONDS")
-    print(len(myhandler.fetchAll()))
-    time.sleep(4)
-    print("AFTER 12 SECONDS")
-    print(len(myhandler.fetchAll()))
-    myhandler.stop()
+    # print("STARTING")
+    # myhandler = ElveflowHandler()
+    # myhandler.start()
+    # time.sleep(4)
+    # print("AFTER 4 SECONDS")
+    # print(len(myhandler.fetchAll()))
+    # time.sleep(4)
+    # print("AFTER 8 SECONDS")
+    # print(len(myhandler.fetchAll()))
+    # time.sleep(4)
+    # print("AFTER 12 SECONDS")
+    # print(len(myhandler.fetchAll()))
+    # myhandler.stop()
