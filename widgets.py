@@ -173,11 +173,14 @@ class ElveflowDisplay(tk.Canvas):
         if self.elveflow_handler is not None:
             raise RuntimeError("the elveflow_handler is already running!")
         self.elveflow_handler = FileIO.ElveflowHandler()
-        if self.elveflow_handler.filename is None:
+        if self.elveflow_handler.sourcename is None:
             #abort if empty
             self._initialize_variables()
             return
-        self.reading_from_data.set(self.elveflow_handler.filename)
+        if type(self.elveflow_handler.sourcename) is str:
+            self.reading_from_data.set(self.elveflow_handler.sourcename)
+        else:
+            self.reading_from_data.set(repr(self.elveflow_handler.sourcename))
         self.dropdownX['menu'].delete(0, 'end')
         self.dropdownY['menu'].delete(0, 'end')
         self.dataXLabel.set('')
