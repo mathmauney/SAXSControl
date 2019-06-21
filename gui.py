@@ -25,6 +25,7 @@ class main:
 
     def __init__(self, window):
         """Set up the window and button variables."""
+        print("Initializing GUI...")
         self.main_window = window
         self.main_window.report_callback_exception = self.handle_exception
         self.main_window.title('Main Window')
@@ -46,7 +47,6 @@ class main:
             log_width = window_width - core_width - 3
             core_height = window_height - state_height - 50
             log_height = core_height
-        print(window_width)
 
         # Button Bar
         self.buttons = tk.Frame(self.main_window)

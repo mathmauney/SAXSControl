@@ -142,8 +142,10 @@ class ElveflowDisplay(tk.Canvas):
 
         tk.Label(self, text="Reading from:").grid(row=3, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
         self.reading_from_data = tk.StringVar()
-        self.reading_from_label = tk.Label(self, textvariable=self.reading_from_data, justify="left", wraplength=remaining_width_per_column*2)
-        self.reading_from_label.grid(row=3, column=2, columnspan=2, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+        self.reading_from_entry = tk.Entry(self, textvariable=self.reading_from_data, justify="left")
+        if not FileIO.USE_SDK:
+            self.reading_from_entry.config(state="readonly")
+        self.reading_from_entry.grid(row=3, column=2, columnspan=2, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
 
         self.run_flag = threading.Event()
         self._initialize_variables()
@@ -155,7 +157,8 @@ class ElveflowDisplay(tk.Canvas):
         self.run_flag.clear()
         self.the_line = self.ax.plot([], [])[0]
         try:
-            self.reading_from_data.set("None")
+            if not FileIO.USE_SDK:
+                self.reading_from_data.set("None")
         except RuntimeError as e:
             # happens because the main window is closed
             print("There was a RuntimeError. Ignoring it: %s" % e)
@@ -172,15 +175,19 @@ class ElveflowDisplay(tk.Canvas):
     def start(self):
         if self.elveflow_handler is not None:
             raise RuntimeError("the elveflow_handler is already running!")
-        self.elveflow_handler = FileIO.ElveflowHandler()
-        if self.elveflow_handler.sourcename is None:
-            #abort if empty
-            self._initialize_variables()
-            return
-        if type(self.elveflow_handler.sourcename) is str:
-            self.reading_from_data.set(self.elveflow_handler.sourcename)
+
+        if FileIO.USE_SDK:
+            self.reading_from_entry.config(state=tk.DISABLED)
+            self.elveflow_handler = FileIO.ElveflowHandler(sourcename=self.reading_from_data.get())
+            self.reading_from_data.set(str(self.elveflow_handler.sourcename, encoding='ascii'))
         else:
-            self.reading_from_data.set(repr(self.elveflow_handler.sourcename))
+            self.elveflow_handler = FileIO.ElveflowHandler()
+            if self.elveflow_handler.sourcename is None:
+                #abort if empty
+                self._initialize_variables()
+                return
+            self.reading_from_data.set(self.elveflow_handler.sourcename)
+
         self.dropdownX['menu'].delete(0, 'end')
         self.dropdownY['menu'].delete(0, 'end')
         self.dataXLabel.set('')
@@ -211,6 +218,8 @@ class ElveflowDisplay(tk.Canvas):
         # print("run flag cleared")
         if self.elveflow_handler is not None:
             self.elveflow_handler.stop()
+        if FileIO.USE_SDK:
+            self.reading_from_entry.config(state=tk.NORMAL)
         self._initialize_variables()
 
     def clear_graph(self):

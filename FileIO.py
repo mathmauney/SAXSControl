@@ -11,7 +11,7 @@ if USE_SDK:
     from ctypes import c_int32, c_double, byref
     import sys, os.path
     sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "Elveflow_SDK"))#add the path of the LoadElveflow.py
-    import Elveflow64
+    import Elveflow64 as Elveflow_SDK
 
 
 class ElveflowHandler_ESI:
@@ -21,10 +21,11 @@ class ElveflowHandler_ESI:
 
     TESTING_FILENAME = 'Elveflow/temp.txt'
 
-    def __init__(self, sourcename=None):
+    def __init__(self, sourcename=None, errorlogger=None):
         """Start actually trying to read in data from an Elveflow log. If the sourcename is
         empty (even after selecting from a file dialog), this instance exists but does
         nothing when you try to start it"""
+        # TODO: errorlogger
         if sourcename is None:
             self.sourcename = filedialog.askopenfilename(initialdir=".", title="Choose file", filetypes=(("tab-separated value", "*.tsv"), ("tab-separated value", "*.txt"), ("all files", "*.*")))
         else:
@@ -112,23 +113,29 @@ class ElveflowHandler_SDK:
     SLEEPTIME = 0.5 #how many seconds between each read of the Elveflow output
     DEQUE_MAXLEN = None #this can be a number if memory becomes an issue
 
-    def __init__(self, sourcename=None):
+    def __init__(self, sourcename=None, errorlogger=None):
         print("Initializing Elveflow")
-        if sourcename is None:
-            self.sourcename = b'01C9D9C3'
+        if sourcename is None or sourcename == '':
+            self.sourcename = b'01A377A5'
         else:
-            self.sourcename = bytes(sourcename)
+            self.sourcename = bytes(sourcename, encoding='ascii')
+
+        if errorlogger is None:
+            self.print = print
+        else:
+            self.print = errorlogger.exception
+
         self.instr_ID = c_int32()
         self.calib =(c_double*1000)() # always define array that way, calibration should have 1000 elements
-        print(self.instr_ID.value)
 
-        err_code = Elveflow64.OB1_Initialization(self.sourcename, 0, 0, 0, 0, byref(self.instr_ID))
-        print("Initialization error code", err_code)
+        err_code = Elveflow_SDK.OB1_Initialization(self.sourcename, 0, 0, 0, 0, byref(self.instr_ID))
+        if err_code != 0:
+            self.print("Initialization error code %i" % err_code)
 
         # TODO: calibrations?
-        err_code = Elveflow64.Elveflow_Calibration_Default(byref(self.calib), 1000)
-        print("Calibration error code", err_code)
-        print(list(self.calib))
+        err_code = Elveflow_SDK.Elveflow_Calibration_Default(byref(self.calib), 1000)
+        if err_code != 0:
+            self.print("Calibration error code %i" % err_code)
         print("Done initializing Elveflow")
 
         self.header = ["time [s]", "Pressure 1 [mbar]","Pressure 2 [mbar]","Pressure 3 [mbar]","Pressure 4 [mbar]","Volume flow rate 1 [µL/min]","Volume flow rate 2 [µL/min]","Volume flow rate 3 [µL/min]","Volume flow rate 4 [µL/min]"]
@@ -138,6 +145,7 @@ class ElveflowHandler_SDK:
 
     def start(self, getheader_handler=None):
         def start_thread():
+            print("STARTING HANDLER THREAD %s" % threading.current_thread())
             self.run_flag.set()
             while self.run_flag.is_set():
                 data_sens = c_double()
@@ -147,15 +155,15 @@ class ElveflowHandler_SDK:
 
                 newline = {}
                 for i in range(1, 5):
-                    error = Elveflow64.OB1_Get_Press(self.instr_ID.value, i, 1, byref(self.calib), byref(get_pressure), 1000)
+                    error = Elveflow_SDK.OB1_Get_Press(self.instr_ID.value, i, 1, byref(self.calib), byref(get_pressure), 1000)
                     if error != 0:
-                        print('ERROR CODE PRESSURE %i: %s' % (i, error))
+                        self.print('ERROR CODE PRESSURE %i: %s' % (i, error))
                     newline[self.header[i]] = get_pressure.value
 
                 for i in range(1, 5):
-                    error = Elveflow64.OB1_Get_Sens_Data(self.instr_ID.value, i, 1, byref(data_sens))
+                    error = Elveflow_SDK.OB1_Get_Sens_Data(self.instr_ID.value, i, 1, byref(data_sens))
                     if error != 0:
-                        print('ERROR CODE PRESSURE %i: %s' % (i, error))
+                        self.print('ERROR CODE FLOW SENSOR %i: %s' % (i, error))
                     newline[self.header[i+4]] = get_pressure.value
 
                 newline[self.header[0]] = time.time()
@@ -163,7 +171,7 @@ class ElveflowHandler_SDK:
                 self.buffer_deque.append(newline)
 
 
-            error = Elveflow64.OB1_Destructor(self.instr_ID.value)
+            error = Elveflow_SDK.OB1_Destructor(self.instr_ID.value)
             print("Closing connection with Elveflow%s." % ("" if error==0 else (" (Error code %i)" % error)))
 
         self.reading_thread = threading.Thread(target=start_thread)
