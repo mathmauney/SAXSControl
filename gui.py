@@ -143,6 +143,7 @@ class main:
                             format='%(asctime)s - %(levelname)s - %(message)s')
         self.python_logger = logging.getLogger()
         self.python_logger.addHandler(python_handler)
+        self.python_logger.exception("Did I do something yet?")
         # SPEC Log
         self.SPEC_logger.grid(row=0, column=0, sticky='NSEW')
         self.SPEC_Connection = SPEC.connection(logger=self.SPEC_logger)
