@@ -127,7 +127,7 @@ class ElveflowHandler_SDK:
     SLEEPTIME = 0.5 #how many seconds between each read of the Elveflow output
     DEQUE_MAXLEN = None #this can be a number if memory becomes an issue
 
-    def __init__(self, sourcename=None, errorlogger=None, sensortypes=None):
+    def __init__(self, sourcename=None, errorlogger=None, sensortypes=[]):
         print("Initializing Elveflow")
         if sourcename is None or sourcename == '':
             self.sourcename = b'01A377A5'
@@ -135,30 +135,34 @@ class ElveflowHandler_SDK:
             self.sourcename = bytes(sourcename, encoding='ascii')
 
         if errorlogger is None:
-            self.print = print
+            # hack to just redirect info and warning to the standard print function
+            # https://stackoverflow.com/questions/2827623/how-can-i-create-an-object-and-add-attributes-to-it
+            self.errorlogger = lambda: None
+            self.errorlogger.info = print
+            self.errorlogger.warning = print
         else:
-            self.print = errorlogger.exception
-
-        print(sensortypes)
+            self.errorlogger = errorlogger
 
         self.instr_ID = c_int32()
         self.calib =(c_double*1000)() # always define array that way, calibration should have 1000 elements
 
         err_code = Elveflow_SDK.OB1_Initialization(self.sourcename, 3, 3, 3, 3, byref(self.instr_ID))
+        # pressure sensors are hard-coded to be the 0-8000 mbar type (type 3)
         if err_code != 0:
-            self.print("Initialization error code %i" % err_code)
-        print("instrument id number is %d" % self.instr_ID.value)
+            self.errorlogger.warning("Initialization error code %i" % err_code)
 
-        err_code = Elveflow_SDK.OB1_Add_Sens(self.instr_ID.value, 1, SensorType=2, DigitalAnalog=0, FSens_Digit_Calib=0, FSens_Digit_Resolution=3) # TODO: what is the resolution? What does that mean?
-        print("sensor addition error code is %d" % self.instr_ID.value)
+        for i in range(len(sensortypes)):
+            err_code = Elveflow_SDK.OB1_Add_Sens(self.instr_ID.value, i+1, SensorType=sensortypes[i], DigitalAnalog=0, FSens_Digit_Calib=0, FSens_Digit_Resolution=3) # TODO: what is the resolution? What does that mean?
+            if err_code != 0:
+                self.errorlogger.warning("sensor addition error code is %d" % self.instr_ID.value)
 
         # TODO: calibrations?
         err_code = Elveflow_SDK.Elveflow_Calibration_Default(byref(self.calib), 1000)
         if err_code != 0:
-            self.print("Calibration error code %i" % err_code)
+            self.errorlogger.warning("Calibration error code %i" % err_code)
         print("Done initializing Elveflow")
 
-        self.header = ["time [s]", "Pressure 1 [mbar]","Pressure 2 [mbar]","Pressure 3 [mbar]","Pressure 4 [mbar]","Volume flow rate 1 [µL/min]","Volume flow rate 2 [µL/min]","Volume flow rate 3 [µL/min]","Volume flow rate 4 [µL/min]"]
+        self.header = ["time since Jan 1, 1970 [s]", "Pressure 1 [mbar]","Pressure 2 [mbar]","Pressure 3 [mbar]","Pressure 4 [mbar]","Volume flow rate 1 [µL/min]","Volume flow rate 2 [µL/min]","Volume flow rate 3 [µL/min]","Volume flow rate 4 [µL/min]"]
         self.buffer_deque = deque(maxlen=ElveflowHandler_SDK.DEQUE_MAXLEN)
         self.run_flag = threading.Event()
         self.run_flag.clear()
@@ -177,12 +181,12 @@ class ElveflowHandler_SDK:
                 for i in range(1, 5):
                     error = Elveflow_SDK.OB1_Get_Press(self.instr_ID.value, c_int32(i), 1, byref(self.calib), byref(get_pressure), 1000)
                     if error != 0:
-                        self.print('ERROR CODE PRESSURE %i: %s' % (i, error))
+                        self.errorlogger.warning('ERROR CODE PRESSURE %i: %s' % (i, error))
                     newline[self.header[i]] = get_pressure.value
                 for i in range(1, 5):
                     error = Elveflow_SDK.OB1_Get_Sens_Data(self.instr_ID.value, c_int32(i), 1, byref(data_sens))
                     if error != 0:
-                        self.print('ERROR CODE FLOW SENSOR %i: %s' % (i, error))
+                        self.errorlogger.warning('ERROR CODE FLOW SENSOR %i: %s' % (i, error))
                     newline[self.header[i+4]] = data_sens.value
 
                 newline[self.header[0]] = time.time()

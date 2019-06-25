@@ -103,12 +103,13 @@ class ElveflowDisplay(tk.Canvas):
     POLLING_PERIOD = 1
     PADDING = 2
 
-    def __init__(self, window, height, width, **kwargs):
+    def __init__(self, window, height, width, errorlogger, **kwargs):
         """Start the FluidLevel object with default paramaters."""
         super().__init__(window, **kwargs)
         self.dataXLabel = tk.StringVar()    # Time [s]
         self.dataYLabel = tk.StringVar()    # hplc(Read)[µl/min]
         self.dataTitle = "Elveflow data"
+        self.errorlogger = errorlogger
 
         # https://stackoverflow.com/questions/31440167/placing-plot-on-tkinter-main-window-in-python
         remaining_width_per_column = width / 9
@@ -119,7 +120,7 @@ class ElveflowDisplay(tk.Canvas):
 
         self.canvas = matplotlib.backends.backend_tkagg.FigureCanvasTkAgg(self.the_fig, self)
         self.canvas.draw()
-        self.canvas.get_tk_widget().grid(row=0, column=0, rowspan=4, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+        self.canvas.get_tk_widget().grid(row=0, column=0, rowspan=6, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
 
         self.start_button = tk.Button(self, text='Start Graph', command=self.start)
         self.start_button.grid(row=0, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
@@ -149,13 +150,15 @@ class ElveflowDisplay(tk.Canvas):
 
         if FileIO.USE_SDK:
             self.sensorTypes = [tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar()]
-            tk.Label(self, text="Flow sensors:").grid(row=4, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+            tk.Label(self, text="Sensors 1, 2:").grid(row=4, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+            tk.Label(self, text="Sensors 3, 4:").grid(row=5, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
             self.sensorDropdowns = [None, None, None, None]
             for i in range(4):
-                self.sensorDropdowns[i] = tk.OptionMenu(self, self.sensorTypes[i], "none")
+                self.sensorDropdowns[i] = tk.OptionMenu(self, self.sensorTypes[i], None)
                 self.sensorDropdowns[i]['menu'].delete(0, 'end') # there's a default empty option, so get rid of that first
                 self.sensorDropdowns[i].config(width=int(remaining_width_per_column / fontsize)) # width is in units of font size
                 self.sensorDropdowns[i].grid(row=4+i//2, column=2+i%2, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+                self.sensorTypes[i].set("none")
                 for item in FileIO.SDK_SENSOR_TYPES:
                     self.sensorDropdowns[i]['menu'].add_command(label=item,
                         command=lambda i=i, item=item: self.sensorTypes[i].set(item)) # weird default argument for scoping
@@ -191,8 +194,12 @@ class ElveflowDisplay(tk.Canvas):
 
         if FileIO.USE_SDK:
             self.reading_from_entry.config(state=tk.DISABLED)
+            for item in self.sensorDropdowns:
+                item.config(state=tk.DISABLED)
+
             self.elveflow_handler = FileIO.ElveflowHandler(sourcename=self.reading_from_data.get(),
-                sensortypes=map(lambda x: FileIO.SDK_SENSOR_TYPES[x.get()], self.sensorTypes))
+                errorlogger=self.errorlogger,
+                sensortypes=list(map(lambda x: FileIO.SDK_SENSOR_TYPES[x.get()], self.sensorTypes)))
             self.reading_from_data.set(str(self.elveflow_handler.sourcename, encoding='ascii'))
         else:
             self.elveflow_handler = FileIO.ElveflowHandler()
@@ -234,6 +241,8 @@ class ElveflowDisplay(tk.Canvas):
             self.elveflow_handler.stop()
         if FileIO.USE_SDK:
             self.reading_from_entry.config(state=tk.NORMAL)
+            for item in self.sensorDropdowns:
+                item.config(state=tk.NORMAL)
         self._initialize_variables()
 
     def clear_graph(self):

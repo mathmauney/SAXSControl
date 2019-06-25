@@ -98,10 +98,11 @@ class main:
         ]
         self.save_button = tk.Button(self.buttons, text='Save History', command=self.save_history)  # TODO
         # self.save_button.grid(row=0, column=4) # TODO
-        self.elveflow_display = ElveflowDisplay(self.elveflow_page, core_height, core_width)
-        self.elveflow_display.grid(row=0, column=0)
 
         self.draw_static()
+        self.elveflow_display = ElveflowDisplay(self.elveflow_page, core_height, core_width, self.python_logger)
+        self.elveflow_display.grid(row=0, column=0)
+
         self.load_config(filename='config.ini')
 
     def draw_static(self):
@@ -143,7 +144,6 @@ class main:
                             format='%(asctime)s - %(levelname)s - %(message)s')
         self.python_logger = logging.getLogger()
         self.python_logger.addHandler(python_handler)
-        self.python_logger.exception("Did I do something yet?")
         # SPEC Log
         self.SPEC_logger.grid(row=0, column=0, sticky='NSEW')
         self.SPEC_Connection = SPEC.connection(logger=self.SPEC_logger)
