@@ -6,13 +6,27 @@ from collections import deque
 from tkinter import filedialog
 
 USE_SDK = True
+SDK_SENSOR_TYPES = {
+    "none": 0,
+    "1.5 µL/min": 1,
+    "7 µL/min": 2,
+    "50 µL/min": 3,
+    "80 µL/min": 4,
+    "1000 µL/min": 5,
+    "5000 µL/min": 6,
+    # "Press_340_mbar": 7,
+    # "Press_1_bar": 8,
+    # "Press_2_bar": 9,
+    # "Press_7_bar": 10,
+    # "Press_16_bar": 11,
+    # "Level": 12
+}
 
 if USE_SDK:
     from ctypes import c_int32, c_double, byref
     import sys, os.path
     sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "Elveflow_SDK"))#add the path of the LoadElveflow.py
     import Elveflow64 as Elveflow_SDK
-
 
 class ElveflowHandler_ESI:
     """a class that handles reading in Elveflow-generated log files"""
@@ -113,7 +127,7 @@ class ElveflowHandler_SDK:
     SLEEPTIME = 0.5 #how many seconds between each read of the Elveflow output
     DEQUE_MAXLEN = None #this can be a number if memory becomes an issue
 
-    def __init__(self, sourcename=None, errorlogger=None):
+    def __init__(self, sourcename=None, errorlogger=None, sensortypes=None):
         print("Initializing Elveflow")
         if sourcename is None or sourcename == '':
             self.sourcename = b'01A377A5'
@@ -125,12 +139,18 @@ class ElveflowHandler_SDK:
         else:
             self.print = errorlogger.exception
 
+        print(sensortypes)
+
         self.instr_ID = c_int32()
         self.calib =(c_double*1000)() # always define array that way, calibration should have 1000 elements
 
-        err_code = Elveflow_SDK.OB1_Initialization(self.sourcename, 0, 0, 0, 0, byref(self.instr_ID))
+        err_code = Elveflow_SDK.OB1_Initialization(self.sourcename, 3, 3, 3, 3, byref(self.instr_ID))
         if err_code != 0:
             self.print("Initialization error code %i" % err_code)
+        print("instrument id number is %d" % self.instr_ID.value)
+
+        err_code = Elveflow_SDK.OB1_Add_Sens(self.instr_ID.value, 1, SensorType=2, DigitalAnalog=0, FSens_Digit_Calib=0, FSens_Digit_Resolution=3) # TODO: what is the resolution? What does that mean?
+        print("sensor addition error code is %d" % self.instr_ID.value)
 
         # TODO: calibrations?
         err_code = Elveflow_SDK.Elveflow_Calibration_Default(byref(self.calib), 1000)
@@ -155,16 +175,15 @@ class ElveflowHandler_SDK:
 
                 newline = {}
                 for i in range(1, 5):
-                    error = Elveflow_SDK.OB1_Get_Press(self.instr_ID.value, i, 1, byref(self.calib), byref(get_pressure), 1000)
+                    error = Elveflow_SDK.OB1_Get_Press(self.instr_ID.value, c_int32(i), 1, byref(self.calib), byref(get_pressure), 1000)
                     if error != 0:
                         self.print('ERROR CODE PRESSURE %i: %s' % (i, error))
                     newline[self.header[i]] = get_pressure.value
-
                 for i in range(1, 5):
-                    error = Elveflow_SDK.OB1_Get_Sens_Data(self.instr_ID.value, i, 1, byref(data_sens))
+                    error = Elveflow_SDK.OB1_Get_Sens_Data(self.instr_ID.value, c_int32(i), 1, byref(data_sens))
                     if error != 0:
                         self.print('ERROR CODE FLOW SENSOR %i: %s' % (i, error))
-                    newline[self.header[i+4]] = get_pressure.value
+                    newline[self.header[i+4]] = data_sens.value
 
                 newline[self.header[0]] = time.time()
 
@@ -219,12 +238,12 @@ if __name__ == '__main__':
         myhandler.start()
         time.sleep(4)
         print("AFTER 4 SECONDS")
-        print(myhandler.fetchAll())
+        print(list(map(lambda x: (x["Pressure 1 [mbar]"], x["Volume flow rate 1 [µL/min]"]), myhandler.fetchAll())))
         time.sleep(4)
         print("AFTER 8 SECONDS")
-        print(myhandler.fetchAll())
+        print(list(map(lambda x: x["Volume flow rate 1 [µL/min]"], myhandler.fetchAll())))
         time.sleep(4)
         print("AFTER 12 SECONDS")
-        print(myhandler.fetchAll())
+        print(list(map(lambda x: x["Volume flow rate 1 [µL/min]"], myhandler.fetchAll())))
     finally:
         myhandler.stop()

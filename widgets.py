@@ -147,6 +147,19 @@ class ElveflowDisplay(tk.Canvas):
             self.reading_from_entry.config(state="readonly")
         self.reading_from_entry.grid(row=3, column=2, columnspan=2, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
 
+        if FileIO.USE_SDK:
+            self.sensorTypes = [tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar()]
+            tk.Label(self, text="Flow sensors:").grid(row=4, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+            self.sensorDropdowns = [None, None, None, None]
+            for i in range(4):
+                self.sensorDropdowns[i] = tk.OptionMenu(self, self.sensorTypes[i], "none")
+                self.sensorDropdowns[i]['menu'].delete(0, 'end') # there's a default empty option, so get rid of that first
+                self.sensorDropdowns[i].config(width=int(remaining_width_per_column / fontsize)) # width is in units of font size
+                self.sensorDropdowns[i].grid(row=4+i//2, column=2+i%2, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+                for item in FileIO.SDK_SENSOR_TYPES:
+                    self.sensorDropdowns[i]['menu'].add_command(label=item,
+                        command=lambda i=i, item=item: self.sensorTypes[i].set(item)) # weird default argument for scoping
+
         self.run_flag = threading.Event()
         self._initialize_variables()
 
@@ -169,7 +182,7 @@ class ElveflowDisplay(tk.Canvas):
         self.dropdownX['menu'].delete(0, 'end')
         self.dropdownY['menu'].delete(0, 'end') # these two deletions shouldn't be necessary, but I'm afraid of weird race conditions that realistically won't happen even if they're possible
         for item in self.elveflow_handler.header:
-            self.dropdownX['menu'].add_command(label=item, command=lambda item=item: self.dataXLabel.set(item))     # weird default argument for scoping
+            self.dropdownX['menu'].add_command(label=item, command=lambda item=item: self.dataXLabel.set(item)) # weird default argument for scoping
             self.dropdownY['menu'].add_command(label=item, command=lambda item=item: self.dataYLabel.set(item))
 
     def start(self):
@@ -178,7 +191,8 @@ class ElveflowDisplay(tk.Canvas):
 
         if FileIO.USE_SDK:
             self.reading_from_entry.config(state=tk.DISABLED)
-            self.elveflow_handler = FileIO.ElveflowHandler(sourcename=self.reading_from_data.get())
+            self.elveflow_handler = FileIO.ElveflowHandler(sourcename=self.reading_from_data.get(),
+                sensortypes=map(lambda x: FileIO.SDK_SENSOR_TYPES[x.get()], self.sensorTypes))
             self.reading_from_data.set(str(self.elveflow_handler.sourcename, encoding='ascii'))
         else:
             self.elveflow_handler = FileIO.ElveflowHandler()
