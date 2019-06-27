@@ -46,6 +46,20 @@ class ElveflowHandler_ESI:
             self.sourcename = sourcename
         if self.sourcename == '':
             self.sourcename = None
+
+        if errorlogger is None:
+            # hack to just redirect logging to the standard print function
+            # https://stackoverflow.com/questions/2827623/how-can-i-create-an-object-and-add-attributes-to-it
+            self.errorlogger = lambda: None
+            self.errorlogger.debug = print
+            self.errorlogger.info = print
+            self.errorlogger.warning = print
+            self.errorlogger.error = print
+            self.errorlogger.exception = print
+            self.errorlogger.critical = print
+        else:
+            self.errorlogger = errorlogger
+
         self.header = None
         self.buffer_deque = deque(maxlen=ElveflowHandler_ESI.DEQUE_MAXLEN)
         self.run_flag = threading.Event()
@@ -54,7 +68,7 @@ class ElveflowHandler_ESI:
     def start(self, getheader_handler=None):
         """Start actually trying to read in data from an Elveflow log. Do not call this function more than once"""
         def start_thread():
-            print("STARTING HANDLER THREAD %s" % threading.current_thread())
+            self.errorlogger.info("STARTING HANDLER THREAD %s" % threading.current_thread())
             def line_generator():
                 with open(self.sourcename, 'a+', encoding="latin-1", newline='') as f:
                     # a+ creates the file if it doesn't exist, or just reads it if not
@@ -73,8 +87,9 @@ class ElveflowHandler_ESI:
                             if self.header is None:
                                 # the first line should be the header
                                 self.header = next( csv.reader([line], delimiter='\t') )  #get the first (only) row from the iterator
-                                print("SETTING HEADER %s" % threading.current_thread())
-                                getheader_handler()
+                                self.errorlogger.info("SETTING HEADER %s" % threading.current_thread())
+                                if getheader_handler is not None:
+                                    getheader_handler()
                             else:
                                 # otherwise, we already have a header, so just read in data
                                 parsedline = next( csv.DictReader([line], fieldnames=self.header, delimiter='\t') )
@@ -88,7 +103,7 @@ class ElveflowHandler_ESI:
                 for line in line_generator():
                     self.buffer_deque.append(line)
             finally:
-                print("ENDING HANDLER THREAD %s" % threading.current_thread())
+                self.errorlogger.info("ENDING HANDLER THREAD %s" % threading.current_thread())
 
         if self.sourcename is not None:
             self.reading_thread = threading.Thread(target=start_thread)
@@ -128,20 +143,24 @@ class ElveflowHandler_SDK:
     DEQUE_MAXLEN = None #this can be a number if memory becomes an issue
 
     def __init__(self, sourcename=None, errorlogger=None, sensortypes=[]):
-        print("Initializing Elveflow")
         if sourcename is None or sourcename == '':
             self.sourcename = b'01A377A5'
         else:
             self.sourcename = bytes(sourcename, encoding='ascii')
 
         if errorlogger is None:
-            # hack to just redirect info and warning to the standard print function
+            # hack to just redirect logging to the standard print function
             # https://stackoverflow.com/questions/2827623/how-can-i-create-an-object-and-add-attributes-to-it
             self.errorlogger = lambda: None
+            self.errorlogger.debug = print
             self.errorlogger.info = print
             self.errorlogger.warning = print
+            self.errorlogger.error = print
+            self.errorlogger.exception = print
+            self.errorlogger.critical = print
         else:
             self.errorlogger = errorlogger
+        self.errorlogger.info("Initializing Elveflow")
 
         self.instr_ID = c_int32()
         self.calib =(c_double*1000)() # always define array that way, calibration should have 1000 elements
@@ -160,16 +179,16 @@ class ElveflowHandler_SDK:
         err_code = Elveflow_SDK.Elveflow_Calibration_Default(byref(self.calib), 1000)
         if err_code != 0:
             self.errorlogger.warning("Calibration error code %i" % err_code)
-        print("Done initializing Elveflow")
+        self.errorlogger.info("Done initializing Elveflow")
 
-        self.header = ["time since Jan 1, 1970 [s]", "Pressure 1 [mbar]","Pressure 2 [mbar]","Pressure 3 [mbar]","Pressure 4 [mbar]","Volume flow rate 1 [µL/min]","Volume flow rate 2 [µL/min]","Volume flow rate 3 [µL/min]","Volume flow rate 4 [µL/min]"]
+        self.header = ["time [s]", "Pressure 1 [mbar]","Pressure 2 [mbar]","Pressure 3 [mbar]","Pressure 4 [mbar]","Volume flow rate 1 [µL/min]","Volume flow rate 2 [µL/min]","Volume flow rate 3 [µL/min]","Volume flow rate 4 [µL/min]"]
         self.buffer_deque = deque(maxlen=ElveflowHandler_SDK.DEQUE_MAXLEN)
         self.run_flag = threading.Event()
         self.run_flag.clear()
 
     def start(self, getheader_handler=None):
         def start_thread():
-            print("STARTING HANDLER THREAD %s" % threading.current_thread())
+            self.errorlogger.info("STARTING HANDLER THREAD %s" % threading.current_thread())
             self.run_flag.set()
             while self.run_flag.is_set():
                 data_sens = c_double()
@@ -193,9 +212,11 @@ class ElveflowHandler_SDK:
 
                 self.buffer_deque.append(newline)
 
-
-            error = Elveflow_SDK.OB1_Destructor(self.instr_ID.value)
-            print("Closing connection with Elveflow%s." % ("" if error==0 else (" (Error code %i)" % error)))
+            try:
+                error = Elveflow_SDK.OB1_Destructor(self.instr_ID.value)
+                self.errorlogger.info("Closing connection with Elveflow%s." % ("" if error==0 else (" (Error code %i)" % error)))
+            except RuntimeError as e:
+                print("Runtime error detected in IO handler thread %s while trying to close. Ignoring." % threading.current_thread())
 
         self.reading_thread = threading.Thread(target=start_thread)
         self.reading_thread.start()
