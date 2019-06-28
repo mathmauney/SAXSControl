@@ -153,9 +153,7 @@ class main:
     def stop(self):
         """Stop all running widgets."""
         self.oil_meter.stop()
-        print("STOPPING")
         if self.elveflow_display.run_flag.is_set():
-            print("NO REALLY, I'M STOPPING")
             self.elveflow_display.stop()
 
     def load_config(self, filename=None):
@@ -190,4 +188,5 @@ if __name__ == "__main__":
         time.sleep(1)
     finally:
         import threading
-        print(threading.enumerate())
+        print("As main thread %s is closing, these are the remaining threads: %s" % (threading.current_thread(), threading.enumerate()))
+        print()

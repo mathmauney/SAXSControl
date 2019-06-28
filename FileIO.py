@@ -74,7 +74,6 @@ class ElveflowHandler_ESI:
                     # a+ creates the file if it doesn't exist, or just reads it if not
                     # we can then jump to the beginning and then continue as though the mode is r
                     f.seek(0)
-                    self.run_flag.set()
                     # continuously read
                     while self.run_flag.is_set():
                         line = f.readline()
@@ -142,7 +141,7 @@ class ElveflowHandler_SDK:
     SLEEPTIME = 0.5 #how many seconds between each read of the Elveflow output
     DEQUE_MAXLEN = None #this can be a number if memory becomes an issue
 
-    def __init__(self, sourcename=None, errorlogger=None, sensortypes=[]):
+    def __init__(self, sourcename=None, errorlogger=None, sensortypes=[], starttime=0):
         if sourcename is None or sourcename == '':
             self.sourcename = b'01A377A5'
         else:
@@ -161,6 +160,7 @@ class ElveflowHandler_SDK:
         else:
             self.errorlogger = errorlogger
         self.errorlogger.info("Initializing Elveflow")
+        self.starttime = starttime
 
         self.instr_ID = c_int32()
         self.calib =(c_double*1000)() # always define array that way, calibration should have 1000 elements
@@ -184,12 +184,11 @@ class ElveflowHandler_SDK:
         self.header = ["time [s]", "Pressure 1 [mbar]","Pressure 2 [mbar]","Pressure 3 [mbar]","Pressure 4 [mbar]","Volume flow rate 1 [µL/min]","Volume flow rate 2 [µL/min]","Volume flow rate 3 [µL/min]","Volume flow rate 4 [µL/min]"]
         self.buffer_deque = deque(maxlen=ElveflowHandler_SDK.DEQUE_MAXLEN)
         self.run_flag = threading.Event()
-        self.run_flag.clear()
+        self.run_flag.set()
 
     def start(self, getheader_handler=None):
         def start_thread():
-            self.errorlogger.info("STARTING HANDLER THREAD %s" % threading.current_thread())
-            self.run_flag.set()
+            print("STARTING HANDLER THREAD %s" % threading.current_thread())
             while self.run_flag.is_set():
                 data_sens = c_double()
                 get_pressure = c_double()
@@ -208,15 +207,18 @@ class ElveflowHandler_SDK:
                         self.errorlogger.warning('ERROR CODE FLOW SENSOR %i: %s' % (i, error))
                     newline[self.header[i+4]] = data_sens.value
 
-                newline[self.header[0]] = time.time()
+                newline[self.header[0]] = time.time() - self.starttime
 
                 self.buffer_deque.append(newline)
 
             try:
                 error = Elveflow_SDK.OB1_Destructor(self.instr_ID.value)
-                self.errorlogger.info("Closing connection with Elveflow%s." % ("" if error==0 else (" (Error code %i)" % error)))
+                print("Closing connection with Elveflow%s." % ("" if error==0 else (" (Error code %i)" % error)))
             except RuntimeError as e:
                 print("Runtime error detected in IO handler thread %s while trying to close. Ignoring." % threading.current_thread())
+            finally:
+                print("As Handler %s is closing, these are the remaining threads: %s" % (threading.current_thread(), threading.enumerate()))
+                print()
 
         self.reading_thread = threading.Thread(target=start_thread)
         self.reading_thread.start()
@@ -250,6 +252,13 @@ class ElveflowHandler_SDK:
     def getHeader(self):
         """returns the header, a list of strings"""
         return self.header
+
+    def setPresure(self, channel_number, value):
+        """tells the Elveflow to set the pressure"""
+        error = Elveflow_SDK.OB1_Set_Press(self.instr_ID.value, channel_number, value, byref(self.calib), 1000)
+        self.errorlogger.info('Set pressure of Channel %i to %s' % (channel_number, value))
+        if error != 0:
+            self.errorlogger.warning('ERROR CODE SET PRESSURE CHANNEL %i: %s' % (channel_number, error))
 
 if USE_SDK:
     ElveflowHandler = ElveflowHandler_SDK

@@ -107,9 +107,13 @@ class ElveflowDisplay(tk.Canvas):
     def __init__(self, window, height, width, errorlogger, **kwargs):
         """Start the FluidLevel object with default paramaters."""
         super().__init__(window, **kwargs)
+        self.starttime = time.time()
+
         self.dataXLabel = tk.StringVar()
         self.dataYLabel = tk.StringVar()
         self.sensorTypes = [tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar()]
+        self.pressureValues = [tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar()]
+        self.axis_limits_numbers = [None, None, None, None]
         self.reading_from_data = tk.StringVar()
         self.saveFileName = tk.StringVar()
         self.saveFileName_suffix = tk.StringVar()
@@ -118,6 +122,10 @@ class ElveflowDisplay(tk.Canvas):
         self.saveFile = None
         self.saveFileWriter = None
 
+        self.run_flag = threading.Event()
+        self.save_flag = threading.Event()
+        self.saveFileName_suffix.set("_%d.csv" % time.time())
+
         # https://stackoverflow.com/questions/31440167/placing-plot-on-tkinter-main-window-in-python
         remaining_width_per_column = width / 9
         dpi = 96 #this shouldn't matter too much (because we normalize against it) except in how font sizes are handled in the plot
@@ -125,92 +133,132 @@ class ElveflowDisplay(tk.Canvas):
         self.ax = self.the_fig.add_subplot(111)
         self.ax.set_title(self.dataTitle, fontsize=16)
 
-        self.canvas = matplotlib.backends.backend_tkagg.FigureCanvasTkAgg(self.the_fig, self)
-        self.canvas.draw()
-        self.canvas.get_tk_widget().grid(row=0, column=0, rowspan=9, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
-
+        rowcounter=0
         self.start_button = tk.Button(self, text='Start Connection', command=self.start)
-        self.start_button.grid(row=0, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+        self.start_button.grid(row=rowcounter, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
         self.stop_button = tk.Button(self, text='Stop Connection', command=self.stop)
-        self.stop_button.grid(row=0, column=2, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+        self.stop_button.grid(row=rowcounter, column=2, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+        rowcounter += 1
         # self.clear_button = tk.Button(self, text='Clear Graph', command=self.clear_graph)
         # self.clear_button.grid(row=0, column=3, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
         # # TODO: make the clear button actually work
 
-
-        tk.Label(self, text="Reading from:").grid(row=1, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+        tk.Label(self, text="Reading from:").grid(row=rowcounter, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
         self.reading_from_entry = tk.Entry(self, textvariable=self.reading_from_data, justify="left")
         if not FileIO.USE_SDK:
             self.reading_from_entry.config(state="readonly")
-        self.reading_from_entry.grid(row=1, column=2, columnspan=2, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
-
-        tkinter.ttk.Separator(self, orient=tk.HORIZONTAL).grid(row=4, column=1, columnspan=3, sticky='ew', padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
-
-        tk.Label(self, text="X axis").grid(row=5, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
-        self.dropdownX = tk.OptionMenu(self, self.dataXLabel, None)
-        fontsize = tkinter.font.Font(font=self.dropdownX ['font'])['size']
-        self.dropdownX.config(width=int(remaining_width_per_column *2 / fontsize)) # width is in units of font size
-        self.dropdownX.grid(row=5, column=2, columnspan=2, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
-
-        tk.Label(self, text="Y axis").grid(row=6, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
-        self.dropdownY = tk.OptionMenu(self, self.dataYLabel, None)
-        self.dropdownY.config(width=int(remaining_width_per_column *2/ fontsize))
-        self.dropdownY.grid(row=6, column=2, columnspan=2, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+        self.reading_from_entry.grid(row=rowcounter, column=2, columnspan=2, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+        fontsize = tkinter.font.Font(font=self.reading_from_entry ['font'])['size']
+        self.reading_from_entry.config(width=2 * int(remaining_width_per_column / fontsize)) # width is in units of font size
+        rowcounter += 1
 
         if FileIO.USE_SDK:
-            tk.Label(self, text="Sensors 1, 2:").grid(row=2, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
-            tk.Label(self, text="Sensors 3, 4:").grid(row=3, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+            tk.Label(self, text="Sensors 1, 2:").grid(row=rowcounter, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+            tk.Label(self, text="Sensors 3, 4:").grid(row=rowcounter+1, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
             self.sensorDropdowns = [None, None, None, None]
             for i in range(4):
                 self.sensorDropdowns[i] = tk.OptionMenu(self, self.sensorTypes[i], None)
                 self.sensorDropdowns[i]['menu'].delete(0, 'end') # there's a default empty option, so get rid of that first
                 self.sensorDropdowns[i].config(width=int(remaining_width_per_column / fontsize)) # width is in units of font size
-                self.sensorDropdowns[i].grid(row=2+i//2, column=2+i%2, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+                self.sensorDropdowns[i].grid(row=rowcounter+i//2, column=2+i%2, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
                 self.sensorTypes[i].set("none")
                 for item in FileIO.SDK_SENSOR_TYPES:
                     self.sensorDropdowns[i]['menu'].add_command(label=item,
                         command=lambda i=i, item=item: self.sensorTypes[i].set(item)) # weird default argument for scoping
+            rowcounter += 2
 
+        tkinter.ttk.Separator(self, orient=tk.HORIZONTAL).grid(row=rowcounter, column=1, columnspan=3, sticky='ew', padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+        rowcounter += 1
+
+        tk.Label(self, text="X axis").grid(row=rowcounter, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+        self.dropdownX = tk.OptionMenu(self, self.dataXLabel, None)
+        self.dropdownX.config(width=int(remaining_width_per_column *2 / fontsize)) # width is in units of font size
+        self.dropdownX.grid(row=rowcounter, column=2, columnspan=2, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+        rowcounter += 1
+
+        tk.Label(self, text="Y axis").grid(row=rowcounter, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+        self.dropdownY = tk.OptionMenu(self, self.dataYLabel, None)
+        self.dropdownY.config(width=int(remaining_width_per_column *2/ fontsize))
+        self.dropdownY.grid(row=rowcounter, column=2, columnspan=2, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+        rowcounter += 1
+
+        if FileIO.USE_SDK:
             self.start_saving_button = tk.Button(self, text='Start Saving Data', command=self.start_saving)
-            self.start_saving_button.grid(row=7, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+            self.start_saving_button.grid(row=rowcounter, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
             self.stop_saving_button = tk.Button(self, text='Stop Saving Data', command=self.stop_saving)
-            self.stop_saving_button.grid(row=7, column=2, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+            self.stop_saving_button.grid(row=rowcounter, column=2, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+            rowcounter += 1
 
-            tk.Label(self, text="Output filename:").grid(row=8, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+            tk.Label(self, text="Output filename:").grid(row=rowcounter, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
             self.saveFileName_entry = tk.Entry(self, textvariable=self.saveFileName, justify="left")
-            self.saveFileName_entry.grid(row=8, column=2, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
-            tk.Label(self, textvariable=self.saveFileName_suffix).grid(row=8, column=3, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+            self.saveFileName_entry.grid(row=rowcounter, column=2, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+            tk.Label(self, textvariable=self.saveFileName_suffix).grid(row=rowcounter, column=3, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+            rowcounter += 1
 
-        self.run_flag = threading.Event()
-        self.save_flag = threading.Event()
+        if FileIO.USE_SDK:
+            tkinter.ttk.Separator(self, orient=tk.HORIZONTAL).grid(row=rowcounter, column=1, columnspan=3, sticky='ew', padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+            rowcounter += 1
+
+            tk.Label(self, text="Set pressure 1, 2:").grid(row=rowcounter, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+            tk.Label(self, text="Set pressure 3, 4:").grid(row=rowcounter+1, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+            self.set_pressure_entries = [None, None, None, None]
+            for i in range(4):
+                self.set_pressure_entries[i] = tk.Entry(self, textvariable=self.pressureValues[i], justify="left")
+                self.set_pressure_entries[i].config(width=int(remaining_width_per_column / fontsize)) # width is in units of font size
+                self.set_pressure_entries[i].grid(row=rowcounter+i//2, column=2+i%2, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+                self.pressureValues[i].set("")
+            rowcounter += 2
+            self.set_pressure_button = tk.Button(self, text='Set pressure (leave blank for off)', command=self.set_pressure) # TODO
+            self.set_pressure_button.grid(row=rowcounter, column=1, columnspan=3, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+            rowcounter += 1
+
+        tkinter.ttk.Separator(self, orient=tk.HORIZONTAL).grid(row=rowcounter, column=1, columnspan=3, sticky='ew', padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+        rowcounter += 1
+
+        tk.Label(self, text="x axis limits:").grid(row=rowcounter, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+        tk.Label(self, text="y axis limits:").grid(row=rowcounter+1, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+        self.set_axis_limits_entries = [None, None, None, None]
+        self.axis_limits = [tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar()]
+        for i in range(4):
+            self.set_axis_limits_entries[i] = tk.Entry(self, textvariable=self.axis_limits[i], justify="left")
+            self.set_axis_limits_entries[i].config(width=int(remaining_width_per_column / fontsize)) # width is in units of font size
+            self.set_axis_limits_entries[i].grid(row=rowcounter+i//2, column=2+i%2, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+            self.axis_limits[i].set("")
+        rowcounter += 2
+        self.set_axis_limits_button = tk.Button(self, text='Set graph limits (leave blank for auto)', command=self.set_axis_limits) # TODO
+        self.set_axis_limits_button.grid(row=rowcounter, column=1, columnspan=3, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+        rowcounter += 1
+
+        self.canvas = matplotlib.backends.backend_tkagg.FigureCanvasTkAgg(self.the_fig, self)
+        self.canvas.draw()
+        self.canvas.get_tk_widget().grid(row=0, column=0, rowspan=rowcounter, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+
         self._initialize_variables()
 
     def _initialize_variables(self):
         """create or reset all the internal variables"""
-        print("INITIALLIZING")
-        try:
-            self.elveflow_handler = None
-            self.data = []
-            self.run_flag.clear()
-            self.save_flag.clear()
-            self.the_line = self.ax.plot([], [])[0]
-            self.dropdownX.config(state=tk.DISABLED)
-            self.dropdownY.config(state=tk.DISABLED)
-            self.start_button.config(state=tk.NORMAL)
-            self.stop_button.config(state=tk.DISABLED)
-            if not FileIO.USE_SDK:
-                self.reading_from_data.set("None")
-            else:
-                self.start_saving_button.config(state=tk.DISABLED)
-                self.stop_saving_button.config(state=tk.DISABLED)
-                self.saveFileName_entry.config(state=tk.DISABLED)
-                self.saveFile = None
-                self.saveFileWriter = None
-        except RuntimeError as e:
-            # happens because the main window is closed
-            print("There was a RuntimeError. Ignoring it: %s" % e)
+        self.elveflow_handler = None
+        self.data = []
+        self.run_flag.clear()
+        self.save_flag.clear()
+        self.the_line = self.ax.plot([], [])[0]
+        self.dropdownX.config(state=tk.DISABLED)
+        self.dropdownY.config(state=tk.DISABLED)
+        self.start_button.config(state=tk.NORMAL)
+        self.stop_button.config(state=tk.DISABLED)
+        if not FileIO.USE_SDK:
+            self.reading_from_data.set("None")
+        else:
+            self.start_saving_button.config(state=tk.DISABLED)
+            self.stop_saving_button.config(state=tk.DISABLED)
+            self.saveFileName_entry.config(state=tk.DISABLED)
+            self.set_pressure_button.config(state=tk.DISABLED)
+            for item in self.set_pressure_entries:
+                item.config(state=tk.DISABLED)
+            self.saveFile = None
+            self.saveFileWriter = None
 
-    def populateDropdowns(self):
+    def populate_dropdowns(self):
         self.dropdownX['menu'].delete(0, 'end')
         self.dropdownY['menu'].delete(0, 'end') # these two deletions shouldn't be necessary, but I'm afraid of weird race conditions that realistically won't happen even if they're possible
         for item in self.elveflow_handler.header:
@@ -225,12 +273,16 @@ class ElveflowDisplay(tk.Canvas):
 
         if FileIO.USE_SDK:
             self.reading_from_entry.config(state=tk.DISABLED)
+            self.set_pressure_button.config(state=tk.NORMAL)
+            for item in self.set_pressure_entries:
+                item.config(state=tk.NORMAL)
             for item in self.sensorDropdowns:
                 item.config(state=tk.DISABLED)
 
             self.elveflow_handler = FileIO.ElveflowHandler(sourcename=self.reading_from_data.get(),
                 errorlogger=self.errorlogger,
-                sensortypes=list(map(lambda x: FileIO.SDK_SENSOR_TYPES[x.get()], self.sensorTypes)))
+                sensortypes=list(map(lambda x: FileIO.SDK_SENSOR_TYPES[x.get()], self.sensorTypes)),
+                starttime=self.starttime)
             self.reading_from_data.set(str(self.elveflow_handler.sourcename, encoding='ascii'))
         else:
             self.elveflow_handler = FileIO.ElveflowHandler()
@@ -244,7 +296,7 @@ class ElveflowDisplay(tk.Canvas):
         self.dropdownY['menu'].delete(0, 'end')
         self.dataXLabel.set('')
         self.dataYLabel.set('')
-        self.elveflow_handler.start(getheader_handler=self.populateDropdowns)
+        self.elveflow_handler.start(getheader_handler=self.populate_dropdowns)
 
         def pollElveflowThread(run_flag, save_flag):
             # technically a race condition here: what if the user tries to stop the thread right here, and then this thread resets it?
@@ -267,6 +319,9 @@ class ElveflowDisplay(tk.Canvas):
                     print("DONE WITH THIS THREAD, %s" % threading.current_thread())
                 except RuntimeError as e:
                     print("Runtime error detected in display thread %s while trying to close. Ignoring." % threading.current_thread())
+                finally:
+                    print("As Display %s is closing, these are the remaining threads: %s" % (threading.current_thread(), threading.enumerate()))
+                    print()
 
         self.the_thread = threading.Thread(target=pollElveflowThread, args=(self.run_flag, self.save_flag))
         self.the_thread.start()
@@ -286,6 +341,9 @@ class ElveflowDisplay(tk.Canvas):
             self.reading_from_entry.config(state=tk.NORMAL)
             for item in self.sensorDropdowns:
                 item.config(state=tk.NORMAL)
+            for item in self.set_pressure_entries:
+                item.config(state=tk.DISABLED)
+            self.set_pressure_button.config(state=tk.DISABLED)
         self.stop_saving()
         self._initialize_variables()
 
@@ -328,15 +386,40 @@ class ElveflowDisplay(tk.Canvas):
         dataXLabel = self.dataXLabel.get()
         dataYLabel = self.dataYLabel.get()
 
-        if dataXLabel != '' and dataYLabel != '':
+        try:
             dataX = [elt[dataXLabel] for elt in self.data if not np.isnan(elt[dataXLabel]) and not np.isnan(elt[dataYLabel])]
             dataY = [elt[dataYLabel] for elt in self.data if not np.isnan(elt[dataXLabel]) and not np.isnan(elt[dataYLabel])]
-            # print(len(dataX))
-            # print(len(dataY))
+            extremes = [np.nanmin(dataX), np.nanmax(dataX), np.nanmin(dataY), np.nanmax(dataY)]
             if len(dataX) > 0:
                 self.the_line.set_data(dataX, dataY)
-                self.ax.set_xlim(np.nanmin(dataX), np.nanmax(dataX))
-                self.ax.set_ylim(np.nanmin(dataY), np.nanmax(dataY))
-                self.ax.set_xlabel(self.dataXLabel.get(), fontsize=14)
-                self.ax.set_ylabel(self.dataYLabel.get(), fontsize=14)
-                self.canvas.draw()
+            self.ax.set_xlabel(self.dataXLabel.get(), fontsize=14)
+            self.ax.set_ylabel(self.dataYLabel.get(), fontsize=14)
+        except (ValueError, KeyError) as e:
+            extremes = [*self.ax.get_xlim(), *self.ax.get_ylim()]
+
+        limits = [item if item is not None else extremes[i]
+            for (i,item) in enumerate(self.axis_limits_numbers)]
+
+        self.ax.set_xlim(*limits[0:2])
+        self.ax.set_ylim(*limits[2:4])
+        self.canvas.draw()
+
+    def set_pressure(self):
+        for i, x in enumerate(self.pressureValues, 1):
+            try:
+                pressure_to_set = int(x.get())
+                self.elveflow_handler.setPresure(i, pressure_to_set)
+                x.set(str(pressure_to_set))
+            except ValueError as e:
+                x.set("")
+
+    def set_axis_limits(self):
+        for i, x in enumerate(self.axis_limits):
+            try:
+                value = float(x.get())
+                x.set(str(value))
+                self.axis_limits_numbers[i] = value
+            except ValueError as e:
+                x.set("")
+                self.axis_limits_numbers[i] = None
+        self.update_plot()
