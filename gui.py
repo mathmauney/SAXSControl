@@ -9,22 +9,26 @@ import tkinter.scrolledtext as ScrolledText
 from tkinter import filedialog
 from widgets import FluidLevel, ElveflowDisplay, TextHandler, MiscLogger
 import tkinter.ttk as ttk
-import csv
 import time
 import SPEC
 from configparser import ConfigParser
 import logging
+import os
 
 
 FULLSCREEN = True  # For easier testing, turn this off
-
+LOG_FOLDER = "log"
 
 class main:
     """Class for the main window of the SAXS Control."""
-    CSV_HEADERS = ["Unix time (s)", "oil level (%)"]
 
     def __init__(self, window):
         """Set up the window and button variables."""
+        print("Initializing GUI...")
+
+        os.makedirs(LOG_FOLDER, exist_ok=True)
+        os.makedirs(ElveflowDisplay.OUTPUT_FOLDER, exist_ok=True)
+
         self.main_window = window
         self.main_window.report_callback_exception = self.handle_exception
         self.main_window.title('Main Window')
@@ -46,7 +50,6 @@ class main:
             log_width = window_width - core_width - 3
             core_height = window_height - state_height - 50
             log_height = core_height
-        print(window_width)
 
         # Button Bar
         self.buttons = tk.Frame(self.main_window)
@@ -89,19 +92,11 @@ class main:
         self.python_logger_gui.configure(font='TkFixedFont')
         self.SPEC_logger = MiscLogger(self.SPEC_logs, state='disabled', height=45)
         self.SPEC_logger.configure(font='TkFixedFont')
-        #
-        # TODO: also autosave, as a backup in case of crashing
-        # initialize an empty history
-        self.history = [
-            (time.time(), 99 if time.sleep(0.15) else 93),
-            (time.time(), 44)
-        ]
-        self.save_button = tk.Button(self.buttons, text='Save History', command=self.save_history)  # TODO
-        # self.save_button.grid(row=0, column=4) # TODO
-        self.elveflow_display = ElveflowDisplay(self.elveflow_page, core_height, core_width)
-        self.elveflow_display.grid(row=0, column=0)
 
         self.draw_static()
+        self.elveflow_display = ElveflowDisplay(self.elveflow_page, core_height, core_width, self.python_logger)
+        self.elveflow_display.grid(row=0, column=0)
+
         self.load_config(filename='config.ini')
 
     def draw_static(self):
@@ -138,11 +133,19 @@ class main:
         self.config_spec_port.grid(row=3, column=1)
         # Python Log
         self.python_logger_gui.grid(row=0, column=0, sticky='NSEW')
+        nowtime = time.time()
         python_handler = TextHandler(self.python_logger_gui)
-        logging.basicConfig(level=logging.INFO,
-                            format='%(asctime)s - %(levelname)s - %(message)s')
-        self.python_logger = logging.getLogger()
-        self.python_logger.addHandler(python_handler)
+        file_handler = logging.FileHandler(os.path.join(LOG_FOLDER, "log%010d.txt" % nowtime))
+        python_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+        file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+
+        # logging.basicConfig(level=logging.INFO,
+        #                     format='%(asctime)s - %(levelname)s - %(message)s')
+        self.python_logger = logging.getLogger("python")
+        self.python_logger.setLevel(logging.DEBUG)
+        self.python_logger.addHandler(python_handler) #logging to the screen
+        self.python_logger.addHandler(file_handler) #logging to a file
+
         # SPEC Log
         self.SPEC_logger.grid(row=0, column=0, sticky='NSEW')
         self.SPEC_Connection = SPEC.connection(logger=self.SPEC_logger)
@@ -150,9 +153,7 @@ class main:
     def stop(self):
         """Stop all running widgets."""
         self.oil_meter.stop()
-        print("STOPPING")
         if self.elveflow_display.run_flag.is_set():
-            print("NO REALLY, I'M STOPPING")
             self.elveflow_display.stop()
 
     def load_config(self, filename=None):
@@ -174,18 +175,6 @@ class main:
     def handle_exception(self, exception, value, traceback):
         self.python_logger.exception("Caught exception:")
 
-    def save_history(self, filename=None):
-        """Save a csv file with the current state."""
-        if filename is None:
-            filename = filedialog.asksaveasfilename(initialdir=".", title="Save file", filetypes=(("comma-separated value", "*.csv"), ("all files", "*.*")))
-        if filename == '':
-            # empty filename: don't save
-            return
-        with open(filename, 'w') as f:
-            csvwriter = csv.writer(f)
-            csvwriter.writerow(main.CSV_HEADERS)
-            csvwriter.writerows(self.history)
-
     def exit(self):
         self.stop()
         self.main_window.destroy()
@@ -199,4 +188,5 @@ if __name__ == "__main__":
         time.sleep(1)
     finally:
         import threading
-        print(threading.enumerate())
+        print("As main thread %s is closing, these are the remaining threads: %s" % (threading.current_thread(), threading.enumerate()))
+        print()
