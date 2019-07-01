@@ -39,3 +39,5 @@ To use the virtual environment, go `cd` into the new folder created, `SAXSContro
   - CHESS systems
 - diplay elements
   - cleaning station
+- PID loop for setting the flow rate rather than setting the pressure
+  - relatedly, limit the pressure gradient

@@ -13,6 +13,7 @@ import FileIO
 import threading
 import time
 import os.path
+from queue import Queue, Empty as Queue_Empty
 
 
 
@@ -69,24 +70,44 @@ class FluidLevel(tk.Canvas):
 class TextHandler(logging.Handler):
     # This class allows you to log to a Tkinter Text or ScrolledText widget
     # Adapted from Moshe Kaplan: https://gist.github.com/moshekaplan/c425f861de7bbf28ef06
+    POLLING_PERIOD = 100 #in milliseconds
 
     def __init__(self, text):
         # run the regular Handler __init__
         logging.Handler.__init__(self)
         # Store a reference to the Text it will log to
         self.text = text
+        self.messagesQueue = Queue()
+
+        # TKinter apparently isn't threadsafe. So instead of updating the GUI directly from the
+        # emit callback, throw messages into a threadsafe queue and use .after in the main thread
+        # instead of actual threading instead.
+        self.text.after(TextHandler.POLLING_PERIOD, self._update)
+
 
     def emit(self, record):
         msg = self.format(record)
 
-        def append():
-            self.text.configure(state='normal')
-            self.text.insert(tk.END, msg + '\n')
-            self.text.configure(state='disabled')
-            # Autoscroll to the bottom
+        self.messagesQueue.put(msg, False)
+
+    def _update(self):
+        self.text.configure(state='normal')
+
+        did_update = False
+        try:
+            while True:
+                msg = self.messagesQueue.get(False)
+                self.text.insert(tk.END, msg + '\n')
+                did_update = True
+        except Queue_Empty as e:
+            pass
+
+        self.text.configure(state='disabled')
+        if did_update:
+            # Autoscroll to the bottom if there actually was anything interesting happening
             self.text.yview(tk.END)
-        # This is necessary because we can't modify the Text from other threads
-        self.text.after(0, append)
+        self.text.after(TextHandler.POLLING_PERIOD, self._update)
+
 
 
 class MiscLogger(ScrolledText.ScrolledText):
@@ -107,7 +128,6 @@ class ElveflowDisplay(tk.Canvas):
     def __init__(self, window, height, width, errorlogger, **kwargs):
         """Start the FluidLevel object with default paramaters."""
         super().__init__(window, **kwargs)
-        self.starttime = time.time()
 
         self.dataXLabel = tk.StringVar()
         self.dataYLabel = tk.StringVar()
@@ -121,6 +141,9 @@ class ElveflowDisplay(tk.Canvas):
         self.errorlogger = errorlogger
         self.saveFile = None
         self.saveFileWriter = None
+
+        self.starttime = int(time.time())
+        self.errorlogger.info("start time is %d" % self.starttime)
 
         self.run_flag = threading.Event()
         self.save_flag = threading.Event()
@@ -208,7 +231,7 @@ class ElveflowDisplay(tk.Canvas):
                 self.set_pressure_entries[i].grid(row=rowcounter+i//2, column=2+i%2, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
                 self.pressureValues[i].set("")
             rowcounter += 2
-            self.set_pressure_button = tk.Button(self, text='Set pressure (leave blank for off)', command=self.set_pressure) # TODO
+            self.set_pressure_button = tk.Button(self, text='Set pressure (blank = zero)', command=self.set_pressure) # TODO
             self.set_pressure_button.grid(row=rowcounter, column=1, columnspan=3, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
             rowcounter += 1
 
@@ -234,6 +257,7 @@ class ElveflowDisplay(tk.Canvas):
         self.canvas.get_tk_widget().grid(row=0, column=0, rowspan=rowcounter, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
 
         self._initialize_variables()
+        self.run_flag.set()
 
     def _initialize_variables(self):
         """create or reset all the internal variables"""
@@ -302,7 +326,6 @@ class ElveflowDisplay(tk.Canvas):
             # technically a race condition here: what if the user tries to stop the thread right here, and then this thread resets it?
             # in practice, I think it's not a concern...?
             print("STARTING DISPLAY THREAD %s" % threading.current_thread())
-            run_flag.set()
             try:
                 while run_flag.is_set():
                     newData = self.elveflow_handler.fetchAll()
@@ -322,6 +345,7 @@ class ElveflowDisplay(tk.Canvas):
                 finally:
                     print("As Display %s is closing, these are the remaining threads: %s" % (threading.current_thread(), threading.enumerate()))
                     print()
+                self.run_flag.set()
 
         self.the_thread = threading.Thread(target=pollElveflowThread, args=(self.run_flag, self.save_flag))
         self.the_thread.start()
@@ -354,12 +378,13 @@ class ElveflowDisplay(tk.Canvas):
             self.start_saving_button.config(state=tk.DISABLED)
             self.saveFileName_entry.config(state=tk.DISABLED)
 
-            self.saveFile = open(os.path.join(ElveflowDisplay.OUTPUT_FOLDER, self.saveFileName.get() + self.saveFileName_suffix.get() ), 'a')
+            self.saveFile = open(os.path.join(ElveflowDisplay.OUTPUT_FOLDER, self.saveFileName.get() + self.saveFileName_suffix.get() ), 'a', encoding="utf-8", newline='')
             self.saveFileWriter = csv.writer(self.saveFile)
             self.saveFileWriter.writerow(self.elveflow_handler.header)
             self.errorlogger.info('started saving')
         else:
             self.errorlogger.error('cannot start saving (header is unknown). Try again in a moment')
+
 
     def stop_saving(self):
         if self.save_flag.is_set():
@@ -407,10 +432,11 @@ class ElveflowDisplay(tk.Canvas):
     def set_pressure(self):
         for i, x in enumerate(self.pressureValues, 1):
             try:
-                pressure_to_set = int(x.get())
-                self.elveflow_handler.setPresure(i, pressure_to_set)
+                pressure_to_set = int(float(x.get()))
+                self.elveflow_handler.setPressure(i, pressure_to_set)
                 x.set(str(pressure_to_set))
             except ValueError as e:
+                self.elveflow_handler.setPressure(i, 0)
                 x.set("")
 
     def set_axis_limits(self):

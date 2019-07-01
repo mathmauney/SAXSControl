@@ -2,7 +2,7 @@
 import csv
 import time
 import threading
-from collections import deque
+from queue import Queue, Empty as Queue_Empty, Full as Queue_Full
 from tkinter import filedialog
 
 USE_SDK = True
@@ -30,8 +30,8 @@ if USE_SDK:
 
 class ElveflowHandler_ESI:
     """a class that handles reading in Elveflow-generated log files"""
-    SLEEPTIME = 0.5 #if no line exists, wait this many seconds before trying again
-    DEQUE_MAXLEN = None #this can be a number if memory becomes an issue
+    SLEEPTIME = 0.2 #if no line exists, wait this many seconds before trying again
+    QUEUE_MAXLEN = 0 #zero means infinite
 
     TESTING_FILENAME = 'Elveflow/temp.txt'
 
@@ -39,7 +39,6 @@ class ElveflowHandler_ESI:
         """Start actually trying to read in data from an Elveflow log. If the sourcename is
         empty (even after selecting from a file dialog), this instance exists but does
         nothing when you try to start it"""
-        # TODO: errorlogger
         if sourcename is None:
             self.sourcename = filedialog.askopenfilename(initialdir=".", title="Choose file", filetypes=(("tab-separated value", "*.tsv"), ("tab-separated value", "*.txt"), ("all files", "*.*")))
         else:
@@ -61,9 +60,9 @@ class ElveflowHandler_ESI:
             self.errorlogger = errorlogger
 
         self.header = None
-        self.buffer_deque = deque(maxlen=ElveflowHandler_ESI.DEQUE_MAXLEN)
+        self.buffer_queue = Queue(maxsize=ElveflowHandler_ESI.QUEUE_MAXLEN)
         self.run_flag = threading.Event()
-        self.run_flag.clear()
+        self.run_flag.set()
 
     def start(self, getheader_handler=None):
         """Start actually trying to read in data from an Elveflow log. Do not call this function more than once"""
@@ -100,7 +99,11 @@ class ElveflowHandler_ESI:
                                 yield parsedline
             try:
                 for line in line_generator():
-                    self.buffer_deque.append(line)
+                    self.buffer_queue.put(line, False)
+                    # print("putting line %s" % line)
+                    time.sleep(0.1)
+            except Queue_Full as e:
+                pass
             finally:
                 self.errorlogger.info("ENDING HANDLER THREAD %s" % threading.current_thread())
 
@@ -117,7 +120,7 @@ class ElveflowHandler_ESI:
         If nothing is in there, return None. (You cannot tell the difference between the leftmost element of
         the buffer holding None and the buffer being empty, but in this class, the former case should never happen)"""
         try:
-            return self.buffer_deque.popleft()
+            return self.buffer_queue.get(False)
         except IndexError:
             return None
 
@@ -127,8 +130,8 @@ class ElveflowHandler_ESI:
         def generateElements():
             try:
                 while True:
-                    yield self.buffer_deque.popleft()
-            except IndexError:
+                    yield self.buffer_queue.get(False)
+            except Queue_Empty:
                 return
         return [elt for elt in generateElements()]
 
@@ -138,8 +141,8 @@ class ElveflowHandler_ESI:
 
 class ElveflowHandler_SDK:
     """a class that handles interfacing with the Elveflow directly"""
-    SLEEPTIME = 0.5 #how many seconds between each read of the Elveflow output
-    DEQUE_MAXLEN = None #this can be a number if memory becomes an issue
+    SLEEPTIME = 0.2 #how many seconds between each read of the Elveflow output
+    QUEUE_MAXLEN = 0 #zero means infinite
 
     def __init__(self, sourcename=None, errorlogger=None, sensortypes=[], starttime=0):
         if sourcename is None or sourcename == '':
@@ -182,7 +185,7 @@ class ElveflowHandler_SDK:
         self.errorlogger.info("Done initializing Elveflow")
 
         self.header = ["time [s]", "Pressure 1 [mbar]","Pressure 2 [mbar]","Pressure 3 [mbar]","Pressure 4 [mbar]","Volume flow rate 1 [µL/min]","Volume flow rate 2 [µL/min]","Volume flow rate 3 [µL/min]","Volume flow rate 4 [µL/min]"]
-        self.buffer_deque = deque(maxlen=ElveflowHandler_SDK.DEQUE_MAXLEN)
+        self.buffer_queue = Queue(maxsize=ElveflowHandler_SDK.QUEUE_MAXLEN)
         self.run_flag = threading.Event()
         self.run_flag.set()
 
@@ -209,7 +212,10 @@ class ElveflowHandler_SDK:
 
                 newline[self.header[0]] = time.time() - self.starttime
 
-                self.buffer_deque.append(newline)
+                try:
+                    self.buffer_queue.put(newline, False)
+                except Queue_Full as e:
+                    pass
 
             try:
                 error = Elveflow_SDK.OB1_Destructor(self.instr_ID.value)
@@ -234,7 +240,7 @@ class ElveflowHandler_SDK:
         If nothing is in there, return None. (You cannot tell the difference between the leftmost element of
         the buffer holding None and the buffer being empty, but in this class, the former case should never happen)"""
         try:
-            return self.buffer_deque.popleft()
+            return self.buffer_queue.get(False)
         except IndexError:
             return None
 
@@ -244,8 +250,8 @@ class ElveflowHandler_SDK:
         def generateElements():
             try:
                 while True:
-                    yield self.buffer_deque.popleft()
-            except IndexError:
+                    yield self.buffer_queue.get(False)
+            except Queue_Empty:
                 return
         return [elt for elt in generateElements()]
 
@@ -253,7 +259,7 @@ class ElveflowHandler_SDK:
         """returns the header, a list of strings"""
         return self.header
 
-    def setPresure(self, channel_number, value):
+    def setPressure(self, channel_number, value):
         """tells the Elveflow to set the pressure"""
         error = Elveflow_SDK.OB1_Set_Press(self.instr_ID.value, channel_number, value, byref(self.calib), 1000)
         self.errorlogger.info('Set pressure of Channel %i to %s' % (channel_number, value))
