@@ -72,13 +72,22 @@ class main:
         self.spec_command = tk.StringVar(value='')
         self.spec_command_entry = tk.Entry(self.auto_page, textvariable=self.spec_command)
         self.spec_command_entry.bind("<Return>", lambda event: self.SPEC_Connection.command(self.spec_command.get()))
+        self.pump_refill_button = tk.Button(self.auto_page, text='Refill Oil', command=lambda: self.pump_refill_command())
+        self.pump_inject_button = tk.Button(self.auto_page, text='Run Buffer/Sample/Buffer', command=lambda: self.pump_inject_command())
         # Config page
         self.save_config_button = tk.Button(self.config_page, text='Save Config', command=self.save_config)
         self.load_config_button = tk.Button(self.config_page, text='Load Config', command=self.load_config)
         self.config_oil_tick_size_label = tk.Label(self.config_page, text='Oil Use (mL/min)')
         self.config_oil_tick_size = tk.Spinbox(self.config_page, from_=0, to=10, textvariable=self.oil_ticksize, increment=0.01)
         self.spec_address = tk.StringVar(value='192.168.1.5')
-        # self.spec_address = tk.StringVar(value='192.168.0.233')
+        self.volumes_label = tk.Label(self.config_page, text='Buffer/Sample/Buffer volumes in uL:')
+        self.first_buffer_volume = tk.IntVar(value=25)     # May need ot be a doublevar
+        self.first_buffer_volume_box = tk.Entry(self.config_page, textvariable=self.first_buffer_volume)
+        self.sample_volume = tk.IntVar(value=25)           # May need ot be a doublevar
+        self.sample_volume_box = tk.Entry(self.config_page, textvariable=self.sample_volume)
+        self.last_buffer_volume = tk.IntVar(value=25)      # May need ot be a doublevar
+        self.last_buffer_volume_box = tk.Entry(self.config_page, textvariable=self.last_buffer_volume)
+        # self.spec_address = tk.StringVar(value='192.168.0.233')   # For Alex M home use
         self.config_spec_address = tk.Entry(self.config_page, textvariable=self.spec_address)
         self.config_spec_address_label = tk.Label(self.config_page, text='SPEC Address')
         self.spec_port = tk.IntVar(value=7)
@@ -100,7 +109,6 @@ class main:
         # self.save_button.grid(row=0, column=4) # TODO
         self.elveflow_display = ElveflowDisplay(self.setup_page)
         self.elveflow_display.grid(row=0, column=0)
-
         self.draw_static()
         self.load_config(filename='config.ini')
 
@@ -127,6 +135,8 @@ class main:
         self.spec_connect_button.grid(row=2, column=0)
         self.spec_command_entry.grid(row=3, column=0)
         self.spec_send_button.grid(row=3, column=1)
+        self.pump_refill_button.grid(row=4, column=0)
+        self.pump_inject_button.grid(row=4, column=1)
         # Config page
         self.save_config_button.grid(row=0, column=0)
         self.load_config_button.grid(row=0, column=1)
@@ -136,6 +146,10 @@ class main:
         self.config_spec_address.grid(row=2, column=1)
         self.config_spec_port_label.grid(row=3, column=0)
         self.config_spec_port.grid(row=3, column=1)
+        self.volumes_label.grid(row=4, column=0)
+        self.first_buffer_volume_box.grid(row=4, column=1)
+        self.sample_volume_box.grid(row=4, column=2)
+        self.last_buffer_volume_box.grid(row=4, column=3)
         # Python Log
         self.python_logger_gui.grid(row=0, column=0, sticky='NSEW')
         python_handler = TextHandler(self.python_logger_gui)
@@ -195,6 +209,27 @@ class main:
         self.stop()
         self.SPEC_Connection.stop()
         self.main_window.destroy()
+
+    def pump_refill_command(self):
+        """Do nothing. It's a dummy command."""
+        #   Pressurize Oil with Elveflow
+        #   Switch valve (may be hooked to pump)
+        #   Set pump refill params
+        #   Refill pump
+        #   Set pump to injection mode
+        #   Switch valve
+        #   Vent Oil
+        pass
+
+    def pump_inject_command(self):
+        """Do nothing. It's a dummy command."""
+        #   Check valve positions
+        #   Inject X uL
+        #   Switch sample valve to sample loop
+        #   Inject Y uL
+        #   Switch sample valve to buffer positions
+        #   Inject Z uL
+        pass
 
 
 if __name__ == "__main__":
