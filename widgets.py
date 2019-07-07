@@ -5,16 +5,16 @@ import tkinter as tk
 import tkinter.font
 import logging, csv
 import tkinter.scrolledtext as ScrolledText
-import matplotlib
-matplotlib.use('TkAgg')
-import matplotlib.pyplot as plt
 import numpy as np
 import FileIO
 import threading
 import time
 import os.path
 from queue import Queue, Empty as Queue_Empty
-
+import matplotlib
+matplotlib.use('TkAgg')
+import os.path
+from queue import Queue, Empty as Queue_Empty
 
 
 class FluidLevel(tk.Canvas):
