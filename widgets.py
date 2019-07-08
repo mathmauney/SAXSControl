@@ -14,6 +14,7 @@ import threading
 import time
 import os.path
 from queue import Queue, Empty as Queue_Empty
+from simple_pid import PID
 
 
 
@@ -222,8 +223,8 @@ class ElveflowDisplay(tk.Canvas):
             tkinter.ttk.Separator(self, orient=tk.HORIZONTAL).grid(row=rowcounter, column=1, columnspan=3, sticky='ew', padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
             rowcounter += 1
 
-            tk.Label(self, text="Set pressure 1, 2:").grid(row=rowcounter, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
-            tk.Label(self, text="Set pressure 3, 4:").grid(row=rowcounter+1, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+            tk.Label(self, text="Set 1, 2:").grid(row=rowcounter, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+            tk.Label(self, text="Set 3, 4:").grid(row=rowcounter+1, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
             self.set_pressure_entries = [None, None, None, None]
             for i in range(4):
                 self.set_pressure_entries[i] = tk.Entry(self, textvariable=self.pressureValues[i], justify="left")
@@ -231,8 +232,10 @@ class ElveflowDisplay(tk.Canvas):
                 self.set_pressure_entries[i].grid(row=rowcounter+i//2, column=2+i%2, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
                 self.pressureValues[i].set("")
             rowcounter += 2
-            self.set_pressure_button = tk.Button(self, text='Set pressure (blank = zero)', command=self.set_pressure) # TODO
-            self.set_pressure_button.grid(row=rowcounter, column=1, columnspan=3, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+            self.set_pressure_button = tk.Button(self, text='Set pressure (mbar)', command=self.set_pressure) # TODO
+            self.set_pressure_button.grid(row=rowcounter, column=2, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+            self.set_pressure_button = tk.Button(self, text='Set flow rate (µL/min)', command=self.set_flow_rate) # TODO
+            self.set_pressure_button.grid(row=rowcounter, column=3, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
             rowcounter += 1
 
         tkinter.ttk.Separator(self, orient=tk.HORIZONTAL).grid(row=rowcounter, column=1, columnspan=3, sticky='ew', padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
@@ -385,7 +388,6 @@ class ElveflowDisplay(tk.Canvas):
         else:
             self.errorlogger.error('cannot start saving (header is unknown). Try again in a moment')
 
-
     def stop_saving(self):
         if self.save_flag.is_set():
             self.errorlogger.info('stopped saving')
@@ -436,7 +438,17 @@ class ElveflowDisplay(tk.Canvas):
                 self.elveflow_handler.setPressure(i, pressure_to_set)
                 x.set(str(pressure_to_set))
             except ValueError as e:
-                self.elveflow_handler.setPressure(i, 0)
+                # self.elveflow_handler.setPressure(i, 0)
+                x.set("")
+
+    def set_flow_rate(self):
+        for i, x in enumerate(self.pressureValues, 1):
+            try:
+                pressure_to_set = int(float(x.get()))
+                # self.elveflow_handler.setPressure(i, pressure_to_set)
+                x.set(str(pressure_to_set))
+            except ValueError as e:
+                # self.elveflow_handler.setPressure(i, 0)
                 x.set("")
 
     def set_axis_limits(self):
