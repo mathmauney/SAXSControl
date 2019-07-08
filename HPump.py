@@ -74,7 +74,7 @@ class HPump:
 		resource.write((self.address+"RAT"+ratestr+units+"\n\r").encode())
 		val=resource.read(4)
 		#TODO: add possibillity to change units
-		self.flowrate=rate #consider moving to after checking with pump
+		self.infuserate=rate #consider moving to after checking with pump
 		resource.close()
 		return val.decode()
 
@@ -86,7 +86,7 @@ class HPump:
 		resource.write((self.address+"RFR"+ratestr+units+"\n\r").encode())
 		val=resource.read(4)
 		#TODO: add possibillity to change units
-		self.flowrate=rate #consider moving to after checking with pump
+		self.fillrate=rate #consider moving to after checking with pump
 		resource.close()
 		return val.decode()
 
@@ -122,6 +122,25 @@ class HPump:
 		resource.write(b'DIRREV')
 		resource.close()
 
+	def setmodepump(self):
+		resource.open()
+		resource.write(b'MOD PMP')
+		resource.close()
+
+	def setmodevol(self):
+		resource.open()
+		resource.write(b'MOD PMP')
+		resource.close()
+
+	def setmodeprogam(self):
+		resource.open()
+		resource.write(b'MOD PMP')
+		resource.close()
+
+	def settargetvol(self,value):
+		resource.open()
+		resource.write(b'MOD PMP')
+		resource.close()
 
 
 #TODO: Add functions to querry pump- double check Diameter, fslowraate, and check volume
