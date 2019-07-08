@@ -2,7 +2,7 @@
 import csv
 import time
 
-INFILE = "Elveflow/responsetime_noresist_01_15ul.txt"
+INFILE = "Elveflow/responsetime_noresist_01_05.txt"
 OUTFILE = "Elveflow/temp.txt"
 TIME_INTERVAL = 0.2     # in s
 
