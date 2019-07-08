@@ -126,6 +126,7 @@ class ElveflowDisplay(tk.Canvas):
         """Start the FluidLevel object with default paramaters."""
         super().__init__(window, **kwargs)
 
+        self.window = window
         self.dataXLabel = tk.StringVar()
         self.dataYLabel = tk.StringVar()
         self.sensorTypes = [tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar()]
@@ -156,7 +157,6 @@ class ElveflowDisplay(tk.Canvas):
         rowcounter = 0
         self.start_button = tk.Button(self, text='Start Connection', command=self.start)
         self.start_button.grid(row=rowcounter, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
-        print(self.start_button)
         self.stop_button = tk.Button(self, text='Stop Connection', command=self.stop)
         self.stop_button.grid(row=rowcounter, column=2, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
         rowcounter += 1
@@ -231,8 +231,8 @@ class ElveflowDisplay(tk.Canvas):
             rowcounter += 2
             self.set_pressure_button = tk.Button(self, text='Set pressure (mbar)', command=self.set_pressure) # TODO
             self.set_pressure_button.grid(row=rowcounter, column=2, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
-            self.set_pressure_button = tk.Button(self, text='Set flow rate (µL/min)', command=self.set_flow_rate) # TODO
-            self.set_pressure_button.grid(row=rowcounter, column=3, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+            self.set_flow_rate_button = tk.Button(self, text='Set flow rate (µL/min)', command=self.set_flow_rate) # TODO
+            self.set_flow_rate_button.grid(row=rowcounter, column=3, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
             rowcounter += 1
 
         tkinter.ttk.Separator(self, orient=tk.HORIZONTAL).grid(row=rowcounter, column=1, columnspan=3, sticky='ew', padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
@@ -277,6 +277,7 @@ class ElveflowDisplay(tk.Canvas):
             self.stop_saving_button.config(state=tk.DISABLED)
             self.saveFileName_entry.config(state=tk.DISABLED)
             self.set_pressure_button.config(state=tk.DISABLED)
+            self.set_flow_rate_button.config(state=tk.DISABLED)
             for item in self.set_pressure_entries:
                 item.config(state=tk.DISABLED)
             self.saveFile = None
@@ -298,6 +299,7 @@ class ElveflowDisplay(tk.Canvas):
         if FileIO.USE_SDK:
             self.reading_from_entry.config(state=tk.DISABLED)
             self.set_pressure_button.config(state=tk.NORMAL)
+            self.set_flow_rate_button.config(state=tk.NORMAL)
             for item in self.set_pressure_entries:
                 item.config(state=tk.NORMAL)
             for item in self.sensorDropdowns:
@@ -334,11 +336,9 @@ class ElveflowDisplay(tk.Canvas):
                     if save_flag.is_set():
                         for dict in newData:
                             self.saveFileWriter.writerow([str(dict[key]) for key in self.elveflow_handler.header])  # TODO
-
                     time.sleep(ElveflowDisplay.POLLING_PERIOD)
             finally:
                 try:
-                    self.stop()
                     print("DONE WITH THIS THREAD, %s" % threading.current_thread())
                 except RuntimeError:
                     print("Runtime error detected in display thread %s while trying to close. Ignoring." % threading.current_thread())
@@ -356,20 +356,24 @@ class ElveflowDisplay(tk.Canvas):
             self.saveFileName_entry.config(state=tk.NORMAL)
             self.saveFileName_suffix.set("_%d.csv" % time.time())
 
-    def stop(self):
+    def stop(self, shutdown=False):
         self.run_flag.clear()
-        # print("run flag cleared")
+        print("Display run flag cleared")
+
         if self.elveflow_handler is not None:
             self.elveflow_handler.stop()
-        if FileIO.USE_SDK:
+        if FileIO.USE_SDK and not shutdown:
+            # if we're actually exiting, no need to update the GUI
             self.reading_from_entry.config(state=tk.NORMAL)
             for item in self.sensorDropdowns:
                 item.config(state=tk.NORMAL)
             for item in self.set_pressure_entries:
                 item.config(state=tk.DISABLED)
             self.set_pressure_button.config(state=tk.DISABLED)
-        self.stop_saving()
-        self._initialize_variables()
+            self.set_flow_rate_button.config(state=tk.DISABLED)
+        self.stop_saving(shutdown=shutdown)
+        if not shutdown:
+            self._initialize_variables()
 
     def start_saving(self):
         if self.elveflow_handler.header is not None:
@@ -384,11 +388,11 @@ class ElveflowDisplay(tk.Canvas):
         else:
             self.errorlogger.error('cannot start saving (header is unknown). Try again in a moment')
 
-    def stop_saving(self):
+    def stop_saving(self, shutdown=False):
         if self.save_flag.is_set():
             self.errorlogger.info('stopped saving')
         self.save_flag.clear()
-        if FileIO.USE_SDK:
+        if FileIO.USE_SDK and not shutdown:
             self.stop_saving_button.config(state=tk.DISABLED)
             self.start_saving_button.config(state=tk.NORMAL)
             self.saveFileName_entry.config(state=tk.NORMAL)
@@ -408,7 +412,6 @@ class ElveflowDisplay(tk.Canvas):
     def update_plot(self):
         dataXLabel = self.dataXLabel.get()
         dataYLabel = self.dataYLabel.get()
-
         try:
             dataX = [elt[dataXLabel] for elt in self.data if not np.isnan(elt[dataXLabel]) and not np.isnan(elt[dataYLabel])]
             dataY = [elt[dataYLabel] for elt in self.data if not np.isnan(elt[dataXLabel]) and not np.isnan(elt[dataYLabel])]
@@ -419,10 +422,8 @@ class ElveflowDisplay(tk.Canvas):
             self.ax.set_ylabel(self.dataYLabel.get(), fontsize=14)
         except (ValueError, KeyError):
             extremes = [*self.ax.get_xlim(), *self.ax.get_ylim()]
-
         limits = [item if item is not None else extremes[i]
                   for (i, item) in enumerate(self.axis_limits_numbers)]
-
         self.ax.set_xlim(*limits[0:2])
         self.ax.set_ylim(*limits[2:4])
         self.canvas.draw()
@@ -437,13 +438,15 @@ class ElveflowDisplay(tk.Canvas):
                 self.elveflow_handler.setPressure(i, 0)
                 x.set("")
 
-    def set_flow_rate(self):
+    def set_flow_rate(self, refresh_rate=0.1, stabilization_tolerance=0.01, stabilization_time=1, callback=None):
+        """do a PID loop until something happens"""
         for i, x in enumerate(self.pressureValues, 1):
             try:
                 pressure_to_set = int(float(x.get()))
                 # self.elveflow_handler.setPressure(i, pressure_to_set)
                 # TODO: PID control
                 x.set(str(pressure_to_set))
+                self.errorlogger.debug(self.elveflow_handler.peekOne())
             except ValueError:
                 pass
                 # self.elveflow_handler.setPressure(i, 0)

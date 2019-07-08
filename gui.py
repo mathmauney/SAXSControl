@@ -105,7 +105,6 @@ class main:
         self.draw_static()
         self.elveflow_display = ElveflowDisplay(self.elveflow_page, core_height, core_width, self.python_logger)
         self.elveflow_display.grid(row=0, column=0)
-        print(self.elveflow_display)
         self.load_config(filename='config.ini')
 
     def draw_static(self):
@@ -205,9 +204,11 @@ class main:
 
     def exit(self):
         """Exit the GUI and stop all running things"""
+        print("stop button pressed")
         self.stop()
+        print("stop signal done")
         if self.elveflow_display.run_flag.is_set():
-            self.elveflow_display.stop()
+            self.elveflow_display.stop(shutdown=False)
         if self.SPEC_Connection.run_flag.is_set():
             self.SPEC_Connection.stop()
         self.main_window.destroy()
