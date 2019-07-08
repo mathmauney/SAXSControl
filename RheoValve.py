@@ -4,9 +4,8 @@ Initial set up using UART communication directly through USB
 All functions in this version need testing. with actual pump.
 """
 
-import serial #Needed for direct communication
+import serial  # Needed for direct communication
 
-class Rheodyne:
 
     def __init__(self,name="",valvetype=0,possition=0, PCConnect=True,addressI2C=-1):
         self.name=name                      #valve nickname
@@ -19,12 +18,21 @@ class Rheodyne:
         self.serialobject=serial.Serial(baudrate=19200,timeout=1)
         #set port throughuh another function.
 
-        ## TODO: error handler to  avoid using withouth port being configured!!!
+    def __init__(self, name="", valvetype=0, position=0):
+        self.name = name                      # valve nickname
+        self.valvetype = valvetype            # int to mark max number of valve possions 2 or 6
+        self.position = position
+        # now lets create a serial object within the class to address the valve
+        # I am presetting baudrate to that expdcted from rheodyne valves.
+        # Actual baudrate can change- they just must agree.
+        self.serialobject = serial.Serial(baudrate=19200, timeout=1)
+        # set port through another function.
+        # TODO: error handler to  avoid using withouth port being configured!!!
 
-    def setport(self,number): #will keep set port accross different classes
+    def setport(self, number):  # will keep set port accross different classes
         if self.serialobject.is_open:
             self.serialobject.close()
-        self.serialobject.port="COM"+str(number)
+        self.serialobject.port = "COM" + str(number)
 
     def settocontroller(self,controller):
         self.PCConnect=False
@@ -63,7 +71,7 @@ class Rheodyne:
                 return -1   #error valve didnt acknowledge
 
 
-        #todo maybe incorporate status check to confirm valve is in the right possition
+        # todo maybe incorporate status check to confirm valve is in the right position
     def statuscheck(self):
         if self.PCConnect:
             if not self.serialobject.is_open:
@@ -109,6 +117,5 @@ class Rheodyne:
                 #self.controller.close()
                 return 0
         else:
-            return -1 # TODO: Error because value is not even
-
-        return ans
+            return -1  # TODO: Error because value is not even
+        return  # ans
