@@ -36,9 +36,10 @@ class HPump:
 
 	#Pump intialization need pump number
 	#need to set defsults fpr simpler impoementation
-	def __init__(self,address="",running=False):
+	def __init__(self,address="",running=False,infusing=True):
 		self.address=address
 		self.running=running
+		self.infusing=infusing
 		#add init for syringe dismeter,flowrate, Direction etc
 
 
@@ -61,12 +62,12 @@ class HPump:
 	def	stoppump(self,resource=pumpserial):
 		resource.open()
 		resource.write((self.address+"STP\n\r").encode())
-		val=resource.read_until("/r")
+		val=resource.read_until("\n\r")
 		resource.close()
 		self.running=False #consider moving to after checking with pump
 		return val.decode()
 
-	def setflowrate(self,rate,units="UM",resource=pumpserial):
+	def setinfuserate(self,rate,units="UM",resource=pumpserial):
 		#consider moving to after checking with pump
 		ratestr=str(rate).zfill(5)
 		resource.open()
@@ -77,9 +78,50 @@ class HPump:
 		resource.close()
 		return val.decode()
 
+
+	def setrefillrate(self,rate,units="UM",resource=pumpserial):
+		#consider moving to after checking with pump
+		ratestr=str(rate).zfill(5)
+		resource.open()
+		resource.write((self.address+"RFR"+ratestr+units+"\n\r").encode())
+		val=resource.read(4)
+		#TODO: add possibillity to change units
+		self.flowrate=rate #consider moving to after checking with pump
+		resource.close()
+		return val.decode()
+
+
+	def setflowrate(self,rate,units="UM",resource=pumpserial):
+		#Function to change the current flowrate whether infuse or withdraw
+		if(self.infusing):
+			return setinfuserate(rate,units)
+		else:
+			return setrefillrate(rate,units)
+
+
 	def	sendcommand(self,command,resource=pumpserial): #sends an albitrary command
 		resource.open()
 		resource.write((command).encode())
 		resource.close()
+
+	def infuse(self):
+		self.infusing=True
+		resource.open()
+		resource.write(b'DIRINF')
+		resource.close()
+
+	def refill(self):
+		self.infusing=False
+		resource.open()
+		resource.write(b'DIRREF')
+		resource.close()
+
+	def reverse(self):
+		self.infusing=(not self.infusing)
+		resource.open()
+		resource.write(b'DIRREV')
+		resource.close()
+
+
 
 #TODO: Add functions to querry pump- double check Diameter, fslowraate, and check volume
