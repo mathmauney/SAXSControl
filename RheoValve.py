@@ -40,27 +40,27 @@ class Rheodyne:
         if self.PCConnect:
             if not self.serialobject.is_open:
                 self.serialobject.open()
-                self.serialobject.write(("P0"+str(possition)+"\n\r").encode())
-                ans=self.serialobject.read()
-                self.serialobject.close()           #Trying to be polite and leaving the ports closed
-                if ans==b'\r': #pump returns this if command acknowledged
-                    self.possition=possition
-                    return 0    #Valve acknowledged commsnd
-                else:
-                    return -1   #error valve didnt acknowledge
+            self.serialobject.write(("P0"+str(possition)+"\n\r").encode())
+            ans=self.serialobject.read()
+            #self.serialobject.close()           #Trying to be polite and leaving the ports closed
+            if ans==b'\r': #pump returns this if command acknowledged
+                self.possition=possition
+                return 0    #Valve acknowledged commsnd
+            else:
+                return -1   #error valve didnt acknowledge
         elif self.addressI2C==-1:
             return -1
         else:
             if not self.controller.is_open:
                 self.controller.open()
-                self.controller.write(("P%03i%i"%(self.addressI2C,possition)).encode())
-                ans=self.controller.read()
-                self.controller.close()           #Trying to be polite and leaving the ports closed
-                if ans==b'0': #pump returns this if command acknowledged
-                    self.possition=possition
-                    return 0    #Valve acknowledged commsnd
-                else:
-                    return -1   #error valve didnt acknowledge
+            self.controller.write(("P%03i%i"%(self.addressI2C,possition)).encode())
+            ans=self.controller.read()
+            #self.controller.close()           #Trying to be polite and leaving the ports closed
+            if ans==b'0': #pump returns this if command acknowledged
+                self.possition=possition
+                return 0    #Valve acknowledged commsnd
+            else:
+                return -1   #error valve didnt acknowledge
 
 
         #todo maybe incorporate status check to confirm valve is in the right possition
@@ -76,12 +76,12 @@ class Rheodyne:
         elif self.addressI2C==-1:
             return -1
         else:
-        if not self.controller.is_open:
+            if not self.controller.is_open:
                 self.controller.open()
-            self.controller.write(("S%03i"%self.addressI2C).encode())
-            ans=self.controller.read() #need to ensure thwt buffer doesnt build up-> if so switch to readln
-            self.controller.close()
-            return int(ans)   #returns valve possition
+                self.controller.write(("S%03i"%self.addressI2C).encode())
+                ans=self.controller.read() #need to ensure thwt buffer doesnt build up-> if so switch to readln
+            #self.controller.close()
+        return int(ans)   #returns valve possition
             # TODO: add error handlers
 
 
@@ -101,11 +101,12 @@ class Rheodyne:
             elif self.addressI2C==-1:
                 return -1
             else:
-                self.controller.open()
+                if not self.controller.is_open:
+                    self.controller.open()
                 self.controller.write(("N%03i%03i"%(self.addressI2C,address)).encode())
                 while(self.controller.in_waiting()>0):
                     print(self.controller.readline())
-                self.controller.close()
+                #self.controller.close()
                 return 0
         else:
             return -1 # TODO: Error because value is not even
