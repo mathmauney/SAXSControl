@@ -24,14 +24,16 @@ SDK_SENSOR_TYPES = {
 
 if USE_SDK:
     from ctypes import c_int32, c_double, byref
-    import sys, os.path
-    sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "Elveflow_SDK"))#add the path of the LoadElveflow.py
+    import sys
+    import os.path
+    sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "Elveflow_SDK"))   # add the path of the LoadElveflow.py
     import Elveflow64 as Elveflow_SDK
+
 
 class ElveflowHandler_ESI:
     """a class that handles reading in Elveflow-generated log files"""
-    SLEEPTIME = 0.2 #if no line exists, wait this many seconds before trying again
-    QUEUE_MAXLEN = 0 #zero means infinite
+    SLEEPTIME = 0.2  # if no line exists, wait this many seconds before trying again
+    QUEUE_MAXLEN = 0  # zero means infinite
 
     TESTING_FILENAME = 'Elveflow/temp.txt'
 
@@ -68,6 +70,7 @@ class ElveflowHandler_ESI:
         """Start actually trying to read in data from an Elveflow log. Do not call this function more than once"""
         def start_thread():
             self.errorlogger.info("STARTING HANDLER THREAD %s" % threading.current_thread())
+
             def line_generator():
                 with open(self.sourcename, 'a+', encoding="latin-1", newline='') as f:
                     # a+ creates the file if it doesn't exist, or just reads it if not
@@ -84,13 +87,13 @@ class ElveflowHandler_ESI:
                             # I think I've avoided this with if statements, but you can't be sure.
                             if self.header is None:
                                 # the first line should be the header
-                                self.header = next( csv.reader([line], delimiter='\t') )  #get the first (only) row from the iterator
+                                self.header = next(csv.reader([line], delimiter='\t'))  # get the first (only) row from the iterator
                                 self.errorlogger.info("SETTING HEADER %s" % threading.current_thread())
                                 if getheader_handler is not None:
                                     getheader_handler()
                             else:
                                 # otherwise, we already have a header, so just read in data
-                                parsedline = next( csv.DictReader([line], fieldnames=self.header, delimiter='\t') )
+                                parsedline = next(csv.DictReader([line], fieldnames=self.header, delimiter='\t'))
                                 for key in parsedline:
                                     try:
                                         parsedline[key] = float(parsedline[key])
@@ -102,7 +105,7 @@ class ElveflowHandler_ESI:
                     self.buffer_queue.put(line, False)
                     # print("putting line %s" % line)
                     time.sleep(0.1)
-            except Queue_Full as e:
+            except Queue_Full:
                 pass
             finally:
                 self.errorlogger.info("ENDING HANDLER THREAD %s" % threading.current_thread())
@@ -139,10 +142,11 @@ class ElveflowHandler_ESI:
         """returns the header, a list of strings"""
         return self.header
 
+
 class ElveflowHandler_SDK:
     """a class that handles interfacing with the Elveflow directly"""
-    SLEEPTIME = 0.2 #how many seconds between each read of the Elveflow output
-    QUEUE_MAXLEN = 0 #zero means infinite
+    SLEEPTIME = 0.2  # how many seconds between each read of the Elveflow output
+    QUEUE_MAXLEN = 0  # zero means infinite
 
     def __init__(self, sourcename=None, errorlogger=None, sensortypes=[], starttime=0):
         if sourcename is None or sourcename == '':
@@ -166,7 +170,7 @@ class ElveflowHandler_SDK:
         self.starttime = starttime
 
         self.instr_ID = c_int32()
-        self.calib =(c_double*1000)() # always define array that way, calibration should have 1000 elements
+        self.calib = (c_double*1000)()  # always define array that way, calibration should have 1000 elements
 
         err_code = Elveflow_SDK.OB1_Initialization(self.sourcename, 3, 3, 3, 3, byref(self.instr_ID))
         # pressure sensors are hard-coded to be the 0-8000 mbar type (type 3)
@@ -174,7 +178,8 @@ class ElveflowHandler_SDK:
             self.errorlogger.warning("Initialization error code %i" % err_code)
 
         for i in range(len(sensortypes)):
-            err_code = Elveflow_SDK.OB1_Add_Sens(self.instr_ID.value, i+1, SensorType=sensortypes[i], DigitalAnalog=0, FSens_Digit_Calib=0, FSens_Digit_Resolution=3) # TODO: what is the resolution? What does that mean?
+            err_code = Elveflow_SDK.OB1_Add_Sens(self.instr_ID.value, i+1, SensorType=sensortypes[i], DigitalAnalog=0,
+                                                 FSens_Digit_Calib=0, FSens_Digit_Resolution=3)   # TODO: what is the resolution? What does that mean?
             if err_code != 0:
                 self.errorlogger.warning("sensor addition error code is %d" % self.instr_ID.value)
 
@@ -184,7 +189,8 @@ class ElveflowHandler_SDK:
             self.errorlogger.warning("Calibration error code %i" % err_code)
         self.errorlogger.info("Done initializing Elveflow")
 
-        self.header = ["time [s]", "Pressure 1 [mbar]","Pressure 2 [mbar]","Pressure 3 [mbar]","Pressure 4 [mbar]","Volume flow rate 1 [µL/min]","Volume flow rate 2 [µL/min]","Volume flow rate 3 [µL/min]","Volume flow rate 4 [µL/min]"]
+        self.header = ["time [s]", "Pressure 1 [mbar]", "Pressure 2 [mbar]", "Pressure 3 [mbar]", "Pressure 4 [mbar]",
+                       "Volume flow rate 1 [µL/min]", "Volume flow rate 2 [µL/min]", "Volume flow rate 3 [µL/min]", "Volume flow rate 4 [µL/min]"]
         self.buffer_queue = Queue(maxsize=ElveflowHandler_SDK.QUEUE_MAXLEN)
         self.run_flag = threading.Event()
         self.run_flag.set()
@@ -214,13 +220,13 @@ class ElveflowHandler_SDK:
 
                 try:
                     self.buffer_queue.put(newline, False)
-                except Queue_Full as e:
+                except Queue_Full:
                     pass
 
             try:
                 error = Elveflow_SDK.OB1_Destructor(self.instr_ID.value)
-                print("Closing connection with Elveflow%s." % ("" if error==0 else (" (Error code %i)" % error)))
-            except RuntimeError as e:
+                print("Closing connection with Elveflow%s." % ("" if error == 0 else (" (Error code %i)" % error)))
+            except RuntimeError:
                 print("Runtime error detected in IO handler thread %s while trying to close. Ignoring." % threading.current_thread())
             finally:
                 print("As Handler %s is closing, these are the remaining threads: %s" % (threading.current_thread(), threading.enumerate()))
@@ -265,6 +271,7 @@ class ElveflowHandler_SDK:
         self.errorlogger.info('Set pressure of Channel %i to %s' % (channel_number, value))
         if error != 0:
             self.errorlogger.warning('ERROR CODE SET PRESSURE CHANNEL %i: %s' % (channel_number, error))
+
 
 if USE_SDK:
     ElveflowHandler = ElveflowHandler_SDK
