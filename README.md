@@ -26,18 +26,21 @@ To use the virtual environment, go `cd` into the new folder created, `SAXSContro
 
 ## What is implemented or in progress
 
-- oil level display
+- oil level display (alex-dev branch)
 - oil syringe
-- logging items into a file
-- Elveflow interfacing
+- logging items into a file (derrick-dev branch)
+- Syringe pump UART Control
+- Rheodyne valve USB(UART) Control
 
 ## TODO
 
 - interfacing with the following systems:
   - cleaning station
-  - valve control
+  - Elveflow
+  - Arduino Controll
   - CHESS systems
 - diplay elements
   - cleaning station
-- PID loop for setting the flow rate rather than setting the pressure
-  - relatedly, limit the pressure gradient
+  - flow rates
+  - PID loop for setting the flow rate rather than setting the pressure
+    - relatedly, limit the pressure gradient
