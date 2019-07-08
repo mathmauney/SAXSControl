@@ -1,27 +1,30 @@
-"""Simple code implenting pump class to control pumps.
-
+"""
+Simple code implenting pump class to control pumps.
 Pollack Lab-Cornell
 Josue San Emeterio
 04/04/19
 """
-from HPump import HPump
-import tkinter as tk
+from HPump import *
+from tkinter import *
 
-# Create pump resource
-firstpump = HPump()
+#create pump resource
+firstpump=HPump()
 
-top = tk.Tk()
 
-s = tk.Spinbox(top, from_=1, to=10)
+
+top=Tk()
+
+
+s=Spinbox(top,from_=1, to=10)
 s.pack()
 
-Bset = tk.Button(top, text="Set", command=lambda: firstpump.setport(s.get()))
+Bset=Button(top,text="Set",command=lambda:firstpump.setport(s.get()))
 Bset.pack()
 
-Brun = tk.Button(top, text="RUN", command=firstpump.startpump)
+Brun=Button(top,text="RUN",command=lambda:firstpump.startpump())
 Brun.pack()
 
-Bstop = tk.Button(top, text="STOP", command=firstpump.stoppump)
+Bstop=Button(top,text="STOP",command=lambda:firstpump.stoppump())
 Bstop.pack()
 
 top.mainloop()
