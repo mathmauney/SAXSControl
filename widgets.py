@@ -13,6 +13,7 @@ import time
 import os.path
 from queue import Queue, Empty as Queue_Empty
 import matplotlib
+from matplotlib import pyplot as plt
 matplotlib.use('TkAgg')
 
 
@@ -166,8 +167,8 @@ class ElveflowDisplay(tk.Canvas):
         if not FileIO.USE_SDK:
             self.reading_from_entry.config(state="readonly")
         self.reading_from_entry.grid(row=rowcounter, column=2, columnspan=2, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
-        fontsize = tkinter.font.Font(font=self.reading_from_entry ['font'])['size']
-        self.reading_from_entry.config(width=2 * int(remaining_width_per_column / fontsize)) # width is in units of font size
+        fontsize = tkinter.font.Font(font=self.reading_from_entry['font'])['size']
+        self.reading_from_entry.config(width=2 * int(remaining_width_per_column / fontsize))  # width is in units of font size
         rowcounter += 1
 
         if FileIO.USE_SDK:
@@ -176,13 +177,13 @@ class ElveflowDisplay(tk.Canvas):
             self.sensorDropdowns = [None, None, None, None]
             for i in range(4):
                 self.sensorDropdowns[i] = tk.OptionMenu(self, self.sensorTypes[i], None)
-                self.sensorDropdowns[i]['menu'].delete(0, 'end') # there's a default empty option, so get rid of that first
-                self.sensorDropdowns[i].config(width=int(remaining_width_per_column / fontsize)) # width is in units of font size
-                self.sensorDropdowns[i].grid(row=rowcounter+i//2, column=2+i%2, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+                self.sensorDropdowns[i]['menu'].delete(0, 'end')  # there's a default empty option, so get rid of that first
+                self.sensorDropdowns[i].config(width=int(remaining_width_per_column / fontsize))  # width is in units of font size
+                self.sensorDropdowns[i].grid(row=rowcounter+i//2, column=2+i % 2, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
                 self.sensorTypes[i].set("none")
                 for item in FileIO.SDK_SENSOR_TYPES:
                     self.sensorDropdowns[i]['menu'].add_command(label=item,
-                        command=lambda i=i, item=item: self.sensorTypes[i].set(item)) # weird default argument for scoping
+                                                                command=lambda i=i, item=item: self.sensorTypes[i].set(item))  # weird default argument for scoping
             rowcounter += 2
 
         tkinter.ttk.Separator(self, orient=tk.HORIZONTAL).grid(row=rowcounter, column=1, columnspan=3, sticky='ew', padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
@@ -190,13 +191,13 @@ class ElveflowDisplay(tk.Canvas):
 
         tk.Label(self, text="X axis").grid(row=rowcounter, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
         self.dropdownX = tk.OptionMenu(self, self.dataXLabel, None)
-        self.dropdownX.config(width=int(remaining_width_per_column *2 / fontsize)) # width is in units of font size
+        self.dropdownX.config(width=int(remaining_width_per_column * 2 / fontsize))  # width is in units of font size
         self.dropdownX.grid(row=rowcounter, column=2, columnspan=2, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
         rowcounter += 1
 
         tk.Label(self, text="Y axis").grid(row=rowcounter, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
         self.dropdownY = tk.OptionMenu(self, self.dataYLabel, None)
-        self.dropdownY.config(width=int(remaining_width_per_column *2/ fontsize))
+        self.dropdownY.config(width=int(remaining_width_per_column * 2 / fontsize))
         self.dropdownY.grid(row=rowcounter, column=2, columnspan=2, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
         rowcounter += 1
 
