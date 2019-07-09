@@ -205,7 +205,7 @@ class HPump:
 
 
     def settargetvol(self,vol,  resource=pumpserial):
-        volstr=str(rate).zfill(5)
+        volstr=str(vol).zfill(5)
         if self.PCConnect:
             resource.open()
             resource.write((self.address+'TGT'+volstr+"\n\r").encode())

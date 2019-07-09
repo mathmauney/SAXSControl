@@ -287,7 +287,7 @@ class ElveflowHandler_SDK:
         """returns the header, a list of strings"""
         return self.header
 
-    def setPressure(self, channel_number, value):
+    def setPressure(self, channel_number=4, value=300):
         """tells the Elveflow to set the pressure"""
         error = Elveflow_SDK.OB1_Set_Press(self.instr_ID.value, channel_number, value, byref(self.calib), 1000)
         self.errorlogger.info('Set pressure of Channel %i to %s' % (channel_number, value))

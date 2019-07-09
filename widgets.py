@@ -458,7 +458,7 @@ class ElveflowDisplay(tk.Canvas):
         if isPressure:
             try:
                 pressure_to_set = int(float(pressureValue.get()))
-                self.elveflow_handler.setPressure(channel, pressure_to_set)
+                self.elveflow_handler.setPressure(channel+1, pressure_to_set)
                 pressureValue.set(str(pressure_to_set))
             except ValueError:
                 self.errorlogger.error("unknown value for channel %i" % channel)

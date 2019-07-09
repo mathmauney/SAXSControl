@@ -86,7 +86,7 @@ class main:
         self.pump_refill_button = tk.Button(self.auto_page, text='Refill Oil', command=lambda: self.pump_refill_command())
         self.pump_inject_button = tk.Button(self.auto_page, text='Run Buffer/Sample/Buffer', command=lambda: self.pump_inject_command())
         # Manual Page
-        self.manualrunpump = tk.Button(self.manual_page, text="Run Pump", command=lambda: self.pump.startpump())
+        self.manualstartpump = tk.Button(self.manual_page, text="Run Pump", command=lambda: self.pump.startpump())
         self.manualstoppump = tk.Button(self.manual_page, text="Stop Pump", command=lambda: self.pump.stoppump())
         # Config page
         self.save_config_button = tk.Button(self.config_page, text='Save Config', command=self.save_config)
@@ -167,7 +167,7 @@ class main:
         self.pump_refill_button.grid(row=4, column=0)
         self.pump_inject_button.grid(row=4, column=1)
         # Manual page
-        self.manualrunpump.grid(row=0,column=0)
+        self.manualstartpump.grid(row=0,column=0)
         self.manualstoppump.grid(row=0,column=1)
         # Config page
         self.save_config_button.grid(row=0, column=0)
@@ -265,38 +265,38 @@ class main:
 
     def pump_refill_command(self):
         """Do nothing. It's a dummy command."""
-        queue.put(self.elveflow_display.elveflow_handler.setPressure, (4, 100))#   Pressurize Oil with Elveflow
+        self.queue.put((self.elveflow_display.elveflow_handler.setPressure, 4, 100))#   Pressurize Oil with Elveflow
         #   Switch valve (may be hooked to pump)
-        queue.put(self.pump.setmodevol)
-        queue.put(time.sleep,0.1)
-        queue.put(self.pump.refill)#   Set pump refill params
-        queue.put(time.sleep,0.1)
-        queue.put(self.pump.settargetvol,(self.first_buffer_volume.get()+self.sample_volume.get()+self.last_buffer_volume.get())/1000)
-        queue.put(time.sleep,0.1)
-        queue.put(self.pump.runpump)#   Refill pump
-        queue.put(time.sleep,10)
-        queue.put(self.pump.infuse)#   Set pump to injection mode
+        self.queue.put(self.pump.setmodevol)
+        self.queue.put((time.sleep,0.1))
+        self.queue.put(self.pump.refill)#   Set pump refill params
+        self.queue.put((time.sleep,0.1))
+        self.queue.put((self.pump.settargetvol,(self.first_buffer_volume.get()+self.sample_volume.get()+self.last_buffer_volume.get())/1000))
+        self.queue.put((time.sleep,0.1))
+        self.queue.put(self.pump.startpump)#   Refill pump
+        self.queue.put((time.sleep,10))
+        self.queue.put(self.pump.infuse)#   Set pump to injection mode
         #   Switch valve
-        queue.put(self.elveflow_display.elveflow_handler.setPressure, (4, 0))#   Vent Oil
+        self.queue.put((self.elveflow_display.elveflow_handler.setPressure, 4, 0))#   Vent Oil
         pass
 
     def pump_inject_command(self):
         """Do nothing. It's a dummy command."""
-        queue.put(self.pump.setmodevol)
-        queue.put(time.sleep,0.1)
-        queue.put(self.pump.infuse)#   Set pump refill params
-        queue.put(time.sleep,0.1)
-        queue.put(self.pump.settargetvol,self.first_buffer_volume.get()/1000)
-        queue.put(time.sleep,0.1)
-        queue.put(self.pump.runpump)
-        queue.put(time.sleep,10)
-        queue.put(self.pump.settargetvol,self.sample_volume.get()/1000)
-        queue.put(time.sleep,0.1)
-        queue.put(self.pump.runpump)
-        queue.put(time.sleep,10)
-        queue.put(self.pump.settargetvol,self.last_buffer_volume.get()/1000)
-        queue.put(time.sleep,0.1)
-        queue.put(self.pump.runpump)
+        self.queue.put(self.pump.setmodevol)
+        self.queue.put((time.sleep,0.1))
+        self.queue.put(self.pump.infuse)#   Set pump refill params
+        self.queue.put((time.sleep,0.1))
+        self.queue.put((self.pump.settargetvol,self.first_buffer_volume.get()/1000))
+        self.queue.put((time.sleep,0.1))
+        self.queue.put(self.pump.startpump)
+        self.queue.put((time.sleep,10))
+        self.queue.put((self.pump.settargetvol,self.sample_volume.get()/1000))
+        self.queue.put((time.sleep,0.1))
+        self.queue.put(self.pump.startpump)
+        self.queue.put((time.sleep,10))
+        self.queue.put((self.pump.settargetvol,self.last_buffer_volume.get()/1000))
+        self.queue.put((time.sleep,0.1))
+        self.queue.put(self.pump.startpump)
         #   Check valve positions
         #   Inject X uL
         #   Switch sample valve to sample loop
@@ -318,7 +318,7 @@ class main:
                     self.toggle_buttons()
                 queue_item = self.queue.get()
                 if isinstance(queue_item, tuple):
-                    queue_item[0](*queue_item[1])
+                    queue_item[0](*queue_item[1:])
                 elif callable(queue_item):
                     queue_item()
 
