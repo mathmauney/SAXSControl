@@ -105,3 +105,4 @@ venv.bak/
 
 # any test files
 test*
+log/
