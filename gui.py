@@ -118,7 +118,8 @@ class main:
         self.queue_busy = False
         self.listen_run_flag = threading.Event()
         self.listen_run_flag.set()
-        self.listen_thread = threading.Thread(target=self.listen).start()
+        self.listen_thread = threading.Thread(target=self.listen)
+        self.listen_thread.start()
         self.load_config(filename='config.ini')
 
     def draw_static(self):
@@ -229,12 +230,14 @@ class main:
             self.elveflow_display.stop()
         if self.SPEC_Connection.run_flag.is_set():
             self.SPEC_Connection.stop()
+        if self.listen_run_flag.is_set():
+            self.listen_run_flag.clear()
         self.main_window.destroy()
 
     def pump_refill_command(self):
         """Do nothing. It's a dummy command."""
         #   Pressurize Oil with Elveflow
-        # queue.put(self.elveflow_display.elveflow_handler.setPressure, 100)
+        # queue.put(self.elveflow_display.elveflow_handler.setPressure, (4, 100))
         #   Switch valve (may be hooked to pump)
         #   Set pump refill params
         #   Refill pump
@@ -265,7 +268,10 @@ class main:
                     self.queue_busy = True
                     self.toggle_buttons()
                 queue_item = self.queue.get()
-                queue_item[0](*queue_item[1])
+                if isinstance(queue_item, tuple):
+                    queue_item[0](*queue_item[1])
+                elif callable(queue_item):
+                    queue_item()
 
     def toggle_buttons(self):
         """Toggle certain buttons on and off when they should not be allowed to add to queue."""

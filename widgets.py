@@ -13,8 +13,8 @@ import time
 import os.path
 from queue import Queue, Empty as Queue_Empty
 import matplotlib
-from matplotlib import pyplot as plt
 matplotlib.use('TkAgg')
+from matplotlib import pyplot as plt    # noqa E402 - ignore that this comes after import
 
 
 class FluidLevel(tk.Canvas):
