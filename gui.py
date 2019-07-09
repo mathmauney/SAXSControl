@@ -15,7 +15,10 @@ from configparser import ConfigParser
 import logging
 import queue
 import threading
+import HPump
+import time
 import os.path
+
 
 FULLSCREEN = True   # For testing, turn this off
 LOG_FOLDER = "log"
@@ -51,6 +54,9 @@ class main:
             core_height = window_height - state_height - 50
             log_height = core_height
 
+        # Make Instrumet
+        self.controller=HPump.SAXSController()
+        self.pump=HPump.HPump()
         # Button Bar
         self.buttons = tk.Frame(self.main_window)
         self.exit_button = tk.Button(self.main_window, text='X', command=self.exit)
@@ -79,6 +85,9 @@ class main:
         self.spec_command_entry.bind("<Return>", lambda event: self.SPEC_Connection.command(self.spec_command.get()))
         self.pump_refill_button = tk.Button(self.auto_page, text='Refill Oil', command=lambda: self.pump_refill_command())
         self.pump_inject_button = tk.Button(self.auto_page, text='Run Buffer/Sample/Buffer', command=lambda: self.pump_inject_command())
+        # Manual Page
+        self.manualrunpump = tk.Button(self.manual_page, text="Run Pump", command=lambda: self.pump.startpump())
+        self.manualstoppump = tk.Button(self.manual_page, text="Stop Pump", command=lambda: self.pump.stoppump())
         # Config page
         self.save_config_button = tk.Button(self.config_page, text='Save Config', command=self.save_config)
         self.load_config_button = tk.Button(self.config_page, text='Load Config', command=self.load_config)
@@ -92,6 +101,14 @@ class main:
         self.sample_volume_box = tk.Entry(self.config_page, textvariable=self.sample_volume)
         self.last_buffer_volume = tk.IntVar(value=25)      # May need ot be a doublevar
         self.last_buffer_volume_box = tk.Entry(self.config_page, textvariable=self.last_buffer_volume)
+        # Setup Page
+        self.controllerportvar = tk.IntVar(value=0)
+        self.pumpportvar = tk.IntVar(value=0)
+        self.InitiateController = tk.Button(self.setup_page, text="Setup Controller", command=lambda:self.controller.setport(self.controllerportvar.get()))
+        self.controllerportselect = tk.Spinbox(self.setup_page,from_=1.0, to=10.0, textvariable=self.controllerportvar)
+        self.pumpusecontroller = tk.Button(self.setup_page, text="Set pump port to controller", command=lambda: self.pump.settocontroller(self.controller))
+        self.selectpumpport = tk.Spinbox(self.setup_page, from_=1.0, to=10.0, textvariable=self.pumpportvar)
+        self.setpumpport = tk.Button(self.setup_page,text="Set Pump port local",command=lambda: self.pump.setport(self.pupmpportvar.get()))
         # self.spec_address = tk.StringVar(value='192.168.0.233')   # For Alex M home use
         self.config_spec_address = tk.Entry(self.config_page, textvariable=self.spec_address)
         self.config_spec_address_label = tk.Label(self.config_page, text='SPEC Address')
@@ -149,6 +166,9 @@ class main:
         self.spec_send_button.grid(row=3, column=1)
         self.pump_refill_button.grid(row=4, column=0)
         self.pump_inject_button.grid(row=4, column=1)
+        # Manual page
+        self.manualrunpump.grid(row=0,column=0)
+        self.manualstoppump.grid(row=0,column=1)
         # Config page
         self.save_config_button.grid(row=0, column=0)
         self.load_config_button.grid(row=0, column=1)
@@ -162,6 +182,12 @@ class main:
         self.first_buffer_volume_box.grid(row=4, column=1)
         self.sample_volume_box.grid(row=4, column=2)
         self.last_buffer_volume_box.grid(row=4, column=3)
+        # Setup page
+        self.controllerportselect.grid(row=0, column=0)
+        self.InitiateController.grid(row=0, column=1)
+        self.selectpumpport.grid(row=1, column=0)
+        self.setpumpport.grid(row=1, column=1)
+        self.pumpusecontroller.grid(row=2, column=0)
         # Python Log
         self.python_logger_gui.grid(row=0, column=0, sticky='NSEW')
         nowtime = time.time()
@@ -239,18 +265,38 @@ class main:
 
     def pump_refill_command(self):
         """Do nothing. It's a dummy command."""
-        #   Pressurize Oil with Elveflow
-        # queue.put(self.elveflow_display.elveflow_handler.setPressure, (4, 100))
+        queue.put(self.elveflow_display.elveflow_handler.setPressure, (4, 100))#   Pressurize Oil with Elveflow
         #   Switch valve (may be hooked to pump)
-        #   Set pump refill params
-        #   Refill pump
-        #   Set pump to injection mode
+        queue.put(self.pump.setmodevol)
+        queue.put(time.sleep,0.1)
+        queue.put(self.pump.refill)#   Set pump refill params
+        queue.put(time.sleep,0.1)
+        queue.put(self.pump.settargetvol,(self.first_buffer_volume.get()+self.sample_volume.get()+self.last_buffer_volume.get())/1000)
+        queue.put(time.sleep,0.1)
+        queue.put(self.pump.runpump)#   Refill pump
+        queue.put(time.sleep,10)
+        queue.put(self.pump.infuse)#   Set pump to injection mode
         #   Switch valve
-        #   Vent Oil
+        queue.put(self.elveflow_display.elveflow_handler.setPressure, (4, 0))#   Vent Oil
         pass
 
     def pump_inject_command(self):
         """Do nothing. It's a dummy command."""
+        queue.put(self.pump.setmodevol)
+        queue.put(time.sleep,0.1)
+        queue.put(self.pump.infuse)#   Set pump refill params
+        queue.put(time.sleep,0.1)
+        queue.put(self.pump.settargetvol,self.first_buffer_volume.get()/1000)
+        queue.put(time.sleep,0.1)
+        queue.put(self.pump.runpump)
+        queue.put(time.sleep,10)
+        queue.put(self.pump.settargetvol,self.sample_volume.get()/1000)
+        queue.put(time.sleep,0.1)
+        queue.put(self.pump.runpump)
+        queue.put(time.sleep,10)
+        queue.put(self.pump.settargetvol,self.last_buffer_volume.get()/1000)
+        queue.put(time.sleep,0.1)
+        queue.put(self.pump.runpump)
         #   Check valve positions
         #   Inject X uL
         #   Switch sample valve to sample loop
