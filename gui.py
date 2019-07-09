@@ -13,12 +13,13 @@ import time
 import SPEC
 from configparser import ConfigParser
 import logging
-import os
+import queue
 import threading
-
+import os.path
 
 FULLSCREEN = True   # For testing, turn this off
 LOG_FOLDER = "log"
+
 
 class main:
     """Class for the main window of the SAXS Control."""
@@ -102,10 +103,24 @@ class main:
         self.python_logger_gui.configure(font='TkFixedFont')
         self.SPEC_logger = MiscLogger(self.SPEC_logs, state='disabled', height=45)
         self.SPEC_logger.configure(font='TkFixedFont')
+        #
+        # TODO: also autosave, as a backup in case of crashing
+        # initialize an empty history
+        self.history = [
+            (time.time(), 99 if time.sleep(0.5) else 93),
+            (time.time(), 44)
+        ]
+        self.save_button = tk.Button(self.buttons, text='Save History', command=self.save_history)  # TODO
+        # self.save_button.grid(row=0, column=4) # TODO
         self.draw_static()
         self.elveflow_display = ElveflowDisplay(self.elveflow_page, core_height, core_width, self.python_logger)
         self.elveflow_display.grid(row=0, column=0)
-        print(self.elveflow_display)
+        self.queue = queue.Queue()
+        self.queue_busy = False
+        self.listen_run_flag = threading.Event()
+        self.listen_run_flag.set()
+        self.listen_thread = threading.Thread(target=self.listen)
+        self.listen_thread.start()
         self.load_config(filename='config.ini')
 
     def draw_static(self):
@@ -154,18 +169,24 @@ class main:
         file_handler = logging.FileHandler(os.path.join(LOG_FOLDER, "log%010d.txt" % nowtime))
         python_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
         file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
-        # logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-        self.python_logger = logging.getLogger("python")
-        self.python_logger.setLevel(logging.DEBUG)
-        self.python_logger.addHandler(python_handler) #logging to the screen
-        self.python_logger.addHandler(file_handler) #logging to a file
         # SPEC Log
         self.SPEC_logger.grid(row=0, column=0, sticky='NSEW')
         self.SPEC_Connection = SPEC.connection(logger=self.SPEC_logger, button=self.spec_connect_button)
 
+        # logging.basicConfig(level=logging.INFO,
+        #                     format='%(asctime)s - %(levelname)s - %(message)s')
+        self.python_logger = logging.getLogger("python")
+        self.python_logger.setLevel(logging.DEBUG)
+        self.python_logger.addHandler(python_handler)  # logging to the screen
+        self.python_logger.addHandler(file_handler)  # logging to a file
+
     def stop(self):
         """Stop all running widgets."""
         self.oil_meter.stop()
+        with self.queue.mutex:
+            self.queue.queue.clear()
+        # TODO Add pump stop
+        # Add Elveflow stop if we use it for non-pressure
 
     def load_config(self, filename=None):
         """Load a config.ini file."""
@@ -210,11 +231,14 @@ class main:
             self.elveflow_display.stop()
         if self.SPEC_Connection.run_flag.is_set():
             self.SPEC_Connection.stop()
+        if self.listen_run_flag.is_set():
+            self.listen_run_flag.clear()
         self.main_window.destroy()
 
     def pump_refill_command(self):
         """Do nothing. It's a dummy command."""
         #   Pressurize Oil with Elveflow
+        # queue.put(self.elveflow_display.elveflow_handler.setPressure, (4, 100))
         #   Switch valve (may be hooked to pump)
         #   Set pump refill params
         #   Refill pump
@@ -232,6 +256,34 @@ class main:
         #   Switch sample valve to buffer positions
         #   Inject Z uL
         pass
+
+    def listen(self):
+        """Look for queues of hardware commands and execute them."""
+        while self.listen_run_flag.is_set():
+            if self.queue.empty():
+                if self.queue_busy:
+                    self.queue_busy = False
+                    self.toggle_buttons()
+            else:
+                if not self.queue_busy:
+                    self.queue_busy = True
+                    self.toggle_buttons()
+                queue_item = self.queue.get()
+                if isinstance(queue_item, tuple):
+                    queue_item[0](*queue_item[1])
+                elif callable(queue_item):
+                    queue_item()
+
+    def toggle_buttons(self):
+        """Toggle certain buttons on and off when they should not be allowed to add to queue."""
+        buttons = (self.pump_inject_button,
+                   self.pump_refill_button)
+        if self.queue_busy:
+            for button in buttons:
+                button['state'] = 'disabled'
+        else:
+            for button in buttons:
+                button['state'] = 'normal'
 
 
 if __name__ == "__main__":
