@@ -236,7 +236,7 @@ class ElveflowHandler_SDK:
 
             try:
                 error = Elveflow_SDK.OB1_Destructor(self.instr_ID.value)
-                print("Closing connection with Elveflow%s." % ("" if error == 0 else (" (Error code %i)" % error)))
+                self.errorlogger.info("Closing connection with Elveflow%s." % ("" if error == 0 else (" (Error code %i)" % error)))
             except RuntimeError:
                 print("Runtime error detected in IO handler thread %s while trying to close. Ignoring." % threading.current_thread())
             finally:
