@@ -127,6 +127,17 @@ class ElveflowHandler_ESI:
         except IndexError:
             return None
 
+    def peekOne(self):
+        """looks at the oldest element from the buffer, but does NOT remove it from the buffer.
+        If nothing is in there, return None. (You cannot tell the difference between the leftmost element of
+        the buffer holding None and the buffer being empty, but in this class, the former case should never happen).
+
+        NOTE that depending on your use-case, you may wish to call this function while holding the mutex"""
+        try:
+            return self.buffer_queue.queue[0]
+        except IndexError:
+            return None
+
     def fetchAll(self):
         """retrieve all elements from the buffer as a list. Afterwards, all elements returned are no longer in the buffer.
         In this class, the elements of the buffer are all dicts whose keys are the entries of the header"""
@@ -225,7 +236,7 @@ class ElveflowHandler_SDK:
 
             try:
                 error = Elveflow_SDK.OB1_Destructor(self.instr_ID.value)
-                print("Closing connection with Elveflow%s." % ("" if error == 0 else (" (Error code %i)" % error)))
+                self.errorlogger.info("Closing connection with Elveflow%s." % ("" if error == 0 else (" (Error code %i)" % error)))
             except RuntimeError:
                 print("Runtime error detected in IO handler thread %s while trying to close. Ignoring." % threading.current_thread())
             finally:
@@ -247,6 +258,17 @@ class ElveflowHandler_SDK:
         the buffer holding None and the buffer being empty, but in this class, the former case should never happen)"""
         try:
             return self.buffer_queue.get(False)
+        except IndexError:
+            return None
+
+    def peekOne(self):
+        """looks at the oldest element from the buffer, but does NOT remove it from the buffer.
+        If nothing is in there, return None. (You cannot tell the difference between the leftmost element of
+        the buffer holding None and the buffer being empty, but in this class, the former case should never happen).
+
+        NOTE that depending on your use-case, you may wish to call this function while holding the mutex"""
+        try:
+            return self.buffer_queue.queue[0]
         except IndexError:
             return None
 

@@ -226,9 +226,11 @@ class main:
 
     def exit(self):
         """Exit the GUI and stop all running things"""
+        print("stop button pressed")
         self.stop()
+        print("stop signal done")
         if self.elveflow_display.run_flag.is_set():
-            self.elveflow_display.stop()
+            self.elveflow_display.stop(shutdown=False)
         if self.SPEC_Connection.run_flag.is_set():
             self.SPEC_Connection.stop()
         if self.listen_run_flag.is_set():
