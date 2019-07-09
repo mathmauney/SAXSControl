@@ -5,12 +5,19 @@ PUMP chai- Therefore it doesn't support multiple pumps connected directly to
 Computer
 
 Version 1-04/04/19
-Pollack Lzb- Ccornell University
+Pollack Lab- Ccornell University
 Josue San Emeterio
 """
 
 
 import serial #needs serial- does import need to be elsewhere?
+class SAXSController(serial.Serial):
+    #function to initialize ports
+    def setport(self,number):
+        if self.is_open:
+            self.close()
+        self.port="COM"+str(number)
+    #Init
 
 
 class HPump:
@@ -36,8 +43,8 @@ class HPump:
 
     #Pump intialization need pump number
     #need to set defsults fpr simpler impoementation
-    def __init__(self, address="",PCConnect=True, running=False, infusing=True):
-        self.address=address
+    def __init__(self, address=0,PCConnect=True, running=False, infusing=True):
+        self.address=str(address)
         self.running=running
         self.infusing=infusing
         self.PCConnect=PCConnect
@@ -124,7 +131,7 @@ class HPump:
             return setrefillrate(rate,units)
 
 
-    def    sendcommand(self,command, resource=pumpserial): #sends an albitrary command
+    def sendcommand(self,command, resource=pumpserial): #sends an albitrary command
         resource.open()
         resource.write((command).encode())
         resource.close()
@@ -207,5 +214,16 @@ class HPump:
             if not self.controller.is_open:
                 self.controller.open()
             self.controller.write(("-"+self.address+'TGT'+volstr+"\n\r").encode())
+
+    def stopall(self, resource=pumpserial):
+        if self.PCConnect:
+            resource.open()
+            resource.write(("\n\r").encode())
+            resource.close()
+        else:
+            if not self.controller.is_open:
+                self.controller.open()
+            self.controller.write(("\n\r").encode())
+
 
 #TODO: Add functions to querry pump- double check Diameter, fslowraate, and check volume
