@@ -14,9 +14,13 @@ import time
 import SPEC
 from configparser import ConfigParser
 import logging
+import queue
+import threading
+import os.path
 
 
 FULLSCREEN = True   # For testing, turn this off
+LOG_FOLDER = "log"
 
 
 class main:
@@ -58,6 +62,7 @@ class main:
         self.config_page = tk.Frame(self.core)
         self.manual_page = tk.Frame(self.core)
         self.setup_page = tk.Frame(self.core)
+        self.elveflow_page = tk.Frame(self.core)
         self.logs = ttk.Notebook(self.main_window, width=log_width, height=log_height)
         self.python_logs = tk.Frame(self.logs)
         self.SPEC_logs = tk.Frame(self.logs)
@@ -107,9 +112,14 @@ class main:
         ]
         self.save_button = tk.Button(self.buttons, text='Save History', command=self.save_history)  # TODO
         # self.save_button.grid(row=0, column=4) # TODO
-        self.elveflow_display = ElveflowDisplay(self.setup_page)
-        self.elveflow_display.grid(row=0, column=0)
         self.draw_static()
+        self.elveflow_display = ElveflowDisplay(self.elveflow_page, core_height, core_width, self.python_logger)
+        self.elveflow_display.grid(row=0, column=0)
+        self.queue = queue.Queue()
+        self.queue_busy = False
+        self.listen_run_flag = threading.Event()
+        self.listen_run_flag.set()
+        self.listen_thread = threading.Thread(target=self.listen).start()
         self.load_config(filename='config.ini')
 
     def draw_static(self):
@@ -125,6 +135,7 @@ class main:
         self.core.add(self.manual_page, text='Manual')
         self.core.add(self.config_page, text='Config')
         self.core.add(self.setup_page, text='Setup')
+        self.core.add(self.elveflow_page, text='Elveflow')
         # Log Tab Bar
         self.logs.add(self.SPEC_logs, text='SPEC')
         self.logs.add(self.python_logs, text='Python')
@@ -152,21 +163,29 @@ class main:
         self.last_buffer_volume_box.grid(row=4, column=3)
         # Python Log
         self.python_logger_gui.grid(row=0, column=0, sticky='NSEW')
+        nowtime = time.time()
         python_handler = TextHandler(self.python_logger_gui)
-        logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-        self.python_logger = logging.getLogger()
-        self.python_logger.addHandler(python_handler)
+        file_handler = logging.FileHandler(os.path.join(LOG_FOLDER, "log%010d.txt" % nowtime))
+        python_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+        file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
         # SPEC Log
         self.SPEC_logger.grid(row=0, column=0, sticky='NSEW')
         self.SPEC_Connection = SPEC.connection(logger=self.SPEC_logger, button=self.spec_connect_button)
 
+        # logging.basicConfig(level=logging.INFO,
+        #                     format='%(asctime)s - %(levelname)s - %(message)s')
+        self.python_logger = logging.getLogger("python")
+        self.python_logger.setLevel(logging.DEBUG)
+        self.python_logger.addHandler(python_handler)  # logging to the screen
+        self.python_logger.addHandler(file_handler)  # logging to a file
+
     def stop(self):
         """Stop all running widgets."""
         self.oil_meter.stop()
-        if self.elveflow_display.run_flag.is_set():
-            self.elveflow_display.stop()
-        if self.SPEC_Connection.run_flag.is_set():
-            self.SPEC_Connection.stop()
+        with self.queue.mutex:
+            self.queue.queue.clear()
+        # TODO Add pump stop
+        # Add Elveflow stop if we use it for non-pressure
 
     def load_config(self, filename=None):
         """Load a config.ini file."""
@@ -207,7 +226,10 @@ class main:
     def exit(self):
         """Exit the GUI and stop all running things"""
         self.stop()
-        self.SPEC_Connection.stop()
+        if self.elveflow_display.run_flag.is_set():
+            self.elveflow_display.stop()
+        if self.SPEC_Connection.run_flag.is_set():
+            self.SPEC_Connection.stop()
         self.main_window.destroy()
 
     def pump_refill_command(self):
@@ -230,6 +252,29 @@ class main:
         #   Switch sample valve to buffer positions
         #   Inject Z uL
         pass
+
+    def listen(self):
+        while self.listen_run_flag.is_set():
+            if self.queue.empty():
+                if self.queue_busy:
+                    self.queue_busy = False
+                    self.toggle_buttons()
+            else:
+                if not self.queue_busy:
+                    self.queue_busy = True
+                    self.toggle_buttons()
+                queue_item = self.queue.get()
+                queue_item[0](*queue_item[1])
+
+    def toggle_buttons(self):
+        buttons = (self.pump_inject_button,
+                   self.pump_refill_button)
+        if self.queue_busy:
+            for button in buttons:
+                button['state'] = 'disabled'
+        else:
+            for button in buttons:
+                button['state'] = 'normal'
 
 
 if __name__ == "__main__":
