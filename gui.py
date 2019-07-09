@@ -18,7 +18,6 @@ import queue
 import threading
 import os.path
 
-
 FULLSCREEN = True   # For testing, turn this off
 LOG_FOLDER = "log"
 
@@ -235,6 +234,7 @@ class main:
     def pump_refill_command(self):
         """Do nothing. It's a dummy command."""
         #   Pressurize Oil with Elveflow
+        # queue.put(self.elveflow_display.elveflow_handler.setPressure, 100)
         #   Switch valve (may be hooked to pump)
         #   Set pump refill params
         #   Refill pump
@@ -254,6 +254,7 @@ class main:
         pass
 
     def listen(self):
+        """Look for queues of hardware commands and execute them."""
         while self.listen_run_flag.is_set():
             if self.queue.empty():
                 if self.queue_busy:
@@ -267,6 +268,7 @@ class main:
                 queue_item[0](*queue_item[1])
 
     def toggle_buttons(self):
+        """Toggle certain buttons on and off when they should not be allowed to add to queue."""
         buttons = (self.pump_inject_button,
                    self.pump_refill_button)
         if self.queue_busy:
