@@ -2,3 +2,4 @@
 serial
 numpy
 matplotlib==2.2.4 # matplotlib 3.0.3 has a bug with threading and tkinter graphs that makes everything crash. Use matplotlib 2 instead
+simple-pid

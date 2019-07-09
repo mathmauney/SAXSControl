@@ -9,7 +9,6 @@ import tkinter.scrolledtext as ScrolledText
 from tkinter import filedialog
 from widgets import FluidLevel, ElveflowDisplay, TextHandler, MiscLogger
 import tkinter.ttk as ttk
-import csv
 import time
 import SPEC
 from configparser import ConfigParser
@@ -24,10 +23,12 @@ LOG_FOLDER = "log"
 
 class main:
     """Class for the main window of the SAXS Control."""
-    CSV_HEADERS = ["Unix time (s)", "oil level (%)"]
 
     def __init__(self, window):
         """Set up the window and button variables."""
+        print("initializing GUI...")
+        os.makedirs(LOG_FOLDER, exist_ok=True)
+        os.makedirs(ElveflowDisplay.OUTPUT_FOLDER, exist_ok=True)
         self.main_window = window
         self.main_window.report_callback_exception = self.handle_exception
         self.main_window.title('Main Window')
@@ -286,6 +287,10 @@ class main:
 
 
 if __name__ == "__main__":
-    window = tk.Tk()
-    main(window)
-    window.mainloop()
+    try:
+        window = tk.Tk()
+        main(window)
+        window.mainloop()
+    finally:
+        print("As main thread %s is closing, these are the remaining threads: %s" % (threading.current_thread(), threading.enumerate()))
+        print()
