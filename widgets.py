@@ -120,6 +120,7 @@ class PressureVolumeToggle(tk.Label):
     # https://www.reddit.com/r/learnpython/comments/7sx953/how_to_add_a_toggle_switch_in_tkinter/
     ON = '''Pressure_button.png'''
     OFF = '''Volume_button.png'''
+
     def __init__(self, master=None, variable=None, **kwargs):
         tk.Label.__init__(self, master, **kwargs)
         self.var = tk.BooleanVar() if variable is None else variable
@@ -196,7 +197,7 @@ class ElveflowDisplay(tk.Canvas):
                 self.sensorDropdowns[i] = tk.OptionMenu(self, self.sensorTypes[i], None)
                 self.sensorDropdowns[i]['menu'].delete(0, 'end')  # there's a default empty option, so get rid of that first
                 self.sensorDropdowns[i].config(width=int(remaining_width_per_column / fontsize))  # width is in units of font size
-                self.sensorDropdowns[i].grid(row=rowcounter+i//2, column=2+(i%2), padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+                self.sensorDropdowns[i].grid(row=rowcounter+i//2, column=2+(i % 2), padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
                 self.sensorTypes[i].set("none")
                 for item in FileIO.SDK_SENSOR_TYPES:
                     self.sensorDropdowns[i]['menu'].add_command(label=item,
@@ -252,7 +253,7 @@ class ElveflowDisplay(tk.Canvas):
                 self.pressureValues[i].set("")
                 self.isPressureValues[i].set(True)
                 self.set_pressure_buttons[i] = tk.Button(self.setElveflow_frame, text='Set',
-                    command=lambda i=i: self.set_pressure(channel=i, isPressure=self.isPressureValues[i].get()))
+                                                         command=lambda i=i: self.set_pressure(channel=i, isPressure=self.isPressureValues[i].get()))
                 self.set_pressure_buttons[i].grid(row=rowcounter, column=i, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
 
             rowcounter += 1
@@ -270,7 +271,7 @@ class ElveflowDisplay(tk.Canvas):
         for i in range(4):
             self.set_axis_limits_entries[i] = tk.Entry(self, textvariable=self.axis_limits[i], justify="left")
             self.set_axis_limits_entries[i].config(width=int(remaining_width_per_column / fontsize))  # width is in units of font size
-            self.set_axis_limits_entries[i].grid(row=rowcounter+i//2, column=2+(i%2), padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+            self.set_axis_limits_entries[i].grid(row=rowcounter+i//2, column=2+(i % 2), padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
             self.axis_limits[i].set("")
         rowcounter += 2
         self.set_axis_limits_button = tk.Button(self, text='Set graph limits (leave blank for auto)', command=self.set_axis_limits)  # TODO
