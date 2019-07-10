@@ -7,7 +7,7 @@ Alex Mauney
 import tkinter as tk
 import tkinter.scrolledtext as ScrolledText
 from tkinter import filedialog
-from widgets import FluidLevel, ElveflowDisplay, TextHandler, MiscLogger
+from widgets import FluidLevel, FlowPath, ElveflowDisplay, TextHandler, MiscLogger
 import tkinter.ttk as ttk
 import time
 import SPEC
@@ -72,7 +72,7 @@ class main:
         self.logs = ttk.Notebook(self.main_window, width=log_width, height=log_height)
         self.python_logs = tk.Frame(self.logs)
         self.SPEC_logs = tk.Frame(self.logs)
-        self.state_frame = tk.Frame(self.main_window, width=window_width, height=state_height, bg='blue')
+        self.state_frame = tk.Frame(self.main_window, width=window_width, height=state_height)
         # Widgets on Main page
         self.oil_ticksize = tk.IntVar(value=5)
         self.oil_meter = FluidLevel(self.auto_page, color='black', ticksize=self.oil_ticksize)
@@ -120,7 +120,8 @@ class main:
         self.python_logger_gui.configure(font='TkFixedFont')
         self.SPEC_logger = MiscLogger(self.SPEC_logs, state='disabled', height=45)
         self.SPEC_logger.configure(font='TkFixedFont')
-        #
+        # Flow setup frames
+        self.flowpath = FlowPath(self.state_frame)
         # TODO: also autosave, as a backup in case of crashing
         # initialize an empty history
         self.history = [
@@ -188,6 +189,8 @@ class main:
         self.selectpumpport.grid(row=1, column=0)
         self.setpumpport.grid(row=1, column=1)
         self.pumpusecontroller.grid(row=2, column=0)
+        # Flowpath Diagram
+        self.flowpath.grid(row=0, column=0)
         # Python Log
         self.python_logger_gui.grid(row=0, column=0, sticky='NSEW')
         nowtime = time.time()
