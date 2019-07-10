@@ -86,8 +86,8 @@ class main:
         self.pump_refill_button = tk.Button(self.auto_page, text='Refill Oil', command=lambda: self.pump_refill_command())
         self.pump_inject_button = tk.Button(self.auto_page, text='Run Buffer/Sample/Buffer', command=lambda: self.pump_inject_command())
         # Manual Page
-        self.manualstartpump = tk.Button(self.manual_page, text="Run Pump", command=lambda: self.pump.startpump())
-        self.manualstoppump = tk.Button(self.manual_page, text="Stop Pump", command=lambda: self.pump.stoppump())
+        self.manualstart_pump = tk.Button(self.manual_page, text="Run Pump", command=lambda: self.pump.start_pump())
+        self.manualstop_pump = tk.Button(self.manual_page, text="Stop Pump", command=lambda: self.pump.stop_pump())
         # Config page
         self.save_config_button = tk.Button(self.config_page, text='Save Config', command=self.save_config)
         self.load_config_button = tk.Button(self.config_page, text='Load Config', command=self.load_config)
@@ -104,11 +104,11 @@ class main:
         # Setup Page
         self.controllerportvar = tk.IntVar(value=0)
         self.pumpportvar = tk.IntVar(value=0)
-        self.InitiateController = tk.Button(self.setup_page, text="Setup Controller", command=lambda: self.controller.setport(self.controllerportvar.get()))
+        self.InitiateController = tk.Button(self.setup_page, text="Setup Controller", command=lambda: self.controller.set_port(self.controllerportvar.get()))
         self.controllerportselect = tk.Spinbox(self.setup_page, from_=1.0, to=10.0, textvariable=self.controllerportvar)
-        self.pumpusecontroller = tk.Button(self.setup_page, text="Set pump port to controller", command=lambda: self.pump.settocontroller(self.controller))
+        self.pumpusecontroller = tk.Button(self.setup_page, text="Set pump port to controller", command=lambda: self.pump.set_to_controller(self.controller))
         self.selectpumpport = tk.Spinbox(self.setup_page, from_=1.0, to=10.0, textvariable=self.pumpportvar)
-        self.setpumpport = tk.Button(self.setup_page, text="Set Pump port local", command=lambda: self.pump.setport(self.pupmpportvar.get()))
+        self.setpumpport = tk.Button(self.setup_page, text="Set Pump port local", command=lambda: self.pump.set_port(self.pupmpportvar.get()))
         # self.spec_address = tk.StringVar(value='192.168.0.233')   # For Alex M home use
         self.config_spec_address = tk.Entry(self.config_page, textvariable=self.spec_address)
         self.config_spec_address_label = tk.Label(self.config_page, text='SPEC Address')
@@ -167,8 +167,8 @@ class main:
         self.pump_refill_button.grid(row=4, column=0)
         self.pump_inject_button.grid(row=4, column=1)
         # Manual page
-        self.manualstartpump.grid(row=0, column=0)
-        self.manualstoppump.grid(row=0, column=1)
+        self.manualstart_pump.grid(row=0, column=0)
+        self.manualstop_pump.grid(row=0, column=1)
         # Config page
         self.save_config_button.grid(row=0, column=0)
         self.load_config_button.grid(row=0, column=1)
@@ -267,13 +267,13 @@ class main:
         """Do nothing. It's a dummy command."""
         self.queue.put((self.elveflow_display.elveflow_handler.setPressure, 4, 100))  # Pressurize Oil with Elveflow
         #   Switch valve (may be hooked to pump)
-        self.queue.put(self.pump.setmodevol)
+        self.queue.put(self.pump.set_mode_vol)
         self.queue.put((time.sleep, 0.1))
         self.queue.put(self.pump.refill)    # Set pump refill params
         self.queue.put((time.sleep, 0.1))
-        self.queue.put((self.pump.settargetvol, (self.first_buffer_volume.get()+self.sample_volume.get()+self.last_buffer_volume.get())/1000))
+        self.queue.put((self.pump.set_target_vol, (self.first_buffer_volume.get()+self.sample_volume.get()+self.last_buffer_volume.get())/1000))
         self.queue.put((time.sleep, 0.1))
-        self.queue.put(self.pump.startpump)     # Refill pump
+        self.queue.put(self.pump.start_pump)     # Refill pump
         self.queue.put((time.sleep, 10))
         self.queue.put(self.pump.infuse)    # Set pump to injection mode
         #   Switch valve
@@ -282,21 +282,21 @@ class main:
 
     def pump_inject_command(self):
         """Do nothing. It's a dummy command."""
-        self.queue.put(self.pump.setmodevol)
+        self.queue.put(self.pump.set_mode_vol)
         self.queue.put((time.sleep, 0.1))
         self.queue.put(self.pump.infuse)  # Set pump refill params
         self.queue.put((time.sleep, 0.1))
-        self.queue.put((self.pump.settargetvol, self.first_buffer_volume.get()/1000))
+        self.queue.put((self.pump.set_target_vol, self.first_buffer_volume.get()/1000))
         self.queue.put((time.sleep, 0.1))
-        self.queue.put(self.pump.startpump)
+        self.queue.put(self.pump.start_pump)
         self.queue.put((time.sleep, 10))
-        self.queue.put((self.pump.settargetvol, self.sample_volume.get()/1000))
+        self.queue.put((self.pump.set_target_vol, self.sample_volume.get()/1000))
         self.queue.put((time.sleep, 0.1))
-        self.queue.put(self.pump.startpump)
+        self.queue.put(self.pump.start_pump)
         self.queue.put((time.sleep, 10))
-        self.queue.put((self.pump.settargetvol, self.last_buffer_volume.get()/1000))
+        self.queue.put((self.pump.set_target_vol, self.last_buffer_volume.get()/1000))
         self.queue.put((time.sleep, 0.1))
-        self.queue.put(self.pump.startpump)
+        self.queue.put(self.pump.start_pump)
         #   Check valve positions
         #   Inject X uL
         #   Switch sample valve to sample loop

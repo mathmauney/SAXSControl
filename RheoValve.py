@@ -34,7 +34,7 @@ import serial  # Needed for direct communication
             self.serialobject.close()
         self.serialobject.port = "COM" + str(number)
 
-    def settocontroller(self,controller):
+    def set_to_controller(self,controller):
         self.PCConnect=False
         self.controller=controller
 
