@@ -195,6 +195,8 @@ class main:
         file_handler = logging.FileHandler(os.path.join(LOG_FOLDER, "log%010d.txt" % nowtime))
         python_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
         file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+        python_handler.setLevel(logging.DEBUG)
+        file_handler.setLevel(logging.DEBUG)
         # SPEC Log
         self.SPEC_logger.grid(row=0, column=0, sticky='NSEW')
         self.SPEC_Connection = SPEC.connection(logger=self.SPEC_logger, button=self.spec_connect_button)
@@ -252,9 +254,7 @@ class main:
 
     def exit(self):
         """Exit the GUI and stop all running things"""
-        print("stop button pressed")
         self.stop()
-        print("stop signal done")
         if self.elveflow_display.run_flag.is_set():
             self.elveflow_display.stop(shutdown=False)
         if self.SPEC_Connection.run_flag.is_set():

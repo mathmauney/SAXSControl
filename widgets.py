@@ -12,7 +12,6 @@ import threading
 import time
 import os.path
 from queue import Queue, Empty as Queue_Empty
-# from simple_pid import PID
 import matplotlib
 matplotlib.use('TkAgg')
 from matplotlib import pyplot as plt    # noqa E402 - ignore that this comes after import
@@ -116,18 +115,53 @@ class MiscLogger(ScrolledText.ScrolledText):
         self.yview(tk.END)
 
 
-class PressureVolumeToggle(tk.Label):
+class Toggle(tk.Label):
     # https://www.reddit.com/r/learnpython/comments/7sx953/how_to_add_a_toggle_switch_in_tkinter/
-    ON = '''Pressure_button.png'''
-    OFF = '''Volume_button.png'''
-    def __init__(self, master=None, variable=None, **kwargs):
+    def __init__(self, master=None, variable=None, onFile='clicked_button.png', offFile='unclicked_button.png', onToggleOn=None, onToggleOff=None, defaultValue=None, **kwargs):
         tk.Label.__init__(self, master, **kwargs)
-        self.var = tk.BooleanVar() if variable is None else variable
+
+        self.ON = onFile
+        self.OFF = offFile
+
+        if variable is None:
+            self.var = tk.BooleanVar()
+            self.set(True)
+        else:
+            self.var = variable
         self.images = [tk.PhotoImage(file=self.OFF), tk.PhotoImage(file=self.ON)]
         self.get, self.set = self.var.get, self.var.set
-        self.bind('<Button-1>', lambda e: self.set(not self.get()))
-        self.var.trace('w', lambda *a: self.config(image=self.images[self.get()]))
-        self.set(True)
+        # on click, swap variable if not disabled
+        self.bind('<Button-1>', lambda e: self.set(not (self.get() ^ (self['state']==tk.DISABLED) )))
+        self.var.trace('w', lambda *_: self.config(image=self.images[self.get()]))
+
+        if defaultValue == None:
+            if variable == None:
+                defaultValue = True
+            else:
+                defaultValue = variable.get()
+        self.set(defaultValue)
+
+        self.onToggleOn = onToggleOn
+        self.onToggleOff = onToggleOff
+        self.var.trace("w", lambda *_: self.doToggle())
+
+
+    def doToggle(self):
+        if self['state'] != tk.DISABLED:
+            if self.get():
+                # we just toggled on
+                if self.onToggleOn is not None:
+                    self.onToggleOn()
+            else:
+                if self.onToggleOff is not None:
+                    self.onToggleOff()
+
+
+class PressureVolumeToggle(Toggle):
+    ON = 'Pressure_button.png'
+    OFF = 'Volume_button.png'
+    def __init__(self, master=None, variable=None, **kwargs):
+        Toggle.__init__(self, master, variable, self.ON, self.OFF, **kwargs)
 
 
 class ElveflowDisplay(tk.Canvas):
@@ -146,6 +180,8 @@ class ElveflowDisplay(tk.Canvas):
         self.sensorTypes = [tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar()]
         self.pressureValues = [tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar()]
         self.isPressureValues = [tk.BooleanVar(), tk.BooleanVar(), tk.BooleanVar(), tk.BooleanVar()]
+        self.isSettingPressureValues = [tk.BooleanVar(), tk.BooleanVar(), tk.BooleanVar(), tk.BooleanVar()]
+        self.setPressureStopflag = [None, None, None, None]
         self.axis_limits_numbers = [None, None, None, None]
         self.reading_from_data = tk.StringVar()
         self.saveFileName = tk.StringVar()
@@ -251,8 +287,10 @@ class ElveflowDisplay(tk.Canvas):
                 self.set_pressure_entries[i].grid(row=1, column=i, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
                 self.pressureValues[i].set("")
                 self.isPressureValues[i].set(True)
-                self.set_pressure_buttons[i] = tk.Button(self.setElveflow_frame, text='Set',
-                    command=lambda i=i: self.set_pressure(channel=i, isPressure=self.isPressureValues[i].get()))
+
+                self.set_pressure_buttons[i] = Toggle(self.setElveflow_frame, defaultValue=False, text='Set', variable=self.isSettingPressureValues[i], compound=tk.CENTER,
+                    onToggleOn=lambda i=i: self.set_pressure(channel=i+1, isPressure=self.isPressureValues[i].get()),
+                    onToggleOff=lambda i=i: self.stop_pressure(channel=i+1))
                 self.set_pressure_buttons[i].grid(row=rowcounter, column=i, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
 
             rowcounter += 1
@@ -453,18 +491,33 @@ class ElveflowDisplay(tk.Canvas):
         self.ax.set_ylim(*limits[2:4])
         self.canvas.draw()
 
-    def set_pressure(self, channel=0, isPressure=True):
-        pressureValue = self.pressureValues[channel]
-        if isPressure:
-            try:
+    def set_pressure(self, channel=1, isPressure=True):
+        i = channel - 1
+        pressureValue = self.pressureValues[i]
+        self.setPressureStopflag[i] = threading.Event()
+        self.setPressureStopflag[i].clear()
+        try:
+            if isPressure:
                 pressure_to_set = int(float(pressureValue.get()))
-                self.elveflow_handler.setPressure(channel+1, pressure_to_set)
                 pressureValue.set(str(pressure_to_set))
-            except ValueError:
-                self.errorlogger.error("unknown value for channel %i" % channel)
-                pressureValue.set("")
-        else:
-            self.errorlogger.error("NOT IMPLEMENTED: Volume PID")
+                self.elveflow_handler.setPressureLoop(channel, pressure_to_set, interruptEvent=self.setPressureStopflag[i])
+            else:
+                flowrate_to_set = int(float(pressureValue.get()))
+                pressureValue.set(str(flowrate_to_set))
+                self.elveflow_handler.setVolumeLoop(channel, flowrate_to_set, interruptEvent=self.setPressureStopflag[i])
+        except ValueError:
+            self.errorlogger.error("unknown value for channel %i" % channel)
+            pressureValue.set("")
+            self.isSettingPressureValues[i].set(False)
+
+    def stop_pressure(self, channel=1):
+        '''stop changing the pressure. It will remain at whatever value it is currently set at'''
+        i = channel - 1
+        self.errorlogger.info('stopping %d', i)
+        try:
+            self.setPressureStopflag[i].set()
+        except AttributeError:
+            print("I hope you don't see this error... Blame Channel %d" % i)
 
     def set_axis_limits(self):
         for i, x in enumerate(self.axis_limits):
