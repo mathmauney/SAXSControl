@@ -560,12 +560,66 @@ class FlowPath(tk.Canvas):
                 self.canvas.itemconfig(self.circles[2], fill=left_color, outline=left_color)
                 self.canvas.itemconfig(self.circles[1], fill=right_color, outline=right_color)
 
+    class InjectionValve:
+        def __init__(self, canvas, x, y):
+            self.x = x
+            self.y = y
+            self.big_radius = 100
+            self.small_radius = 20
+            self.offset = 60
+            self.arc_radius = self.offset + self.small_radius
+            self.position = -1
+            self.rads = math.radians(60)
+            self.canvas = canvas
+            self.big_circle = self.canvas.create_circle(x, y, self.big_radius, fill='dimgray', outline='dimgray')
+            self.inner_circle = self.canvas.create_circle(x, y, self.offset-self.small_radius, fill='dimgray', outline='dimgray')
+            self.circles = []
+            for i in range(0, 6):
+                circle = canvas.create_circle(x+self.offset*math.cos(i*self.rads), y+self.offset*math.sin(i*self.rads), self.small_radius, fill='white', outline='white')
+                self.circles.append(circle)
+
+        def set_position(self, position=1, color1='cyan', color2='red', color3='green'):
+            try:
+                self.canvas.delete(self.arc1)
+                self.canvas.delete(self.arc2)
+                self.canvas.delete(self.arc3)
+            except AttributeError:
+                pass
+            if position == 1:
+                self.arc1 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=300, extent=60, fill=color1, outline=color1)
+                self.arc2 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=180, extent=60, fill=color2, outline=color2)
+                self.arc3 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=60, extent=60, fill=color3, outline=color3)
+                self.canvas.tag_lower(self.arc1)
+                self.canvas.tag_lower(self.arc2)
+                self.canvas.tag_lower(self.arc3)
+                self.canvas.tag_lower(self.big_circle)
+                self.canvas.itemconfig(self.circles[0], fill=color1, outline=color1)
+                self.canvas.itemconfig(self.circles[1], fill=color1, outline=color1)
+                self.canvas.itemconfig(self.circles[2], fill=color2, outline=color2)
+                self.canvas.itemconfig(self.circles[3], fill=color2, outline=color2)
+                self.canvas.itemconfig(self.circles[4], fill=color3, outline=color3)
+                self.canvas.itemconfig(self.circles[5], fill=color3, outline=color3)
+            elif position == 2:
+                self.arc1 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=0, extent=60, fill=color1, outline=color1)
+                self.arc2 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=240, extent=60, fill=color2, outline=color2)
+                self.arc3 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=120, extent=60, fill=color3, outline=color3)
+                self.canvas.tag_lower(self.arc1)
+                self.canvas.tag_lower(self.arc2)
+                self.canvas.tag_lower(self.arc3)
+                self.canvas.tag_lower(self.big_circle)
+                self.canvas.itemconfig(self.circles[0], fill=color1, outline=color1)
+                self.canvas.itemconfig(self.circles[1], fill=color2, outline=color2)
+                self.canvas.itemconfig(self.circles[2], fill=color2, outline=color2)
+                self.canvas.itemconfig(self.circles[3], fill=color3, outline=color3)
+                self.canvas.itemconfig(self.circles[4], fill=color3, outline=color3)
+                self.canvas.itemconfig(self.circles[5], fill=color1, outline=color1)
+
     def __init__(self, window,  **kwargs):
         super().__init__(window, **kwargs)
         self.config(width=1000, height=300)
-        valve1 = self.SampleValve(self, 150, 150)
-        valve1.set_position(1)
+        valve1 = self.InjectionValve(self, 150, 150)
         valve1.set_position(2)
+        valve1.set_position(1)
 
     def create_circle(self, x, y, r, **kwargs):
         return self.create_oval(x-r, y-r, x+r, y+r, **kwargs)
