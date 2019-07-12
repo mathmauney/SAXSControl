@@ -298,13 +298,16 @@ class HPump:
                 self.controller.open()
             self.controller.write(("\n\r").encode())
 
+    def close(self):
+        if HPump.pumpserial.is_open:
+            HPump.pumpserial.close()
 
 
-class Rheodyne():
-    def __init__(self,name="Rheodyne",valvetype=0, possition=0, PCConnect=True, addressI2C=-1, ennabled=False, logger=[]):
+class Rheodyne:
+    def __init__(self,name="Rheodyne",valvetype=0, position=0, PCConnect=True, addressI2C=-1, ennabled=False, logger=[]):
         self.name=name                      #valve nickname
         self.valvetype=valvetype            #int to mark max number of valve possions 2 or 6
-        self.possition=possition
+        self.position=position
         self.PCConnect=PCConnect
         self.ennabled=ennabled
         self.logger=logger
@@ -337,23 +340,23 @@ class Rheodyne():
             self.logger.append("Setting"+ self.name+"address :"+name)
             self.addressI2C=address
     #"""Now the function to actually control de valve."""
-    def switchvalve(self,possition): #Lets take int
-    #this function wont work for possitions>10
+    def switchvalve(self,position): #Lets take int
+    #this function wont work for positions>10
     #to add that functionality the number must be
     #in hex format => P##  so 10 P0A
-    #Need errror handler to check possition is integer and less than valve type
+    #Need errror handler to check position is integer and less than valve type
         if not self.ennabled:
             return
 
         if self.PCConnect:
             if not self.serialobject.is_open:
                 self.serialobject.open()
-            self.serialobject.write(("P0"+str(possition)+"\n\r").encode())
+            self.serialobject.write(("P0"+str(position)+"\n\r").encode())
             ans=self.serialobject.read()
             #self.serialobject.close()           #Trying to be polite and leaving the ports closed
             if ans==b'\r': #pump returns this if command acknowledged
-                self.possition=possition
-                self.logger.append(self.name+" switched to "+str(possition))
+                self.position=position
+                self.logger.append(self.name+" switched to "+str(position))
                 return 0    #Valve acknowledged commsnd
             else:
                 self.logger.append("Error Switching "+self.name)
@@ -364,12 +367,12 @@ class Rheodyne():
         else:
             if not self.controller.is_open:
                 self.controller.open()
-            self.controller.write(("P%03i%i"%(self.addressI2C,possition)).encode())
+            self.controller.write(("P%03i%i"%(self.addressI2C,position)).encode())
             ans=self.controller.read()
             #self.controller.close()           #Trying to be polite and leaving the ports closed
             if ans==b'0': #pump returns this if command acknowledged
-                self.possition=possition
-                self.logger.append(self.name+" switched to "+str(possition))
+                self.position=position
+                self.logger.append(self.name+" switched to "+str(position))
                 return 0    #Valve acknowledged commsnd
             else:
                 self.logger.append("Error Switching "+self.name)
@@ -387,7 +390,7 @@ class Rheodyne():
             self.serialobject.write("S\n\r".encode())
             ans=self.serialobject.read(2) #need to ensure thwt buffer doesnt build up-> if so switch to readln
             self.serialobject.close()
-            return int(ans)   #returns valve possition
+            return int(ans)   #returns valve position
             # TODO: add error handlers
         elif self.addressI2C==-1:
             return -1
@@ -397,7 +400,7 @@ class Rheodyne():
                 self.controller.write(("S%03i"%self.addressI2C).encode())
                 ans=self.controller.read() #need to ensure thwt buffer doesnt build up-> if so switch to readln
             #self.controller.close()
-        return int(ans)   #returns valve possition
+        return int(ans)   #returns valve position
             # TODO: add error handlers
 
     def seti2caddress(self,address: int): #Address is in int format
@@ -424,3 +427,71 @@ class Rheodyne():
         else:
             return -1  # TODO: Error because value is not even
         return  # ans
+
+    def close(self):
+        if self.serialobject.is_open:
+            self.serialobject.close()
+
+
+
+class VICI:
+    def __init__(self,name="VICI", address="", ennabled=False, PCConnect=True, position=0, logger=[]):
+        self.name = name
+        self.address = address
+        self.ennabled = ennabled
+        self.PCConnect = PCConnect
+        self.position = position
+        self.logger = logger
+
+        self.ControllerKey=""
+        self.serialobject=serial.Serial( timeout=0.1, baudrate=9600)
+
+    def setport(self,port):
+        if self.serialobject.is_open:
+            self.serialobject.close()
+        self.serialobject.port = port
+        self.ennabled = True
+        self.PCConnect = True
+        self.ControllerKey = ""
+        self.serialobject.open()
+        self.logger.append(self.name+" set to port: "+ port)
+
+    def settocontroller(self, controller):
+        if self.serialobject.is_open:
+            self.serialobject.close()
+        self.PCConnect = False
+        self.serialobject = Controller
+        self.ennabled = True
+        self.ControllerKey="+"
+        self.serialobject.open()
+        self.logger.append(self.name+" set to Microntroller")
+
+    def switchvalve(self, position):
+        if not self.ennabled:
+            self.logger.append(self.name+" not set up, switching ignored")
+            return
+
+        if not self.serialobject.is_open():
+            self.serialobject.open()
+        commandtosend=self.ControllerKey+"GO{:02d}".format(position)
+        self.serialobject.write(commandtosend.encode())
+        self.logger.append(self.name+" switched to "+position)
+        while self.serialobject.in_waiting()>0:
+            self.logger.append(self.serialobject.readline())
+
+    def currentposition(self):
+        if not self.ennabled:
+            self.logger.append(self.name+" not set up, switching ignored")
+            return
+
+        if not self.serialobject.is_open():
+            self.serialobject.open()
+        commandtosend=self.ControllerKey+"CP"
+        self.serialobject.write(commandtosend.encode())
+        self.logger.append(self.name+" Position Query ")
+        while self.serialobject.in_waiting()>0:
+            self.logger.append(self.serialobject.readline())
+
+    def close(self):
+        if self.serialobject.is_open:
+            self.serialobject.close()
