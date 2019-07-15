@@ -190,6 +190,7 @@ class ElveflowDisplay(tk.Canvas):
         self.errorlogger = errorlogger
         self.saveFile = None
         self.saveFileWriter = None
+        self.shutdown = False
 
         self.starttime = int(time.time())
         self.errorlogger.info("start time is %d" % self.starttime)
@@ -269,8 +270,6 @@ class ElveflowDisplay(tk.Canvas):
 
             tkinter.ttk.Separator(self, orient=tk.HORIZONTAL).grid(row=rowcounter, column=1, columnspan=3, sticky='ew', padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
             rowcounter += 1
-
-            # TODO!
 
             self.setElveflow_frame = tk.Frame(self, bg="#aaddff")
             self.setElveflow_frame.grid(row=rowcounter, column=1, columnspan=3, padx=ElveflowDisplay.PADDING*3, pady=ElveflowDisplay.PADDING*3)
@@ -398,7 +397,7 @@ class ElveflowDisplay(tk.Canvas):
                     self.update_plot()
                     if save_flag.is_set():
                         for dict in newData:
-                            self.saveFileWriter.writerow([str(dict[key]) for key in self.elveflow_handler.header])  # TODO
+                            self.saveFileWriter.writerow([str(dict[key]) for key in self.elveflow_handler.header])
                     time.sleep(ElveflowDisplay.POLLING_PERIOD)
             finally:
                 try:
@@ -421,7 +420,10 @@ class ElveflowDisplay(tk.Canvas):
 
     def stop(self, shutdown=False):
         self.run_flag.clear()
-        print("Display run flag cleared")
+        if shutdown:
+            self.shutdown = True
+            # shutdown was a flag I was using to help with threading problems
+            # I don't think it actually does anything, but at least it's not hurting anything, anyway
 
         if self.elveflow_handler is not None:
             self.elveflow_handler.stop()
@@ -489,7 +491,17 @@ class ElveflowDisplay(tk.Canvas):
                   for (i, item) in enumerate(self.axis_limits_numbers)]
         self.ax.set_xlim(*limits[0:2])
         self.ax.set_ylim(*limits[2:4])
-        self.canvas.draw()
+
+        # HACK:
+        # self.canvas.draw doesn't shut down properly for whatever reason when clicking the exit button
+        # so instead, spawn a daemon thread (a thread that automatically dies at the end of the program -
+        # we haven't been using them elsewhere because they don't allow for graceful exiting/handling of
+        # acquired resources, but I think it shouldn't matter if we crash-exit drawing to the screen
+        # because we're closing the screen anyway, even if it becomes corrupted)
+        def thisIsDumb():
+            self.canvas.draw()
+        tempThread = threading.Thread(target=thisIsDumb, daemon=True)
+        tempThread.start()
 
     def set_pressure(self, channel=1, isPressure=True):
         i = channel - 1
@@ -500,7 +512,7 @@ class ElveflowDisplay(tk.Canvas):
             if isPressure:
                 pressure_to_set = int(float(pressureValue.get()))
                 pressureValue.set(str(pressure_to_set))
-                self.elveflow_handler.setPressureLoop(channel, pressure_to_set, interruptEvent=self.setPressureStopflag[i])
+                self.elveflow_handler.setPressureLoop(channel, pressure_to_set, interruptEvent=self.setPressureStopflag[i], onFinish=lambda: self.isSettingPressureValues[i].set(False))
             else:
                 flowrate_to_set = int(float(pressureValue.get()))
                 pressureValue.set(str(flowrate_to_set))

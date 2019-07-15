@@ -120,15 +120,11 @@ class main:
         self.python_logger_gui.configure(font='TkFixedFont')
         self.SPEC_logger = MiscLogger(self.SPEC_logs, state='disabled', height=45)
         self.SPEC_logger.configure(font='TkFixedFont')
-        #
-        # TODO: also autosave, as a backup in case of crashing
-        # initialize an empty history
-        self.history = [
-            (time.time(), 99 if time.sleep(0.5) else 93),
-            (time.time(), 44)
-        ]
-        self.save_button = tk.Button(self.buttons, text='Save History', command=self.save_history)  # TODO
-        # self.save_button.grid(row=0, column=4) # TODO
+
+        time.sleep(0.6) # I have no idea why we need this but everything crashes and burns if we don't include it
+        # It acts as though there's a race condition, but aren't we still single-threaded at this point?
+        # I suspect something might be going wrong with the libraries, then, especially tkinter and matplotlib
+
         self.draw_static()
         self.elveflow_display = ElveflowDisplay(self.elveflow_page, core_height, core_width, self.python_logger)
         self.elveflow_display.grid(row=0, column=0)
@@ -254,13 +250,15 @@ class main:
 
     def exit(self):
         """Exit the GUI and stop all running things"""
+        print("STARTING EXIT PROCEDURE")
         self.stop()
         if self.elveflow_display.run_flag.is_set():
-            self.elveflow_display.stop(shutdown=False)
+            self.elveflow_display.stop(shutdown=True)
         if self.SPEC_Connection.run_flag.is_set():
             self.SPEC_Connection.stop()
         if self.listen_run_flag.is_set():
             self.listen_run_flag.clear()
+
         self.main_window.destroy()
 
     def pump_refill_command(self):
@@ -307,6 +305,7 @@ class main:
 
     def listen(self):
         """Look for queues of hardware commands and execute them."""
+        print("STARTING QUEUE LISTENING THREAD %s" % threading.current_thread())
         while self.listen_run_flag.is_set():
             if self.queue.empty():
                 if self.queue_busy:
@@ -321,6 +320,7 @@ class main:
                     queue_item[0](*queue_item[1:])
                 elif callable(queue_item):
                     queue_item()
+        print("DONE WITH THIS QUEUE LISTENING THREAD %s" % threading.current_thread())
 
     def toggle_buttons(self):
         """Toggle certain buttons on and off when they should not be allowed to add to queue."""
@@ -335,10 +335,7 @@ class main:
 
 
 if __name__ == "__main__":
-    try:
-        window = tk.Tk()
-        main(window)
-        window.mainloop()
-    finally:
-        print("As main thread %s is closing, these are the remaining threads: %s" % (threading.current_thread(), threading.enumerate()))
-        print()
+    window = tk.Tk()
+    main(window)
+    window.mainloop()
+    print("Main window now destroyed. Exiting.")
