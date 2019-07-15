@@ -514,11 +514,13 @@ class FlowPath(tk.Canvas):
             super().__init__(canvas, x, y, name)
             self.canvas.itemconfig(self.center_circle, fill='white', outline='white', tag=self.name)
             self.color = 'black'
+            for i in range(0, 6):
+                self.canvas.itemconfig(self.circles[i], tag=self.name+str(i))
+                self.canvas.tag_bind(self.name+str(i), '<Button-1>', lambda event, position=i: self.set_manual_position(position))
 
         def set_position(self, position, color=None):
             if color is not None:
                 self.color = color
-            self.canvas.itemconfig(self.circles[position], fill=self.color, outline=self.color)
             for line in self.fluid_lines[position]:
                 self.canvas.itemconfig(line, fill=self.color, outline=self.color)
             self.canvas.itemconfig(self.circles[self.position], fill='white', outline='white')
@@ -530,6 +532,7 @@ class FlowPath(tk.Canvas):
                 self.canvas.delete(self.channel)
             except AttributeError:
                 pass
+            self.canvas.itemconfig(self.circles[position], fill=self.color, outline=self.color)
             self.channel = self.canvas.create_polygon([self.x+self.small_radius*math.sin(position*self.rads), self.y-self.small_radius*math.cos(position*self.rads),
                                                        self.x+self.offset*math.cos(position*self.rads)+self.small_radius*math.sin(position*self.rads), self.y+self.offset*math.sin(position*self.rads)-self.small_radius*math.cos(position*self.rads),
                                                        self.x+self.offset*math.cos(position*self.rads)-self.small_radius*math.sin(position*self.rads), self.y+self.offset*math.sin(position*self.rads)+self.small_radius*math.cos(position*self.rads),
@@ -538,16 +541,22 @@ class FlowPath(tk.Canvas):
             for i in range(0, 6):
                 self.canvas.tag_raise(self.circles[i])
 
+        def set_manual_position(self, position):
+            if self.canvas.is_unlocked:
+                self.set_position(position)
+
     class SampleValve(Valve):
         def __init__(self, canvas, x, y, name):
             super().__init__(canvas, x, y, name)
             self.inner_circle = self.canvas.create_circle(x, y, self.offset-self.small_radius, fill='dimgray', outline='dimgray', tag=self.name)
             self.right_color = 'red'
             self.left_color = 'black'
+            self.canvas.tag_bind(name, '<Button-1>', lambda event: self.set_manual_position(self.position+1))
 
-        def set_position(self, position=1, **kwargs):
+        def set_position(self, position, **kwargs):
             self.left_color = kwargs.pop('left_color', self.left_color)
             self.right_color = kwargs.pop('right_color', self.right_color)
+            self.position = position % 2
             try:
                 self.canvas.delete(self.arc1)
                 self.canvas.delete(self.arc2)
@@ -559,7 +568,7 @@ class FlowPath(tk.Canvas):
             self.canvas.itemconfig(self.circles[3], fill=self.left_color, outline=self.left_color)
             for line in self.fluid_lines[3]:
                 self.canvas.itemconfig(line, fill=self.left_color, outline=self.left_color)
-            if position % 2 == 1:
+            if self.position == 1:
                 self.arc1 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=120, extent=60, fill=self.left_color, outline=self.left_color)
                 self.arc2 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=0, extent=60, fill=self.right_color, outline=self.right_color)
                 self.canvas.tag_lower(self.arc1)
@@ -574,7 +583,7 @@ class FlowPath(tk.Canvas):
                 self.canvas.itemconfig(self.circles[3], fill=self.left_color, outline=self.left_color)
                 for line in self.fluid_lines[4]:
                     self.canvas.itemconfig(line, fill=self.left_color, outline=self.left_color)
-            elif position % 2 == 0:
+            elif self.position == 0:
                 self.arc1 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=180, extent=60, fill=self.left_color, outline=self.left_color)
                 self.arc2 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=300, extent=60, fill=self.right_color, outline=self.right_color)
                 self.canvas.tag_lower(self.arc1)
@@ -592,6 +601,11 @@ class FlowPath(tk.Canvas):
             for i in range(0, 6):
                 self.canvas.tag_raise(self.circles[i])
 
+        def set_manual_position(self, position):
+            if self.canvas.is_unlocked:
+                self.set_position(position)
+                print('Set position %i' % position)
+
     class InjectionValve(Valve):
         def __init__(self, canvas, x, y, name):
             super().__init__(canvas, x, y, name)
@@ -599,19 +613,22 @@ class FlowPath(tk.Canvas):
             self.color2 = 'white'
             self.color3 = 'white'
             self.name = name
+            self.position = 1
             self.inner_circle = self.canvas.create_circle(x, y, self.offset-self.small_radius, fill='dimgray', outline='dimgray', tag=self.name)
+            self.canvas.tag_bind(name, '<Button-1>', lambda event: self.set_manual_position(self.position+1))
 
-        def set_position(self, position=1, **kwargs):
+        def set_position(self, position, **kwargs):
             self.color1 = kwargs.pop('color1', self.color1)
-            self.color1 = kwargs.pop('color1', self.color1)
-            self.color1 = kwargs.pop('color1', self.color1)
+            self.color2 = kwargs.pop('color1', self.color2)
+            self.color3 = kwargs.pop('color1', self.color3)
+            self.position = position % 2
             try:
                 self.canvas.delete(self.arc1)
                 self.canvas.delete(self.arc2)
                 self.canvas.delete(self.arc3)
             except AttributeError:
                 pass
-            if position % 2 == 1:
+            if self.position == 1:
                 self.arc1 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=300, extent=60, fill=self.color2, outline=self.color2)
                 self.arc2 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=180, extent=60, fill=self.color1, outline=self.color1)
                 self.arc3 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=60, extent=60, fill=self.color3, outline=self.color3)
@@ -643,7 +660,7 @@ class FlowPath(tk.Canvas):
                 for line in self.fluid_lines[5]:
                     if self.color3 != 'white':
                         self.canvas.itemconfig(line, fill=self.color3, outline=self.color3)
-            elif position % 2 == 0:
+            elif self.position == 0:
                 self.arc1 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=0, extent=60, fill=self.color3, outline=self.color3)
                 self.arc2 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=240, extent=60, fill=self.color2, outline=self.color2)
                 self.arc3 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=120, extent=60, fill=self.color1, outline=self.color1)
@@ -682,6 +699,10 @@ class FlowPath(tk.Canvas):
             for i in range(0, 6):
                 self.canvas.tag_raise(self.circles[i])
 
+        def set_manual_position(self, position):
+            if self.canvas.is_unlocked:
+                self.set_position(position)
+
     class FluidLevel():
         """Build a widget to show the fluid level in a syringe."""
 
@@ -716,11 +737,47 @@ class FlowPath(tk.Canvas):
             else:
                 self.canvas.itemconfig(self.level, fill=self.color, outline=self.color)
 
-    def __init__(self, window,  **kwargs):
+    class Lock():
+        def __init__(self, canvas, x, y):
+            self.x = x
+            self.y = y
+            self.canvas = canvas
+            self.size = 100 * self.canvas.lock_scale
+            self.state = 'locked'
+            self.color = 'gold'
+            self.canvas.create_rectangle(x, y+.8*self.size, x+self.size, y+1.8*self.size, fill=self.color, outline='', tag='lock')
+            self.movable_rectangle = self.canvas.create_rectangle(x+.1*self.size, y+.4*self.size, x+.3*self.size, y+self.size, fill=self.color, outline='', tag='lock')
+            self.canvas.create_rectangle(x+.7*self.size, y+.4*self.size, x+.9*self.size, y+self.size, fill=self.color, outline='', tag='lock')
+            self.moveable_arc1 = self.canvas.create_arc(x+.1*self.size, y, x+.9*self.size, y+.8*self.size, start=0, extent=180, fill=self.color, outline='', tag='lock')
+            self.moveable_arc2 = self.canvas.create_arc(x+.3*self.size, y+.2*self.size, x+.7*self.size, y+.6*self.size, start=0, extent=180, fill=self.canvas['background'], outline='', tag='lock')
+
+        def toggle(self, state=None):
+            if state is not None:
+                self.state = state
+            dist = .6*self.size
+            if self.state == 'locked':
+                self.canvas.move(self.movable_rectangle, 2*dist, 0)
+                self.canvas.move(self.moveable_arc1, dist, 0)
+                self.canvas.move(self.moveable_arc2, dist, 0)
+                self.state = 'unlocked'
+            elif self.state == 'unlocked':
+                self.canvas.move(self.movable_rectangle, -2*dist, 0)
+                self.canvas.move(self.moveable_arc1, -dist, 0)
+                self.canvas.move(self.moveable_arc2, -dist, 0)
+                self.state = 'locked'
+            else:
+                raise ValueError('Invalid lock state')
+
+    def __init__(self, window, **kwargs):
         super().__init__(window, **kwargs)
         self.config(width=1800, height=300)
+        self.is_unlocked = False
         self.valve_scale = 2/3
+        self.lock_scale = .3
         self.fluid_line_width = 20
+        self.window = window
+        self.lock = self.Lock(self, 10, 10)
+        self.tag_bind('lock', '<Button-1>', lambda event: self.lock_popup())
         # Add Elements
         self.draw_pumps()
         self.draw_valves()
@@ -730,7 +787,6 @@ class FlowPath(tk.Canvas):
 
     def draw_pumps(self):
         self.pump1 = self.FluidLevel(self, 0, 125, height=50, color='black', orientation='right', name='pump')
-        self.tag_bind('pump', '<Button-1>', lambda event: print("Pump clicked"))
 
     def draw_valves(self):
         self.valve1 = self.InjectionValve(self, 300, 150, 'valve1')
@@ -765,7 +821,7 @@ class FlowPath(tk.Canvas):
         self.pump1.update(25)
         self.sample_level.update(25)
         self.buffer_level.update(25)
-        self.valve1.set_position(2, color1='black')
+        self.valve1.set_position(0, color1='black')
         self.valve2.set_position(4, color='black')
         self.valve3.set_position(1)
         self.valve4.set_position(0, color='red')
@@ -787,3 +843,43 @@ class FlowPath(tk.Canvas):
                 return self.create_rectangle(x-r, y-r, x+r, y+length+r, fill=color, outline=color)
             else:
                 return self.create_rectangle(x-r, y+length-r, x+r, y+r, fill=color, outline=color)
+
+    def set_unlock_state(self, state=None):
+        if state is None:
+            self.is_unlocked = not self.is_unlocked
+        else:
+            self.is_unlocked = state
+        if self.is_unlocked:
+            self.lock.toggle('unlocked')
+        else:
+            self.lock.toggle('locked')
+
+    def manual_switch_lock(self):
+        if self.is_unlocked:
+            self.is_unlocked = False
+        else:
+            self.lock_popup()
+
+    def lock_popup(self):
+        def check_password(password):
+            if password == 'asaxsisgr8':
+                self.set_unlock_state()
+                self.lock.toggle()
+                win.destroy()
+        if self.is_unlocked:
+            self.lock.toggle()
+            self.set_unlock_state()
+        else:
+            print('Test')
+            win = tk.Toplevel()
+            win.wm_title("Unlock?")
+            label = tk.Label(win, text='Password?')
+            label.grid(row=0, column=0)
+            pass_entry = tk.Entry(win, show='*')
+            pass_entry.grid(row=0, column=1)
+            pass_entry.focus()
+            pass_entry.bind("<Return>", lambda event: check_password(pass_entry.get()))
+            ok_button = tk.Button(win, text="Unlock", command=lambda: check_password(pass_entry.get()))
+            ok_button.grid(row=1, column=0)
+            cancel_button = tk.Button(win, text="Cancel", command=win.destroy)
+            cancel_button.grid(row=1, column=1)
