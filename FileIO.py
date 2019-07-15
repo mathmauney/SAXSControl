@@ -110,7 +110,7 @@ class ElveflowHandler_ESI:
             except Queue_Full:
                 pass
             finally:
-                self.errorlogger.info("ENDING HANDLER THREAD %s" % threading.current_thread())
+                self.errorlogger.info("ENDING HANDLER THREAD %s, %s" % (threading.current_thread(),threading.enumerate()) )
 
         if self.sourcename is not None:
             self.reading_thread = threading.Thread(target=start_thread)
@@ -159,7 +159,7 @@ class ElveflowHandler_ESI:
 class ElveflowHandler_SDK:
     """a class that handles interfacing with the Elveflow directly"""
     SLEEPTIME = 0.1  # how many seconds between each read of the Elveflow output
-    PID_SLEEPTIME = 0.05  # how many seconds between each command of the PID loop
+    PID_SLEEPTIME = 0.1  # how many seconds between each command of the PID loop
     QUEUE_MAXLEN = 0  # zero means infinite
 
     PRESSURE_MAXSLOPE = 1000 * PID_SLEEPTIME # in mbar per update frame
@@ -248,8 +248,7 @@ class ElveflowHandler_SDK:
             except RuntimeError:
                 print("Runtime error detected in IO handler thread %s while trying to close. Ignoring." % threading.current_thread())
             finally:
-                print("DONE WITH HANLDER THREAD %s" % threading.current_thread())
-                # print("As Handler %s is closing, these are the remaining threads: %s" % (threading.current_thread(), threading.enumerate()))
+                print("DONE WITH HANDLER THREAD %s" % threading.current_thread())
 
         self.reading_thread = threading.Thread(target=start_thread)
         self.reading_thread.start()
@@ -321,6 +320,7 @@ class ElveflowHandler_SDK:
                 else:
                     # if we have an error reading, don't try to set anything
                     if abs(target - get_pressure.value) <= ElveflowHandler_SDK.PRESSURE_MAXSLOPE:
+                        # if we're close, just set it and hope for the best
                         pressure_to_set = target
                         interruptEvent.set()
                     else:
@@ -328,7 +328,7 @@ class ElveflowHandler_SDK:
                     error = Elveflow_SDK.OB1_Set_Press(self.instr_ID.value, channel_number, pressure_to_set, byref(self.calib), 1000)
                     if error != 0:
                         self.errorlogger.warning('ERROR CODE SETTING PRESSURE %i: %s' % (channel_number, error))
-                    self.errorlogger.debug(pressure_to_set)
+                    self.errorlogger.debug("setting pressure to %s", pressure_to_set)
                 time.sleep(ElveflowHandler_SDK.PID_SLEEPTIME)
 
             try:
@@ -337,26 +337,23 @@ class ElveflowHandler_SDK:
                     onFinish()
             except RuntimeError:
                 print("Runtime error detected in pressure loop channel %s thread %s while trying to close. Ignoring." % (channel_number, threading.current_thread()))
-            finally:
-                print("As pressure loop channel %s is closing, these are the remaining threads: %s" % (threading.current_thread(), threading.enumerate()))
-                print()
 
         self.reading_thread = threading.Thread(target=start_thread, args=(channel_number, value, interruptEvent))
         self.reading_thread.start()
         return self.reading_thread
 
-    def setVolumeLoop(self, channel_number, value, interruptEvent=None):
+    def setVolumeLoop(self, channel_number, value, interruptEvent=None, pid_constants=None):
         """starts a thread that sets the Elveflow flow rate"""
         if interruptEvent is None:
             # if there isn't one already, create a dummy one
             interruptEvent = threading.Event()
             interruptEvent.clear()
+        if pid_constants is None:
+            pid_constants = (ElveflowHandler_SDK.VOLUME_KP, ElveflowHandler_SDK.VOLUME_KI, ElveflowHandler_SDK.VOLUME_KD)
 
-        def start_thread(channel_number, target, interruptEvent):
+        def start_thread(channel_number, target, interruptEvent, pid_constants):
             self.errorlogger.info("STARTING PRESSURE LOOP CHANNEL %s THREAD %s." % (channel_number, threading.current_thread()))
-
-            pid = PID(Kp=ElveflowHandler_SDK.VOLUME_KP, Ki=ElveflowHandler_SDK.VOLUME_KI, Kd=ElveflowHandler_SDK.VOLUME_KD, setpoint=target)
-
+            pid = PID(*pid_constants, setpoint=target)
             initial_pressure = c_double()
             error = Elveflow_SDK.OB1_Get_Press(self.instr_ID.value, c_int32(channel_number), 1, byref(self.calib), byref(initial_pressure), 1000)
             if error != 0:
@@ -391,11 +388,8 @@ class ElveflowHandler_SDK:
                 self.errorlogger.info("ENDING FLOW RATE LOOP CHANNEL %s THREAD %s." % (channel_number, threading.current_thread()))
             except RuntimeError:
                 print("Runtime error detected in flow rate loop channel %s thread %s while trying to close. Ignoring." % (channel_number, threading.current_thread()))
-            finally:
-                print("As flow rate loop channel %s is closing, these are the remaining threads: %s" % (threading.current_thread(), threading.enumerate()))
-                print()
 
-        self.reading_thread = threading.Thread(target=start_thread, args=(channel_number, value, interruptEvent))
+        self.reading_thread = threading.Thread(target=start_thread, args=(channel_number, value, interruptEvent, pid_constants))
         self.reading_thread.start()
 
 if USE_SDK:

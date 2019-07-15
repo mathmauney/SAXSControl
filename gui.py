@@ -54,7 +54,7 @@ class main:
             core_height = window_height - state_height - 50
             log_height = core_height
 
-        # Make Instrumet
+        # Make Instrument
         self.controller=HPump.SAXSController()
         self.pump=HPump.HPump()
         # Button Bar
