@@ -199,6 +199,8 @@ class main:
         self.ControllerSet.grid(row=1, column=2)
         self.I2CScanButton.grid(row=1, column=3)
         self.RefreshCOMList()
+        # FlowPath
+        self.flowpath.grid(row=0, column=0)
         # Python Log
         self.python_logger_gui.grid(row=0, column=0, sticky='NSEW')
         nowtime = time.time()

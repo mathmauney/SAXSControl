@@ -440,7 +440,7 @@ class ElveflowDisplay(tk.Canvas):
             self.saveFileName_entry.config(state=tk.NORMAL)
             self.saveFileNameSuffix_var.set("_%d.csv" % time.time())
 
-    def stop(self):
+    def stop(self, shutdown=False):
         self.run_flag.clear()
         if shutdown:
             self.shutdown = True
@@ -482,7 +482,7 @@ class ElveflowDisplay(tk.Canvas):
         else:
             self.errorlogger.error('cannot start saving (header is unknown). Try again in a moment')
 
-    def stop_saving(self):
+    def stop_saving(self, shutdown=False):
         if self.save_flag.is_set():
             self.errorlogger.info('stopped saving')
         self.save_flag.clear()
