@@ -316,7 +316,7 @@ class ElveflowHandler_SDK:
                 get_pressure = c_double()
                 error = Elveflow_SDK.OB1_Get_Press(self.instr_ID.value, c_int32(channel_number), 1, byref(self.calib), byref(get_pressure), 1000)
                 if error != 0:
-                    self.errorlogger.warning('ERROR CODE GETTING PRESSURE %i: %s' % (i, error))
+                    self.errorlogger.warning('ERROR CODE GETTING PRESSURE %i: %s' % (channel_number, error))
                 else:
                     # if we have an error reading, don't try to set anything
                     if abs(target - get_pressure.value) <= ElveflowHandler_SDK.PRESSURE_MAXSLOPE:
@@ -357,7 +357,7 @@ class ElveflowHandler_SDK:
             initial_pressure = c_double()
             error = Elveflow_SDK.OB1_Get_Press(self.instr_ID.value, c_int32(channel_number), 1, byref(self.calib), byref(initial_pressure), 1000)
             if error != 0:
-                self.errorlogger.warning('ERROR CODE GETTING PRESSURE %i: %s' % (i, error))
+                self.errorlogger.warning('ERROR CODE GETTING PRESSURE %i: %s' % (channel_number, error))
             self.errorlogger.debug("INITIAL PRESSURE IS %f" % initial_pressure.value)
 
             while self.run_flag.is_set() and not interruptEvent.is_set():
@@ -365,7 +365,7 @@ class ElveflowHandler_SDK:
                 get_flowrate = c_double()
                 error = Elveflow_SDK.OB1_Get_Sens_Data(self.instr_ID.value, c_int32(channel_number), 1, byref(get_flowrate))
                 if error != 0:
-                    self.errorlogger.warning('ERROR CODE GETTING FLOW RATE %i: %s' % (i, error))
+                    self.errorlogger.warning('ERROR CODE GETTING FLOW RATE %i: %s' % (channel_number, error))
                 else:
                     # if we have an error reading, don't try to set anything
                     pressure_to_set = pid(get_flowrate.value) + initial_pressure.value
