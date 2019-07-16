@@ -122,7 +122,7 @@ class main:
         self.SPEC_logger.configure(font='TkFixedFont')
         # Flow setup frames
         self.flowpath = FlowPath(self.state_frame)
-        time.sleep(0.6) # I have no idea why we need this but everything crashes and burns if we don't include it
+        time.sleep(0.6)   # I have no idea why we need this but everything crashes and burns if we don't include it
         # It acts as though there's a race condition, but aren't we still single-threaded at this point?
         # I suspect something might be going wrong with the libraries, then, especially tkinter and matplotlib
         self.draw_static()
