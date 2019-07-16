@@ -5,7 +5,7 @@ import threading
 import math
 from queue import Queue, Empty as Queue_Empty, Full as Queue_Full
 from tkinter import filedialog
-from simple_pid import PID
+# from simple_pid import PID
 
 USE_SDK = False
 SDK_SENSOR_TYPES = {
