@@ -16,7 +16,6 @@ import logging
 import queue
 import threading
 import SAXSDrivers
-import time
 import os.path
 import csv
 
@@ -85,8 +84,8 @@ class main:
         self.pump_refill_button = tk.Button(self.auto_page, text='Refill Oil', command=lambda: self.pump_refill_command())
         self.pump_inject_button = tk.Button(self.auto_page, text='Run Buffer/Sample/Buffer', command=lambda: self.pump_inject_command())
         # Manual Page
-        self.manual_page_buttons=[]
-        self.manual_page_variables=[]
+        self.manual_page_buttons = []
+        self.manual_page_variables = []
         # Config page
 
         self.save_config_button = tk.Button(self.config_page, text='Save Config', command=self.save_config)
@@ -103,18 +102,18 @@ class main:
         self.last_buffer_volume_box = tk.Entry(self.config_page, textvariable=self.last_buffer_volume)
 
         # Make Instrument
-        self.AvailablePorts=SAXSDrivers.ListAvailablePorts()
-        self.controller=SAXSDrivers.SAXSController(timeout=0.1)
-        self.Instruments=[]
-        self.NumberofPumps=0
+        self.AvailablePorts = SAXSDrivers.ListAvailablePorts()
+        self.controller = SAXSDrivers.SAXSController(timeout=0.1)
+        self.Instruments = []
+        self.NumberofPumps = 0
         # Setup Page
-        self.AvailablePorts=SAXSDrivers.ListAvailablePorts()
-        self.setup_page_buttons=[]
-        self.setup_page_variables=[]
-        self.refresh_com_ports = tk.Button(self.setup_page,text="Refresh COM", command=lambda: self.RefreshCOMList())
-        self.AddPump = tk.Button(self.setup_page, text="Add Pump", command=lambda:self.AddPumpSetButtons())
-        self.AddRheodyne = tk.Button(self.setup_page, text="Add Rheodyne", command=lambda:self.AddRheodyneSetButtons())
-        self.AddVICI = tk.Button(self.setup_page, text="Add VICI Valve", command=lambda:self.AddVICISetButtons())
+        self.AvailablePorts = SAXSDrivers.ListAvailablePorts()
+        self.setup_page_buttons = []
+        self.setup_page_variables = []
+        self.refresh_com_ports = tk.Button(self.setup_page, text="Refresh COM", command=lambda: self.RefreshCOMList())
+        self.AddPump = tk.Button(self.setup_page, text="Add Pump", command=lambda: self.AddPumpSetButtons())
+        self.AddRheodyne = tk.Button(self.setup_page, text="Add Rheodyne", command=lambda: self.AddRheodyneSetButtons())
+        self.AddVICI = tk.Button(self.setup_page, text="Add VICI Valve", command=lambda: self.AddVICISetButtons())
         self.ControllerCOM = COMPortSelector(self.setup_page, exportselection=0, height=3)
         self.ControllerSet = tk.Button(self.setup_page, text="Set Microntroller", command=lambda: self.controller.setport(self.AvailablePorts[int(self.ControllerCOM.curselection()[0])].device))
         self.I2CScanButton = tk.Button(self.setup_page, text="Scan I2C line", command=lambda: self.controller.ScanI2C())
@@ -131,7 +130,7 @@ class main:
         self.SPEC_logger.configure(font='TkFixedFont')
         self.Instrument_logger = MiscLogger(self.Instrument_logs, state='disabled', height=45)
         self.Instrument_logger.configure(font='TkFixedFont')
-        self.controller.logger=self.Instrument_logger
+        self.controller.logger = self.Instrument_logger
         #
         # Flow setup frames
         self.flowpath = FlowPath(self.state_frame)
@@ -356,56 +355,56 @@ class main:
         self.NumberofPumps += 1
         InstrumentIndex = len(self.Instruments)-1
 
-        newvars=[tk.IntVar(value=0), tk.StringVar()]
+        newvars = [tk.IntVar(value=0), tk.StringVar()]
         self.setup_page_variables.append(newvars)
 
-        newbuttons=[
+        newbuttons = [
          COMPortSelector(self.setup_page, exportselection=0, height=4),
-         tk.Button(self.setup_page,text="Set Port", command=lambda: self.Instruments[InstrumentIndex].setport(self.AvailablePorts[int(self.setup_page_buttons[InstrumentIndex][0].curselection()[0])].device)),
-         tk.Label(self.setup_page, text="or") ,
-         tk.Button(self.setup_page,text="Send to Controller", command=lambda:self.Instruments[InstrumentIndex].settocontroller(self.controller)),
+         tk.Button(self.setup_page, text="Set Port", command=lambda: self.Instruments[InstrumentIndex].setport(self.AvailablePorts[int(self.setup_page_buttons[InstrumentIndex][0].curselection()[0])].device)),
+         tk.Label(self.setup_page, text="or"),
+         tk.Button(self.setup_page, text="Send to Controller", command=lambda: self.Instruments[InstrumentIndex].settocontroller(self.controller)),
          tk.Label(self.setup_page, text="   Pump Address:"),
          tk.Spinbox(self.setup_page, from_=1, to=100, textvariable=self.setup_page_variables[InstrumentIndex][0]),
          tk.Label(self.setup_page, text="   Pump Name:"),
-         tk.Entry(self.setup_page,textvariable=self.setup_page_variables[InstrumentIndex][1]),
-         tk.Button(self.setup_page, text="Set values",command=lambda:self.InstrumentChangeValues(InstrumentIndex))
+         tk.Entry(self.setup_page, textvariable=self.setup_page_variables[InstrumentIndex][1]),
+         tk.Button(self.setup_page, text="Set values", command=lambda: self.InstrumentChangeValues(InstrumentIndex))
          ]
 
         # Pumps share a port-> Dont need extra ones
         if self.NumberofPumps > 1:
-             newbuttons[0]=tk.Label(self.setup_page, text="     ")
-             newbuttons[1]=tk.Label(self.setup_page, text="     ")
-             newbuttons[2]=tk.Label(self.setup_page, text="     ")
+            newbuttons[0] = tk.Label(self.setup_page, text="     ")
+            newbuttons[1] = tk.Label(self.setup_page, text="     ")
+            newbuttons[2] = tk.Label(self.setup_page, text="     ")
 
         self.setup_page_buttons.append(newbuttons)
         for i in range(len(self.setup_page_buttons)):
             for y in range(len(self.setup_page_buttons[i])):
-                self.setup_page_buttons[i][y].grid(row=i+2,column=y)
+                self.setup_page_buttons[i][y].grid(row=i+2, column=y)
         self.RefreshCOMList()
         self.AddPumpControlButtons()
 
-    def InstrumentChangeValues(self,InstrumentIndex,isvalve=False):
-        self.Instruments[InstrumentIndex].changevalues(int((self.setup_page_variables[InstrumentIndex][0]).get()),(self.setup_page_variables[InstrumentIndex][1]).get())
+    def InstrumentChangeValues(self, InstrumentIndex, isvalve=False):
+        self.Instruments[InstrumentIndex].changevalues(int((self.setup_page_variables[InstrumentIndex][0]).get()), (self.setup_page_variables[InstrumentIndex][1]).get())
         self.manual_page_variables[InstrumentIndex][0].set(self.Instruments[InstrumentIndex].name+":  ")
         if isvalve:
             self.manual_page_buttons[InstrumentIndex][2].config(to=self.setup_page_variables[InstrumentIndex][2].get())
 
     def AddPumpControlButtons(self):
         InstrumentIndex = len(self.Instruments)-1
-        newvars=[tk.StringVar(), tk.DoubleVar(value=0), tk.DoubleVar(value=0),tk.DoubleVar(value=0)]
+        newvars = [tk.StringVar(), tk.DoubleVar(value=0), tk.DoubleVar(value=0), tk.DoubleVar(value=0)]
         newvars[0].set(self.Instruments[InstrumentIndex].name+":  ")
         self.manual_page_variables.append(newvars)
-        newbuttons=[
-         tk.Label(self.manual_page,textvariable=self.manual_page_variables[InstrumentIndex][0]),
-         tk.Button(self.manual_page,text="Run", command=lambda: self.Instruments[InstrumentIndex].startpump()),
-         tk.Button(self.manual_page,text="Stop", command=lambda:self.Instruments[InstrumentIndex].stoppump()),
+        newbuttons = [
+         tk.Label(self.manual_page, textvariable=self.manual_page_variables[InstrumentIndex][0]),
+         tk.Button(self.manual_page, text="Run", command=lambda: self.Instruments[InstrumentIndex].startpump()),
+         tk.Button(self.manual_page, text="Stop", command=lambda:self.Instruments[InstrumentIndex].stoppump()),
          tk.Label(self.manual_page, text="  Infuse Rate:"),
          tk.Spinbox(self.manual_page, from_=0, to=1000, textvariable=self.manual_page_variables[InstrumentIndex][1]),
          tk.Button(self.manual_page, text="Set"),
          tk.Label(self.manual_page, text="  Refill Rate:"),
          tk.Spinbox(self.manual_page, from_=0, to=1000, textvariable=self.manual_page_variables[InstrumentIndex][2]),
          tk.Button(self.manual_page, text="Set"),
-         tk.Label(self.manual_page,text="  Direction:"),
+         tk.Label(self.manual_page, text="  Direction:"),
          tk.Button(self.manual_page, text="Infuse"),
          tk.Button(self.manual_page, text="Refill"),
          tk.Label(self.manual_page, text="Mode"),
@@ -416,50 +415,50 @@ class main:
          tk.Button(self.manual_page, text="Set")
          ]
         self.manual_page_buttons.append(newbuttons)
-        #Build Pump
+        # Build Pump
         for i in range(len(self.manual_page_buttons)):
             for y in range(len(self.manual_page_buttons[i])):
-                self.manual_page_buttons[i][y].grid(row=i,column=y)
+                self.manual_page_buttons[i][y].grid(row=i, column=y)
 
     def RefreshCOMList(self):
         self.ControllerCOM.updatelist(SAXSDrivers.ListAvailablePorts(self.AvailablePorts))
         for button in self.setup_page_buttons:
-            if isinstance(button[0],COMPortSelector):
+            if isinstance(button[0], COMPortSelector):
                 button[0].updatelist(SAXSDrivers.ListAvailablePorts(self.AvailablePorts))
 
     def AddRheodyneSetButtons(self):
         self.Instruments.append(SAXSDrivers.Rheodyne(logger=self.Instrument_logger))
         InstrumentIndex = len(self.Instruments)-1
-        newvars=[tk.IntVar(value=-1),tk.StringVar(), tk.IntVar(value=2)]
+        newvars = [tk.IntVar(value=-1), tk.StringVar(), tk.IntVar(value=2)]
         self.setup_page_variables.append(newvars)
-        newbuttons=[
+        newbuttons = [
          COMPortSelector(self.setup_page, exportselection=0, height=4),
-         tk.Button(self.setup_page,text="Set Port", command=lambda: self.Instruments[InstrumentIndex].setport(self.AvailablePorts[int(self.setup_page_buttons[InstrumentIndex][0].curselection()[0])].device)),
-         tk.Label(self.setup_page, text="or") ,
-         tk.Button(self.setup_page,text="Send to Controller", command=lambda:self.Instruments[InstrumentIndex].settocontroller(self.controller)),
+         tk.Button(self.setup_page, text="Set Port", command=lambda: self.Instruments[InstrumentIndex].setport(self.AvailablePorts[int(self.setup_page_buttons[InstrumentIndex][0].curselection()[0])].device)),
+         tk.Label(self.setup_page, text="or"),
+         tk.Button(self.setup_page, text="Send to Controller", command=lambda: self.Instruments[InstrumentIndex].settocontroller(self.controller)),
          tk.Label(self.setup_page, text="   Type:"),
-         tk.Spinbox(self.setup_page, values=(2,6), textvariable=self.setup_page_variables[InstrumentIndex][2]),
+         tk.Spinbox(self.setup_page, values=(2, 6), textvariable=self.setup_page_variables[InstrumentIndex][2]),
          tk.Label(self.setup_page, text="   I2C Address:"),
          tk.Spinbox(self.setup_page, from_=-1, to=100, textvariable=self.setup_page_variables[InstrumentIndex][0]),
          tk.Label(self.setup_page, text="   Valve Name:"),
-         tk.Entry(self.setup_page,textvariable=self.setup_page_variables[InstrumentIndex][1]),
-         tk.Button(self.setup_page, text="Set values",command=lambda:self.InstrumentChangeValues(InstrumentIndex,True))
+         tk.Entry(self.setup_page, textvariable=self.setup_page_variables[InstrumentIndex][1]),
+         tk.Button(self.setup_page, text="Set values", command=lambda: self.InstrumentChangeValues(InstrumentIndex, True))
          ]
         self.setup_page_buttons.append(newbuttons)
         for i in range(len(self.setup_page_buttons)):
             for y in range(len(self.setup_page_buttons[i])):
-                self.setup_page_buttons[i][y].grid(row=i+2,column=y)
+                self.setup_page_buttons[i][y].grid(row=i+2, column=y)
         self.AddRheodyneControlButtons()
         self.RefreshCOMList()
 
     def AddRheodyneControlButtons(self):
         InstrumentIndex = len(self.Instruments)-1
-        newvars=[tk.StringVar(), tk.IntVar(value=0)]
+        newvars = [tk.StringVar(), tk.IntVar(value=0)]
         newvars[0].set(self.Instruments[InstrumentIndex].name+":  ")
         self.manual_page_variables.append(newvars)
 
-        newbuttons=[
-         tk.Label(self.manual_page,textvariable=self.manual_page_variables[InstrumentIndex][0]),
+        newbuttons = [
+         tk.Label(self.manual_page, textvariable=self.manual_page_variables[InstrumentIndex][0]),
          tk.Label(self.manual_page, text="   Position:"),
          tk.Spinbox(self.manual_page, from_=1, to=self.setup_page_variables[InstrumentIndex][2].get(), textvariable=self.manual_page_variables[InstrumentIndex][1]),
          tk.Button(self.manual_page, text="Change", command=lambda: self.Instruments[InstrumentIndex].switchvalve(self.manual_page_variables[InstrumentIndex][1].get())),
@@ -468,46 +467,46 @@ class main:
         # Place buttons
         for i in range(len(self.manual_page_buttons)):
             for y in range(len(self.manual_page_buttons[i])):
-                self.manual_page_buttons[i][y].grid(row=i,column=y)
+                self.manual_page_buttons[i][y].grid(row=i, column=y)
 
     def AddVICISetButtons(self):
         self.Instruments.append(SAXSDrivers.VICI(logger=self.Instrument_logger))
         InstrumentIndex = len(self.Instruments)-1
-        newvars=[tk.IntVar(value=-1),tk.StringVar()]
+        newvars = [tk.IntVar(value=-1), tk.StringVar()]
         self.setup_page_variables.append(newvars)
-        newbuttons=[
+        newbuttons = [
          COMPortSelector(self.setup_page, exportselection=0, height=4),
-         tk.Button(self.setup_page,text="Set Port", command=lambda: self.Instruments[InstrumentIndex].setport(self.AvailablePorts[int(self.setup_page_buttons[InstrumentIndex][0].curselection()[0])].device)),
-         tk.Label(self.setup_page, text="or") ,
-         tk.Button(self.setup_page,text="Send to Controller", command=lambda:self.Instruments[InstrumentIndex].settocontroller(self.controller)),
+         tk.Button(self.setup_page, text="Set Port", command=lambda: self.Instruments[InstrumentIndex].setport(self.AvailablePorts[int(self.setup_page_buttons[InstrumentIndex][0].curselection()[0])].device)),
+         tk.Label(self.setup_page, text="or"),
+         tk.Button(self.setup_page, text="Send to Controller", command=lambda:self.Instruments[InstrumentIndex].settocontroller(self.controller)),
          tk.Label(self.setup_page, text="   Valve Name:"),
-         tk.Entry(self.setup_page,textvariable=self.setup_page_variables[InstrumentIndex][1]),
-         tk.Button(self.setup_page, text="Set values",command=lambda:self.InstrumentChangeValues(InstrumentIndex,False))
+         tk.Entry(self.setup_page, textvariable=self.setup_page_variables[InstrumentIndex][1]),
+         tk.Button(self.setup_page, text="Set values", command=lambda: self.InstrumentChangeValues(InstrumentIndex, False))
          ]
         self.setup_page_buttons.append(newbuttons)
         for i in range(len(self.setup_page_buttons)):
             for y in range(len(self.setup_page_buttons[i])):
-                self.setup_page_buttons[i][y].grid(row=i+2,column=y)
+                self.setup_page_buttons[i][y].grid(row=i+2, column=y)
         self.AddVICIControlButtons()
         self.RefreshCOMList()
 
     def AddVICIControlButtons(self):
         InstrumentIndex = len(self.Instruments)-1
-        newvars=[tk.StringVar(), tk.StringVar(value="A")]
+        newvars = [tk.StringVar(), tk.StringVar(value="A")]
         newvars[0].set(self.Instruments[InstrumentIndex].name+":  ")
         self.manual_page_variables.append(newvars)
 
-        newbuttons=[
-         tk.Label(self.manual_page,textvariable=self.manual_page_variables[InstrumentIndex][0]),
+        newbuttons = [
+         tk.Label(self.manual_page, textvariable=self.manual_page_variables[InstrumentIndex][0]),
          tk.Label(self.manual_page, text="   Position:"),
-         tk.Spinbox(self.manual_page, values=("A","B"), textvariable=self.manual_page_variables[InstrumentIndex][1]),
+         tk.Spinbox(self.manual_page, values=("A", "B"), textvariable=self.manual_page_variables[InstrumentIndex][1]),
          tk.Button(self.manual_page, text="Change", command=lambda: self.Instruments[InstrumentIndex].switchvalve(self.manual_page_variables[InstrumentIndex][1].get())),
          ]
         self.manual_page_buttons.append(newbuttons)
         # Place buttons
         for i in range(len(self.manual_page_buttons)):
             for y in range(len(self.manual_page_buttons[i])):
-                self.manual_page_buttons[i][y].grid(row=i,column=y)
+                self.manual_page_buttons[i][y].grid(row=i, column=y)
 
 
 if __name__ == "__main__":

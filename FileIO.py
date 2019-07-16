@@ -5,7 +5,7 @@ import threading
 import math
 from queue import Queue, Empty as Queue_Empty, Full as Queue_Full
 from tkinter import filedialog
-# from simple_pid import PID
+from simple_pid import PID
 
 USE_SDK = False
 SDK_SENSOR_TYPES = {
@@ -110,7 +110,7 @@ class ElveflowHandler_ESI:
             except Queue_Full:
                 pass
             finally:
-                self.errorlogger.info("ENDING HANDLER THREAD %s, %s" % (threading.current_thread(),threading.enumerate()) )
+                self.errorlogger.info("ENDING HANDLER THREAD %s, %s" % (threading.current_thread(), threading.enumerate()))
 
         if self.sourcename is not None:
             self.reading_thread = threading.Thread(target=start_thread)
@@ -162,7 +162,7 @@ class ElveflowHandler_SDK:
     PID_SLEEPTIME = 0.1  # how many seconds between each command of the PID loop
     QUEUE_MAXLEN = 0  # zero means infinite
 
-    PRESSURE_MAXSLOPE = 1000 * PID_SLEEPTIME # in mbar per update frame
+    PRESSURE_MAXSLOPE = 1000 * PID_SLEEPTIME     # in mbar per update frame
     VOLUME_KP = 0
     VOLUME_KI = 50
     VOLUME_KD = 0
@@ -316,7 +316,7 @@ class ElveflowHandler_SDK:
                 get_pressure = c_double()
                 error = Elveflow_SDK.OB1_Get_Press(self.instr_ID.value, c_int32(channel_number), 1, byref(self.calib), byref(get_pressure), 1000)
                 if error != 0:
-                    self.errorlogger.warning('ERROR CODE GETTING PRESSURE %i: %s' % (i, error))
+                    self.errorlogger.warning('ERROR CODE GETTING PRESSURE %i: %s' % (channel_number, error))
                 else:
                     # if we have an error reading, don't try to set anything
                     if abs(target - get_pressure.value) <= ElveflowHandler_SDK.PRESSURE_MAXSLOPE:
@@ -357,7 +357,7 @@ class ElveflowHandler_SDK:
             initial_pressure = c_double()
             error = Elveflow_SDK.OB1_Get_Press(self.instr_ID.value, c_int32(channel_number), 1, byref(self.calib), byref(initial_pressure), 1000)
             if error != 0:
-                self.errorlogger.warning('ERROR CODE GETTING PRESSURE %i: %s' % (i, error))
+                self.errorlogger.warning('ERROR CODE GETTING PRESSURE %i: %s' % (channel_number, error))
             self.errorlogger.debug("INITIAL PRESSURE IS %f" % initial_pressure.value)
 
             while self.run_flag.is_set() and not interruptEvent.is_set():
@@ -365,7 +365,7 @@ class ElveflowHandler_SDK:
                 get_flowrate = c_double()
                 error = Elveflow_SDK.OB1_Get_Sens_Data(self.instr_ID.value, c_int32(channel_number), 1, byref(get_flowrate))
                 if error != 0:
-                    self.errorlogger.warning('ERROR CODE GETTING FLOW RATE %i: %s' % (i, error))
+                    self.errorlogger.warning('ERROR CODE GETTING FLOW RATE %i: %s' % (channel_number, error))
                 else:
                     # if we have an error reading, don't try to set anything
                     pressure_to_set = pid(get_flowrate.value) + initial_pressure.value
@@ -391,6 +391,7 @@ class ElveflowHandler_SDK:
 
         self.reading_thread = threading.Thread(target=start_thread, args=(channel_number, value, interruptEvent, pid_constants))
         self.reading_thread.start()
+
 
 if USE_SDK:
     ElveflowHandler = ElveflowHandler_SDK

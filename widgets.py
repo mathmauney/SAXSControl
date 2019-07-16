@@ -17,12 +17,12 @@ import matplotlib
 from matplotlib import pyplot as plt
 matplotlib.use('TkAgg')
 
+
 class COMPortSelector(tk.Listbox):
-    def updatelist(self,COMList):
-        self.delete(0,tk.END)
+    def updatelist(self, COMList):
+        self.delete(0, tk.END)
         for item in COMList:
             self.insert(tk.END, item.device+"  "+item.description)
-
 
 
 class FluidLevel(tk.Canvas):
