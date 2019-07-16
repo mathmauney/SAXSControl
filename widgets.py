@@ -565,7 +565,7 @@ class ElveflowDisplay(tk.Canvas):
         '''stop changing the pressure. Pressure-controlled systems will remain at whatever value it is currently set at;
         volume-controlled systems will drop to zero pressure'''
         i = channel - 1
-        self.errorlogger.info('stopping %d', i)
+        self.errorlogger.info('Stopping Elveflow Channel %d', i)
         try:
             self.setPressureStop_flag[i].set()
         except AttributeError:

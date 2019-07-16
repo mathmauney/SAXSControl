@@ -159,10 +159,11 @@ class ElveflowHandler_ESI:
 class ElveflowHandler_SDK:
     """a class that handles interfacing with the Elveflow directly"""
     SLEEPTIME = 0.1  # how many seconds between each read of the Elveflow output
-    PID_SLEEPTIME = 0.1  # how many seconds between each command of the PID loop
+    PID_SLEEPTIME = 0.05  # how many seconds between each command of the PID loop
+    PRESSURELOOP_SLEEPTIME = 0.01  # how many seconds between each command of the pressure loop
     QUEUE_MAXLEN = 0  # zero means infinite
 
-    PRESSURE_MAXSLOPE = 1000 * PID_SLEEPTIME # in mbar per update frame
+    PRESSURE_MAXSLOPE = 1000 * PRESSURELOOP_SLEEPTIME # in mbar per update frame; 1000 is in mbar/sec
     VOLUME_KP = 0
     VOLUME_KI = 50
     VOLUME_KD = 0
@@ -312,24 +313,60 @@ class ElveflowHandler_SDK:
         def start_thread(channel_number, target, interruptEvent):
             self.errorlogger.info("STARTING PRESSURE LOOP CHANNEL %s THREAD %s." % (channel_number, threading.current_thread()))
 
+            get_pressure = c_double()
+            error = Elveflow_SDK.OB1_Get_Press(self.instr_ID.value, c_int32(channel_number), 1, byref(self.calib), byref(get_pressure), 1000)
+            if error != 0:
+                self.errorlogger.warning('ERROR CODE GETTING PRESSURE %i: %s' % (i, error))
+                if onFinish is not None:
+                    onFinish()
+                return
+
+            curr_pressure = get_pressure.value
+
             while self.run_flag.is_set() and not interruptEvent.is_set():
-                get_pressure = c_double()
-                error = Elveflow_SDK.OB1_Get_Press(self.instr_ID.value, c_int32(channel_number), 1, byref(self.calib), byref(get_pressure), 1000)
-                if error != 0:
-                    self.errorlogger.warning('ERROR CODE GETTING PRESSURE %i: %s' % (i, error))
+                # if we have an error reading, don't try to set anything
+                self.errorlogger.warning('max slope is %s' % ElveflowHandler_SDK.PRESSURE_MAXSLOPE)
+                self.errorlogger.warning('requested slope is %s' % abs(target - curr_pressure))
+                if abs(target - curr_pressure) <= ElveflowHandler_SDK.PRESSURE_MAXSLOPE:
+                    # if we're close, just set it and hope for the best
+                    curr_pressure = target
+                    interruptEvent.set()
                 else:
-                    # if we have an error reading, don't try to set anything
-                    if abs(target - get_pressure.value) <= ElveflowHandler_SDK.PRESSURE_MAXSLOPE:
-                        # if we're close, just set it and hope for the best
-                        pressure_to_set = target
-                        interruptEvent.set()
-                    else:
-                        pressure_to_set = get_pressure.value + math.copysign(target - get_pressure.value, ElveflowHandler_SDK.PRESSURE_MAXSLOPE)
-                    error = Elveflow_SDK.OB1_Set_Press(self.instr_ID.value, channel_number, pressure_to_set, byref(self.calib), 1000)
-                    if error != 0:
-                        self.errorlogger.warning('ERROR CODE SETTING PRESSURE %i: %s' % (channel_number, error))
-                    self.errorlogger.debug("setting pressure to %s", pressure_to_set)
-                time.sleep(ElveflowHandler_SDK.PID_SLEEPTIME)
+                    # otherwise, just make one PRESSURE_MAXSLOPE-sized step in the correct direction
+                    curr_pressure = curr_pressure + math.copysign(ElveflowHandler_SDK.PRESSURE_MAXSLOPE, target - curr_pressure)
+
+                self.errorlogger.debug("setting pressure to %s", curr_pressure)
+                error = Elveflow_SDK.OB1_Set_Press(self.instr_ID.value, channel_number, curr_pressure, byref(self.calib), 1000)
+                if error != 0:
+                    self.errorlogger.warning('ERROR CODE SETTING PRESSURE %i: %s' % (channel_number, error))
+                self.errorlogger.debug("setting pressure to %s", curr_pressure)
+
+                time.sleep(ElveflowHandler_SDK.PRESSURELOOP_SLEEPTIME)
+
+            # while self.run_flag.is_set() and not interruptEvent.is_set():
+            #     get_pressure = c_double()
+            #     error = Elveflow_SDK.OB1_Get_Press(self.instr_ID.value, c_int32(channel_number), 1, byref(self.calib), byref(get_pressure), 1000)
+            #     starting_pressure = 
+            #     if error != 0:
+            #         self.errorlogger.warning('ERROR CODE GETTING PRESSURE %i: %s' % (i, error))
+            #     else:
+            #         # if we have an error reading, don't try to set anything
+            #         self.errorlogger.warning('max slope is %s' % ElveflowHandler_SDK.PRESSURE_MAXSLOPE)
+            #         self.errorlogger.warning('requested slope is %s' % abs(target - get_pressure.value))
+            #         if target < 100 and get_pressure.value < 100:
+            #             pressure_to_set = 0
+            #             interruptEvent.set()
+            #         elif abs(target - get_pressure.value) <= ElveflowHandler_SDK.PRESSURE_MAXSLOPE:
+            #             # if we're close, just set it and hope for the best
+            #             pressure_to_set = target
+            #             interruptEvent.set()
+            #         else:
+            #             pressure_to_set = get_pressure.value + math.copysign(ElveflowHandler_SDK.PRESSURE_MAXSLOPE, target - get_pressure.value)
+            #         error = Elveflow_SDK.OB1_Set_Press(self.instr_ID.value, channel_number, pressure_to_set, byref(self.calib), 1000)
+            #         if error != 0:
+            #             self.errorlogger.warning('ERROR CODE SETTING PRESSURE %i: %s' % (channel_number, error))
+            #         self.errorlogger.debug("setting pressure to %s", pressure_to_set)
+            #     time.sleep(ElveflowHandler_SDK.PRESSURELOOP_SLEEPTIME)
 
             try:
                 self.errorlogger.info("ENDING PRESSURE LOOP CHANNEL %s THREAD %s." % (channel_number, threading.current_thread()))
