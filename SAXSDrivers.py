@@ -420,7 +420,7 @@ class Rheodyne:
                 if not self.controller.is_open:
                     self.controller.open()
                 self.controller.write(("N%03i%03i"%(self.addressI2C,address)).encode())
-                while(self.controller.in_waiting()>0):
+                while(self.controller.in_waiting>0):
                     print(self.controller.readline())
                 #self.controller.close()
                 return 0
@@ -471,12 +471,12 @@ class VICI:
             self.logger.append(self.name+" not set up, switching ignored")
             return
 
-        if not self.serialobject.is_open():
+        if not self.serialobject.is_open:
             self.serialobject.open()
-        commandtosend=self.ControllerKey+"GO{:02d}".format(position)
+        commandtosend=self.ControllerKey+"GO"+position
         self.serialobject.write(commandtosend.encode())
         self.logger.append(self.name+" switched to "+position)
-        while self.serialobject.in_waiting()>0:
+        while self.serialobject.in_waiting>0:
             self.logger.append(self.serialobject.readline())
 
     def currentposition(self):
@@ -484,13 +484,18 @@ class VICI:
             self.logger.append(self.name+" not set up, switching ignored")
             return
 
-        if not self.serialobject.is_open():
+        if not self.serialobject.is_open:
             self.serialobject.open()
         commandtosend=self.ControllerKey+"CP"
         self.serialobject.write(commandtosend.encode())
         self.logger.append(self.name+" Position Query ")
-        while self.serialobject.in_waiting()>0:
+        while self.serialobject.in_waiting>0:
             self.logger.append(self.serialobject.readline())
+
+    def changevalues(self,address,name):
+        if not self.name==name:
+            self.logger.append("Changing Name: "+ self.name+" to "+name)
+            self.name=name
 
     def close(self):
         if self.serialobject.is_open:
