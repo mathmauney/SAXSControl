@@ -107,3 +107,4 @@ venv.bak/
 test*
 log/
 log
+Elveflow/*.csv
