@@ -507,7 +507,7 @@ class FlowPath(tk.Canvas):
             """Link a line to an in or out port of the valve"""
             if position == 'center':
                 position = 6
-            self.fluid_lines[position].append(object)
+            self.fluid_lines[position].append(object)   # TODO: Add way to associate real valve to diagram
 
     class SelectionValve(Valve):
         def __init__(self, canvas, x, y, name):
@@ -541,7 +541,7 @@ class FlowPath(tk.Canvas):
             for i in range(0, 6):
                 self.canvas.tag_raise(self.circles[i])
 
-        def set_manual_position(self, position):
+        def set_manual_position(self, position):    # TODO: Add in actual valve switching
             if self.canvas.is_unlocked:
                 self.set_position(position)
 
@@ -601,7 +601,7 @@ class FlowPath(tk.Canvas):
             for i in range(0, 6):
                 self.canvas.tag_raise(self.circles[i])
 
-        def set_manual_position(self, position):
+        def set_manual_position(self, position):    # TODO: Add in actual valve switching
             if self.canvas.is_unlocked:
                 self.set_position(position)
                 print('Set position %i' % position)
@@ -699,7 +699,7 @@ class FlowPath(tk.Canvas):
             for i in range(0, 6):
                 self.canvas.tag_raise(self.circles[i])
 
-        def set_manual_position(self, position):
+        def set_manual_position(self, position):    # TODO: Add in actual valve switching
             if self.canvas.is_unlocked:
                 self.set_position(position)
 
@@ -754,17 +754,19 @@ class FlowPath(tk.Canvas):
         def toggle(self, state=None):
             if state is not None:
                 self.state = state
+            elif self.state == 'locked':
+                self.state = 'unlocked'
+            else:
+                self.state = 'locked'
             dist = .6*self.size
-            if self.state == 'locked':
+            if self.state == 'unlocked':
                 self.canvas.move(self.movable_rectangle, 2*dist, 0)
                 self.canvas.move(self.moveable_arc1, dist, 0)
                 self.canvas.move(self.moveable_arc2, dist, 0)
-                self.state = 'unlocked'
-            elif self.state == 'unlocked':
+            elif self.state == 'locked':
                 self.canvas.move(self.movable_rectangle, -2*dist, 0)
                 self.canvas.move(self.moveable_arc1, -dist, 0)
                 self.canvas.move(self.moveable_arc2, -dist, 0)
-                self.state = 'locked'
             else:
                 raise ValueError('Invalid lock state')
 
@@ -863,12 +865,10 @@ class FlowPath(tk.Canvas):
     def lock_popup(self):
         def check_password(password):
             if password == 'asaxsisgr8':
-                self.set_unlock_state()
-                self.lock.toggle()
+                self.set_unlock_state(True)
                 win.destroy()
         if self.is_unlocked:
-            self.lock.toggle()
-            self.set_unlock_state()
+            self.set_unlock_state(False)
         else:
             print('Test')
             win = tk.Toplevel()
