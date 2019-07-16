@@ -5,7 +5,7 @@ import threading
 import math
 from queue import Queue, Empty as Queue_Empty, Full as Queue_Full
 from tkinter import filedialog
-# from simple_pid import PID
+from simple_pid import PID
 
 USE_SDK = False
 SDK_SENSOR_TYPES = {
@@ -110,7 +110,7 @@ class ElveflowHandler_ESI:
             except Queue_Full:
                 pass
             finally:
-                self.errorlogger.info("ENDING HANDLER THREAD %s, %s" % (threading.current_thread(),threading.enumerate()) )
+                self.errorlogger.info("ENDING HANDLER THREAD %s, %s" % (threading.current_thread(), threading.enumerate()))
 
         if self.sourcename is not None:
             self.reading_thread = threading.Thread(target=start_thread)
@@ -162,7 +162,7 @@ class ElveflowHandler_SDK:
     PID_SLEEPTIME = 0.1  # how many seconds between each command of the PID loop
     QUEUE_MAXLEN = 0  # zero means infinite
 
-    PRESSURE_MAXSLOPE = 1000 * PID_SLEEPTIME # in mbar per update frame
+    PRESSURE_MAXSLOPE = 1000 * PID_SLEEPTIME     # in mbar per update frame
     VOLUME_KP = 0
     VOLUME_KI = 50
     VOLUME_KD = 0
@@ -391,6 +391,7 @@ class ElveflowHandler_SDK:
 
         self.reading_thread = threading.Thread(target=start_thread, args=(channel_number, value, interruptEvent, pid_constants))
         self.reading_thread.start()
+
 
 if USE_SDK:
     ElveflowHandler = ElveflowHandler_SDK
