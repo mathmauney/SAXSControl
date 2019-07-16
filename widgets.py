@@ -14,8 +14,15 @@ import time
 import os.path
 from queue import Queue, Empty as Queue_Empty
 import matplotlib
+from matplotlib import pyplot as plt
 matplotlib.use('TkAgg')
-from matplotlib import pyplot as plt    # noqa E402 - ignore that this comes after import
+
+class COMPortSelector(tk.Listbox):
+    def updatelist(self,COMList):
+        self.delete(0,tk.END)
+        for item in COMList:
+            self.insert(tk.END, item.device+"  "+item.description)
+
 
 
 class FluidLevel(tk.Canvas):
@@ -218,9 +225,10 @@ class ElveflowDisplay(tk.Canvas):
 
         rowcounter = 0
         self.start_button = tk.Button(self, text='Start Connection', command=self.start)
-        self.start_button.grid(row=rowcounter, column=2, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+        self.start_button.grid(row=rowcounter, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+        print(self.start_button)
         self.stop_button = tk.Button(self, text='Stop Connection', command=self.stop)
-        self.stop_button.grid(row=rowcounter, column=3, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+        self.stop_button.grid(row=rowcounter, column=2, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
         rowcounter += 1
         # self.clear_button = tk.Button(self, text='Clear Graph', command=self.clear_graph)
         # self.clear_button.grid(row=0, column=3, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
@@ -278,6 +286,7 @@ class ElveflowDisplay(tk.Canvas):
             tk.Label(self, textvariable=self.saveFileNameSuffix_var).grid(row=rowcounter, column=3, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
             rowcounter += 1
 
+        if FileIO.USE_SDK:
             tkinter.ttk.Separator(self, orient=tk.HORIZONTAL).grid(row=rowcounter, column=1, columnspan=3, sticky='ew', padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
             rowcounter += 1
 
@@ -416,6 +425,7 @@ class ElveflowDisplay(tk.Canvas):
                     time.sleep(ElveflowDisplay.POLLING_PERIOD)
             finally:
                 try:
+                    self.stop()
                     print("DONE WITH THIS THREAD, %s" % threading.current_thread())
                 except RuntimeError:
                     print("Runtime error detected in display thread %s while trying to close. Ignoring." % threading.current_thread())
@@ -430,7 +440,7 @@ class ElveflowDisplay(tk.Canvas):
             self.saveFileName_entry.config(state=tk.NORMAL)
             self.saveFileNameSuffix_var.set("_%d.csv" % time.time())
 
-    def stop(self, shutdown=False):
+    def stop(self):
         self.run_flag.clear()
         if shutdown:
             self.shutdown = True
@@ -472,7 +482,7 @@ class ElveflowDisplay(tk.Canvas):
         else:
             self.errorlogger.error('cannot start saving (header is unknown). Try again in a moment')
 
-    def stop_saving(self, shutdown=False):
+    def stop_saving(self):
         if self.save_flag.is_set():
             self.errorlogger.info('stopped saving')
         self.save_flag.clear()
@@ -506,6 +516,7 @@ class ElveflowDisplay(tk.Canvas):
             self.ax.set_ylabel(self.dataYLabel_var.get(), fontsize=14)
         except (ValueError, KeyError):
             extremes = [*self.ax.get_xlim(), *self.ax.get_ylim()]
+
         limits = [item if item is not None else extremes[i]
                   for (i, item) in enumerate(self.axisLimits_numbers)]
         self.ax.set_xlim(*limits[0:2])
