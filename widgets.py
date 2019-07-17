@@ -14,8 +14,8 @@ import time
 import os.path
 from queue import Queue, Empty as Queue_Empty
 import matplotlib
+matplotlib.use('TkAgg') # noqa
 from matplotlib import pyplot as plt
-matplotlib.use('TkAgg')
 
 
 class COMPortSelector(tk.Listbox):

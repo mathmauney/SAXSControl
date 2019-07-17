@@ -7,7 +7,7 @@ from queue import Queue, Empty as Queue_Empty, Full as Queue_Full
 from tkinter import filedialog
 from simple_pid import PID
 
-USE_SDK = False
+USE_SDK = True
 SDK_SENSOR_TYPES = {
     "none": 0,
     "1.5 µL/min": 1,
@@ -29,7 +29,11 @@ if USE_SDK:
     import sys
     import os.path
     sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "Elveflow_SDK"))   # add the path of the LoadElveflow.py
-    import Elveflow64 as Elveflow_SDK
+    try:
+        import Elveflow64 as Elveflow_SDK
+    except OSError:
+        print("Elveflow SDK not found, falling back to non-SDK version.")
+        USE_SDK = False
 
 
 class ElveflowHandler_ESI:
