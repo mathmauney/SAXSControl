@@ -904,6 +904,10 @@ class FlowPath(tk.Canvas):
         self.draw_loops()
         self.draw_fluid_lines()
         self.initialize()
+        # Scale for computers smaller than 1800 log_width
+        if self.window.winfo_screenwidth() < 1800:
+            scale = self.window.winfo_screenwidth()/1800
+            self.scale("all", 0, 0, scale, scale)
 
     def draw_pumps(self):
         self.pump1 = self.FluidLevel(self, 0, 125, height=50, color='black', orientation='right', name='pump')
