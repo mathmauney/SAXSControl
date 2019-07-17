@@ -37,7 +37,7 @@ if USE_SDK:
 
 
 class ElveflowHandler_ESI:
-    """a class that handles reading in Elveflow-generated log files"""
+    """A class that handles reading in Elveflow-generated log files."""
     SLEEPTIME = 0.2  # if no line exists, wait this many seconds before trying again
     QUEUE_MAXLEN = 0  # zero means infinite
 

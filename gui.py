@@ -5,7 +5,7 @@ Alex Mauney
 """
 
 import tkinter as tk
-import tkinter.scrolledtext as ScrolledText
+from tkinter.scrolledtext import ScrolledText
 from tkinter import filedialog
 from widgets import FluidLevel, FlowPath, ElveflowDisplay, TextHandler, MiscLogger, COMPortSelector
 import tkinter.ttk as ttk
@@ -17,14 +17,13 @@ import queue
 import threading
 import SAXSDrivers
 import os.path
-import csv
 
 
 FULLSCREEN = True   # For testing, turn this off
 LOG_FOLDER = "log"
 
 
-class main:
+class MainGUI:
     """Class for the main window of the SAXS Control."""
 
     def __init__(self, window):
@@ -56,7 +55,7 @@ class main:
 
         # Button Bar
         self.buttons = tk.Frame(self.main_window)
-        self.exit_button = tk.Button(self.main_window, text='X', command=self.exit)
+        self.exit_button = tk.Button(self.main_window, text='X', command=self.exit_gui)
         self.stop_button = tk.Button(self.main_window, text='STOP', command=self.stop, fg='red', font='Arial 16 bold')
 
         # Main Structures
@@ -124,7 +123,7 @@ class main:
         self.config_spec_port = tk.Entry(self.config_page, textvariable=self.spec_port)
         self.config_spec_port_label = tk.Label(self.config_page, text='SPEC Port')
         # logs
-        self.python_logger_gui = ScrolledText.ScrolledText(self.python_logs, state='disabled', height=45)
+        self.python_logger_gui = ScrolledText(self.python_logs, state='disabled', height=45)
         self.python_logger_gui.configure(font='TkFixedFont')
         self.SPEC_logger = MiscLogger(self.SPEC_logs, state='disabled', height=45)
         self.SPEC_logger.configure(font='TkFixedFont')
@@ -233,7 +232,7 @@ class main:
         self.config = ConfigParser()
         if filename is None:
             filename = filedialog.askopenfilename(initialdir=".", title="Select file", filetypes=(("config files", "*.ini"), ("all files", "*.*")))
-        if filename is not '':
+        if filename != '':
             self.config.read(filename)
             self.config_oil_tick_size.delete(0, 'end')
             self.config_oil_tick_size.insert(0, self.config.get('Default', 'oil_tick_size'))
@@ -241,7 +240,7 @@ class main:
     def save_config(self):
         """Save a config.ini file."""
         filename = filedialog.asksaveasfilename(initialdir=".", title="Select file", filetypes=(("config files", "*.ini"), ("all files", "*.*")))
-        if filename is not '':
+        if filename != '':
             self.config.write(open(filename, 'w'))
 
     def connect_to_spec(self):
@@ -252,20 +251,8 @@ class main:
         """Add python exceptions to the GUI log."""
         self.python_logger.exception("Caught exception:")
 
-    def save_history(self, filename=None):
-        """Save a csv file with the current state."""
-        if filename is None:
-            filename = filedialog.asksaveasfilename(initialdir=".", title="Save file", filetypes=(("comma-separated value", "*.csv"), ("all files", "*.*")))
-        if filename == '':
-            # empty filename: don't save
-            return
-        with open(filename, 'w') as f:
-            csvwriter = csv.writer(f)
-            csvwriter.writerow(main.CSV_HEADERS)
-            csvwriter.writerows(self.history)
-
-    def exit(self):
-        """Exit the GUI and stop all running things"""
+    def exit_gui(self):
+        """Exit the GUI and stop all running things."""
         print("STARTING EXIT PROCEDURE")
         self.stop()
         if self.elveflow_display.run_flag.is_set():
@@ -511,6 +498,6 @@ class main:
 
 if __name__ == "__main__":
     window = tk.Tk()
-    main(window)
+    MainGUI(window)
     window.mainloop()
     print("Main window now destroyed. Exiting.")
