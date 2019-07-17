@@ -92,8 +92,8 @@ class HPump:
             self.logger.append("Changing Name: "+ self.name+" to "+name)
             self.name=name
         if not self.address==address:
-            self.logger.append("Setting"+ self.name+"address :"+name)
-            self.address=address
+            self.logger.append("Setting "+ self.name+" address :"+str(address))
+            self.address=str(address)
 
 
 
@@ -115,7 +115,7 @@ class HPump:
         self.running=True #Consider switching to after checking with pump
         #return val.decode()
 
-    def    stoppump(self,resource=pumpserial):
+    def stoppump(self,resource=pumpserial):
         if not HPump.ennabled:
             return
 
@@ -296,7 +296,7 @@ class HPump:
         else:
             if not self.controller.is_open:
                 self.controller.open()
-            self.controller.write(("\n\r").encode())
+            self.controller.write(("-\n\r").encode())
 
     def close(self):
         if HPump.pumpserial.is_open:
@@ -337,7 +337,7 @@ class Rheodyne:
             self.logger.append("Changing Name: "+ self.name+" to "+name)
             self.name=name
         if not self.addressI2C==address:
-            self.logger.append("Setting"+ self.name+"address :"+name)
+            self.logger.append("Setting "+ self.name+" address:"+address)
             self.addressI2C=address
     #"""Now the function to actually control de valve."""
     def switchvalve(self,position): #Lets take int
@@ -373,7 +373,7 @@ class Rheodyne:
             if ans==b'0': #pump returns this if command acknowledged
                 self.position=position
                 self.logger.append(self.name+" switched to "+str(position))
-                return 0    #Valve acknowledged commsnd
+                return 0    #Valve acknowledged command
             else:
                 self.logger.append("Error Switching "+self.name)
                 return -1   #error valve didnt acknowledge
@@ -397,8 +397,8 @@ class Rheodyne:
         else:
             if not self.controller.is_open:
                 self.controller.open()
-                self.controller.write(("S%03i"%self.addressI2C).encode())
-                ans=self.controller.read() #need to ensure thwt buffer doesnt build up-> if so switch to readln
+            self.controller.write(("S%03i"%self.addressI2C).encode())
+            ans=self.controller.read() #need to ensure thwt buffer doesnt build up-> if so switch to readln
             #self.controller.close()
         return int(ans)   #returns valve position
             # TODO: add error handlers
@@ -460,7 +460,7 @@ class VICI:
         if self.serialobject.is_open:
             self.serialobject.close()
         self.PCConnect = False
-        self.serialobject = Controller
+        self.serialobject = controller
         self.ennabled = True
         self.ControllerKey="+"
         self.serialobject.open()
@@ -473,7 +473,7 @@ class VICI:
 
         if not self.serialobject.is_open:
             self.serialobject.open()
-        commandtosend=self.ControllerKey+"GO"+position
+        commandtosend=self.ControllerKey+"GO"+position+"\r"
         self.serialobject.write(commandtosend.encode())
         self.logger.append(self.name+" switched to "+position)
         while self.serialobject.in_waiting>0:
@@ -486,7 +486,7 @@ class VICI:
 
         if not self.serialobject.is_open:
             self.serialobject.open()
-        commandtosend=self.ControllerKey+"CP"
+        commandtosend=self.ControllerKey+"CP"+"\r"
         self.serialobject.write(commandtosend.encode())
         self.logger.append(self.name+" Position Query ")
         while self.serialobject.in_waiting>0:
