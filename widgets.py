@@ -890,7 +890,6 @@ class FlowPath(tk.Canvas):
 
     def __init__(self, window, **kwargs):
         super().__init__(window, **kwargs)
-        self.config(width=1800, height=300)
         self.is_unlocked = False
         self.valve_scale = 2/3
         self.lock_scale = .3
@@ -905,9 +904,9 @@ class FlowPath(tk.Canvas):
         self.draw_fluid_lines()
         self.initialize()
         # Scale for computers smaller than 1800 log_width
-        if self.window.winfo_screenwidth() < 1800:
-            scale = self.window.winfo_screenwidth()/1800
-            self.scale("all", 0, 0, scale, scale)
+        scale = self.window.winfo_screenwidth()/1920
+        self.scale("all", 0, 0, scale, scale)
+        self.config(width=1800*scale, height=300*scale)
 
     def draw_pumps(self):
         self.pump1 = self.FluidLevel(self, 0, 125, height=50, color='black', orientation='right', name='pump')
