@@ -244,8 +244,16 @@ class ElveflowHandler_SDK:
                     pass
 
             try:
-                error = Elveflow_SDK.OB1_Destructor(self.instr_ID.value)
-                self.errorlogger.info("Closing connection with Elveflow%s." % ("" if error == 0 else (" (Error code %i)" % error)))
+                def closingFunction(i):
+                    if i == 4:
+                        onFinish = lambda: (print("Closing Elveflow connection"), print("Error code: %s" % Elveflow_SDK.OB1_Destructor(self.instr_ID.value)))
+                        # hack: put imperative commands into a tuple in order to execute each of them in a lambda
+                    else:
+                        onFinish = lambda: closingFunction(i+1)
+                    print("setting elveflow channel %s to 0" % i)
+                    self.setPressureLoop(i, 0, onFinish=onFinish)
+
+                closingFunction(1)
             except RuntimeError:
                 print("Runtime error detected in IO handler thread %s while trying to close. Ignoring." % threading.current_thread())
             finally:
@@ -312,11 +320,15 @@ class ElveflowHandler_SDK:
 
         def start_thread(channel_number, target, interruptEvent):
             self.errorlogger.info("STARTING PRESSURE LOOP CHANNEL %s THREAD %s." % (channel_number, threading.current_thread()))
+            if target > 8000:
+                target = 8000
+            if target < 0:
+                target = 0
 
             get_pressure = c_double()
             error = Elveflow_SDK.OB1_Get_Press(self.instr_ID.value, c_int32(channel_number), 1, byref(self.calib), byref(get_pressure), 1000)
             if error != 0:
-                self.errorlogger.warning('ERROR CODE GETTING PRESSURE %i: %s' % (i, error))
+                self.errorlogger.warning('ERROR CODE GETTING PRESSURE %i: %s' % (channel_number, error))
                 if onFinish is not None:
                     onFinish()
                 return

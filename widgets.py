@@ -412,7 +412,7 @@ class ElveflowDisplay(tk.Canvas):
                     time.sleep(ElveflowDisplay.POLLING_PERIOD)
             finally:
                 try:
-                    print("DONE WITH THIS THREAD, %s" % threading.current_thread())
+                    print("DONE WITH THIS DISPLAY THREAD, %s" % threading.current_thread())
                 except RuntimeError:
                     print("Runtime error detected in display thread %s while trying to close. Ignoring." % threading.current_thread())
                 self.run_flag.set() # reset in preparation for if we start up the connection again
@@ -517,7 +517,6 @@ class ElveflowDisplay(tk.Canvas):
             self.canvas.draw()
         tempThread = threading.Thread(target=thisIsDumb, daemon=True)
         tempThread.start()
-        print(tempThread)
 
     def start_pressure(self, channel=1, isPressure=True):
         i = channel - 1
