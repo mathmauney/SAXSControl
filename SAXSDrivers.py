@@ -12,9 +12,8 @@ import serial
 import serial.tools.list_ports
 
 
-
-
-def ListAvailablePorts(optional_list=[]):
+def list_available_ports(optional_list=[]):   # Does the optional list input do anything? Should we just initialize an empty list for the output?
+    """Find and return all available COM ports."""
     optional_list.clear()
     for item in list(serial.tools.list_ports.comports()):
         optional_list.append(item)

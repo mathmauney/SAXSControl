@@ -6,7 +6,7 @@ import math
 import tkinter.font
 import logging
 import csv
-import tkinter.scrolledtext as ScrolledText
+from tkinter.scrolledtext import ScrolledText
 import numpy as np
 import FileIO
 import threading
@@ -117,7 +117,7 @@ class TextHandler(logging.Handler):
         self.text.after(TextHandler.POLLING_PERIOD, self._update)
 
 
-class MiscLogger(ScrolledText.ScrolledText):
+class MiscLogger(ScrolledText):
     def append(self, msg):
         self.configure(state='normal')
         self.insert(tk.END, msg + '\n')
@@ -621,11 +621,11 @@ class FlowPath(tk.Canvas):
                 self.fluid_lines.append([])
             self.fluid_lines.append([])  # for center circle
 
-        def connect(self, object, position):
+        def connect(self, link_object, position):
             """Link a line to an in or out port of the valve"""
             if position == 'center':
                 position = 6
-            self.fluid_lines[position].append(object)   # TODO: Add way to associate real valve to diagram
+            self.fluid_lines[position].append(link_object)   # TODO: Add way to associate real valve to diagram
 
     class SelectionValve(Valve):
         def __init__(self, canvas, x, y, name):
