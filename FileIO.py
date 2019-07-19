@@ -1,3 +1,4 @@
+"""Module to support interfacing with an Elveflow either through the official SDK or by reading in datafiles as they are created."""
 # encoding: utf8
 import csv
 import time
@@ -36,17 +37,20 @@ if USE_SDK:
         USE_SDK = False
 
 
-class ElveflowHandler_ESI:
+class ElveflowHandlerESI:
     """A class that handles reading in Elveflow-generated log files."""
+
     SLEEPTIME = 0.2  # if no line exists, wait this many seconds before trying again
     QUEUE_MAXLEN = 0  # zero means infinite
 
     TESTING_FILENAME = 'Elveflow/temp.txt'
 
     def __init__(self, sourcename=None, errorlogger=None):
-        """Start actually trying to read in data from an Elveflow log. If the sourcename is
-        empty (even after selecting from a file dialog), this instance exists but does
-        nothing when you try to start it"""
+        """Start actually trying to read in data from an Elveflow log.
+
+        If the sourcename is empty (even after selecting from a file dialog), this instance exists but does
+        nothing when you try to start it.
+        """
         if sourcename is None:
             self.sourcename = filedialog.askopenfilename(initialdir=".", title="Choose file", filetypes=(("tab-separated value", "*.tsv"), ("tab-separated value", "*.txt"), ("all files", "*.*")))
         else:
@@ -68,12 +72,12 @@ class ElveflowHandler_ESI:
             self.errorlogger = errorlogger
 
         self.header = None
-        self.buffer_queue = Queue(maxsize=ElveflowHandler_ESI.QUEUE_MAXLEN)
+        self.buffer_queue = Queue(maxsize=ElveflowHandlerESI.QUEUE_MAXLEN)
         self.run_flag = threading.Event()
         self.run_flag.set()
 
-    def start(self, getheader_handler=None):
-        """Start actually trying to read in data from an Elveflow log. Do not call this function more than once"""
+    def start(self, get_header_handler=None):
+        """Start actually trying to read in data from an Elveflow log. Do not call this function more than once."""
         def start_thread():
             self.errorlogger.info("STARTING HANDLER THREAD %s" % threading.current_thread())
 
@@ -87,7 +91,7 @@ class ElveflowHandler_ESI:
                         line = f.readline()
                         if not line.strip():
                             # wait a little before trying to find more lines
-                            time.sleep(ElveflowHandler_ESI.SLEEPTIME)
+                            time.sleep(ElveflowHandlerESI.SLEEPTIME)
                         else:
                             # DANGER: next() can raise a StopIteration. If this does, this entire thread silently exits prematurely
                             # I think I've avoided this with if statements, but you can't be sure.
@@ -95,8 +99,8 @@ class ElveflowHandler_ESI:
                                 # the first line should be the header
                                 self.header = next(csv.reader([line], delimiter='\t'))  # get the first (only) row from the iterator
                                 self.errorlogger.info("SETTING HEADER %s" % threading.current_thread())
-                                if getheader_handler is not None:
-                                    getheader_handler()
+                                if get_header_handler is not None:
+                                    get_header_handler()
                             else:
                                 # otherwise, we already have a header, so just read in data
                                 parsedline = next(csv.DictReader([line], fieldnames=self.header, delimiter='\t'))
@@ -121,57 +125,65 @@ class ElveflowHandler_ESI:
             self.reading_thread.start()
 
     def stop(self):
-        """Stops the reading thread."""
+        """Stop the reading thread."""
         self.run_flag.clear()
 
-    def fetchOne(self):
-        """retrieve the oldest element from the buffer. Afterwards, the element is no longer in the buffer.
-        If nothing is in there, return None. (You cannot tell the difference between the leftmost element of
-        the buffer holding None and the buffer being empty, but in this class, the former case should never happen)"""
+    def fetch_one(self):
+        """Retrieve the oldest element from the buffer.
+
+        Afterwards, the element is no longer in the buffer. If nothing is in there, return None. (You cannot tell the difference between the leftmost element of
+        the buffer holding None and the buffer being empty, but in this class, the former case should never happen).
+        """
         try:
             return self.buffer_queue.get(False)
         except IndexError:
             return None
 
-    def peekOne(self):
-        """looks at the oldest element from the buffer, but does NOT remove it from the buffer.
+    def peek_one(self):
+        """Look at the oldest element from the buffer, but does NOT remove it from the buffer.
+
         If nothing is in there, return None. (You cannot tell the difference between the leftmost element of
         the buffer holding None and the buffer being empty, but in this class, the former case should never happen).
 
-        NOTE that depending on your use-case, you may wish to call this function while holding the mutex"""
+        NOTE that depending on your use-case, you may wish to call this function while holding the mutex.
+        """
         try:
             return self.buffer_queue.queue[0]
         except IndexError:
             return None
 
-    def fetchAll(self):
-        """retrieve all elements from the buffer as a list. Afterwards, all elements returned are no longer in the buffer.
-        In this class, the elements of the buffer are all dicts whose keys are the entries of the header"""
-        def generateElements():
+    def fetch_all(self):
+        """Retrieve all elements from the buffer as a list. Afterwards, all elements returned are no longer in the buffer.
+
+        In this class, the elements of the buffer are all dicts whose keys are the entries of the header.
+        """
+        def generate_elements():
             try:
                 while True:
                     yield self.buffer_queue.get(False)
             except Queue_Empty:
                 return
-        return [elt for elt in generateElements()]
+        return [elt for elt in generate_elements()]
 
-    def getHeader(self):
-        """returns the header, a list of strings"""
+    def get_header(self):
+        """Return the header, a list of strings."""
         return self.header
 
 
-class ElveflowHandler_SDK:
-    """a class that handles interfacing with the Elveflow directly"""
+class ElveflowHandlerSDK:
+    """A class that handles interfacing with the Elveflow directly."""
+
     SLEEPTIME = 0.1  # how many seconds between each read of the Elveflow output
     QUEUE_MAXLEN = 0  # zero means infinite
     PID_SLEEPTIME = 0.05  # how many seconds between each command of the PID loop
     PRESSURELOOP_SLEEPTIME = 0.01  # how many seconds between each command of the pressure loop
-    PRESSURE_MAXSLOPE = 1000 * PRESSURELOOP_SLEEPTIME # in mbar per update frame; 1000 is in mbar/sec
+    PRESSURE_MAXSLOPE = 1000 * PRESSURELOOP_SLEEPTIME  # in mbar per update frame; 1000 is in mbar/sec
     VOLUME_KP = 0
     VOLUME_KI = 50
     VOLUME_KD = 0
 
     def __init__(self, sourcename=None, errorlogger=None, sensortypes=[], starttime=0):
+        """Start the Elveflow connection."""
         if sourcename is None or sourcename == '':
             self.sourcename = b'01A377A5'
         else:
@@ -214,18 +226,19 @@ class ElveflowHandler_SDK:
 
         self.header = ["time [s]", "Pressure 1 [mbar]", "Pressure 2 [mbar]", "Pressure 3 [mbar]", "Pressure 4 [mbar]",
                        "Volume flow rate 1 [µL/min]", "Volume flow rate 2 [µL/min]", "Volume flow rate 3 [µL/min]", "Volume flow rate 4 [µL/min]"]
-        self.buffer_queue = Queue(maxsize=ElveflowHandler_SDK.QUEUE_MAXLEN)
+        self.buffer_queue = Queue(maxsize=ElveflowHandlerSDK.QUEUE_MAXLEN)
         self.run_flag = threading.Event()
         self.run_flag.set()
 
-    def start(self, getheader_handler=None):
+    def start(self, get_header_handler=None):
+        """Start the elveflow handler thread."""
         def start_thread():
             print("STARTING HANDLER THREAD %s" % threading.current_thread())
             while self.run_flag.is_set():
                 data_sens = c_double()
                 get_pressure = c_double()
 
-                time.sleep(ElveflowHandler_SDK.SLEEPTIME)
+                time.sleep(ElveflowHandlerSDK.SLEEPTIME)
 
                 newline = {}
                 for i in range(1, 5):
@@ -247,16 +260,19 @@ class ElveflowHandler_SDK:
                     pass
 
             try:
-                def closingFunction(i):
+                def closing_function(i):
                     if i == 4:
-                        onFinish = lambda: (print("Closing Elveflow connection"), print("Error code: %s" % Elveflow_SDK.OB1_Destructor(self.instr_ID.value)))
-                        # hack: put imperative commands into a tuple in order to execute each of them in a lambda
+                        def on_finish():
+                            print("Closing Elveflow connection")
+                            print("Error code: %s" % Elveflow_SDK.OB1_Destructor(self.instr_ID.value))
                     else:
-                        onFinish = lambda: closingFunction(i+1)
-                    print("setting elveflow channel %s to 0" % i)
-                    self.setPressureLoop(i, 0, onFinish=onFinish)
+                        def on_finish():
+                            closing_function(i+1)
 
-                closingFunction(1)
+                    print("setting elveflow channel %s to 0" % i)
+                    self.set_pressure_loop(i, 0, on_finish=on_finish)
+
+                closing_function(1)
             except RuntimeError:
                 print("Runtime error detected in IO handler thread %s while trying to close. Ignoring." % threading.current_thread())
             finally:
@@ -264,64 +280,72 @@ class ElveflowHandler_SDK:
 
         self.reading_thread = threading.Thread(target=start_thread)
         self.reading_thread.start()
-        if getheader_handler is not None:
-            getheader_handler()
+        if get_header_handler is not None:
+            get_header_handler()
 
     def stop(self):
-        """Stops the reading thread."""
+        """Stop the reading thread."""
         self.run_flag.clear()
 
-    def fetchOne(self):
-        """retrieve the oldest element from the buffer. Afterwards, the element is no longer in the buffer.
-        If nothing is in there, return None. (You cannot tell the difference between the leftmost element of
-        the buffer holding None and the buffer being empty, but in this class, the former case should never happen)"""
+    def fetch_one(self):
+        """Retrieve the oldest element from the buffer.
+
+        Afterwards, the element is no longer in the buffer. If nothing is in there, return None. (You cannot tell the difference between the leftmost element of
+        the buffer holding None and the buffer being empty, but in this class, the former case should never happen).
+        """
         try:
             return self.buffer_queue.get(False)
         except IndexError:
             return None
 
-    def peekOne(self):
-        """looks at the oldest element from the buffer, but does NOT remove it from the buffer.
+    def peek_one(self):
+        """Look at the oldest element from the buffer, but does NOT remove it from the buffer.
+
         If nothing is in there, return None. (You cannot tell the difference between the leftmost element of
         the buffer holding None and the buffer being empty, but in this class, the former case should never happen).
 
-        NOTE that depending on your use-case, you may wish to call this function while holding the mutex"""
+        NOTE that depending on your use-case, you may wish to call this function while holding the mutex.
+        """
         try:
             return self.buffer_queue.queue[0]
         except IndexError:
             return None
 
-    def fetchAll(self):
-        """retrieve all elements from the buffer as a list. Afterwards, all elements returned are no longer in the buffer.
-        In this class, the elements of the buffer are all dicts whose keys are the entries of the header"""
-        def generateElements():
+    def fetch_all(self):
+        """Retrieve all elements from the buffer as a list.
+
+        Afterwards, all elements returned are no longer in the buffer. In this class, the elements of the buffer are all dicts whose keys are the entries of the header.
+        """
+        def generate_elements():
             try:
                 while True:
                     yield self.buffer_queue.get(False)
             except Queue_Empty:
                 return
-        return [elt for elt in generateElements()]
+        return [elt for elt in generate_elements()]
 
-    def getHeader(self):
-        """returns the header, a list of strings"""
+    def get_header(self):
+        """Return the header, a list of strings."""
         return self.header
 
-    def setPressure(self, channel_number=4, value=300):
-        """tells the Elveflow to set the pressure directly"""
+    def set_pressure(self, channel_number=4, value=300):
+        """Tell the Elveflow to set the pressure directly."""
         error = Elveflow_SDK.OB1_Set_Press(self.instr_ID.value, channel_number, value, byref(self.calib), 1000)
         self.errorlogger.info('Set pressure of Channel %i to %s' % (channel_number, value))
         if error != 0:
             self.errorlogger.warning('ERROR CODE SET PRESSURE CHANNEL %i: %s' % (channel_number, error))
 
-    def setPressureLoop(self, channel_number, value, interruptEvent=None, onFinish=None):
-        """starts a thread that raises the Elveflow pressure without a big spike
-        TODO: make it stop when it reaches the target"""
-        if interruptEvent is None:
-            # if there isn't one already, create a dummy one
-            interruptEvent = threading.Event()
-            interruptEvent.clear()
+    def set_pressure_loop(self, channel_number, value, interrupt_event=None, on_finish=None):
+        """Start a thread that raises the Elveflow pressure without a big spike.
 
-        def start_thread(channel_number, target, interruptEvent):
+        TODO: make it stop when it reaches the target.
+        """
+        if interrupt_event is None:
+            # if there isn't one already, create a dummy one
+            interrupt_event = threading.Event()
+            interrupt_event.clear()
+
+        def start_thread(channel_number, target, interrupt_event):
             self.errorlogger.info("STARTING PRESSURE LOOP CHANNEL %s THREAD %s." % (channel_number, threading.current_thread()))
             if target > 8000:
                 target = 8000
@@ -332,23 +356,23 @@ class ElveflowHandler_SDK:
             error = Elveflow_SDK.OB1_Get_Press(self.instr_ID.value, c_int32(channel_number), 1, byref(self.calib), byref(get_pressure), 1000)
             if error != 0:
                 self.errorlogger.warning('ERROR CODE GETTING PRESSURE %i: %s' % (channel_number, error))
-                if onFinish is not None:
-                    onFinish()
+                if on_finish is not None:
+                    on_finish()
                 return
 
             curr_pressure = get_pressure.value
 
-            while self.run_flag.is_set() and not interruptEvent.is_set():
+            while self.run_flag.is_set() and not interrupt_event.is_set():
                 # if we have an error reading, don't try to set anything
-                self.errorlogger.warning('max slope is %s' % ElveflowHandler_SDK.PRESSURE_MAXSLOPE)
+                self.errorlogger.warning('max slope is %s' % ElveflowHandlerSDK.PRESSURE_MAXSLOPE)
                 self.errorlogger.warning('requested slope is %s' % abs(target - curr_pressure))
-                if abs(target - curr_pressure) <= ElveflowHandler_SDK.PRESSURE_MAXSLOPE:
+                if abs(target - curr_pressure) <= ElveflowHandlerSDK.PRESSURE_MAXSLOPE:
                     # if we're close, just set it and hope for the best
                     curr_pressure = target
-                    interruptEvent.set()
+                    interrupt_event.set()
                 else:
                     # otherwise, just make one PRESSURE_MAXSLOPE-sized step in the correct direction
-                    curr_pressure = curr_pressure + math.copysign(ElveflowHandler_SDK.PRESSURE_MAXSLOPE, target - curr_pressure)
+                    curr_pressure = curr_pressure + math.copysign(ElveflowHandlerSDK.PRESSURE_MAXSLOPE, target - curr_pressure)
 
                 self.errorlogger.debug("setting pressure to %s", curr_pressure)
                 error = Elveflow_SDK.OB1_Set_Press(self.instr_ID.value, channel_number, curr_pressure, byref(self.calib), 1000)
@@ -356,54 +380,54 @@ class ElveflowHandler_SDK:
                     self.errorlogger.warning('ERROR CODE SETTING PRESSURE %i: %s' % (channel_number, error))
                 self.errorlogger.debug("setting pressure to %s", curr_pressure)
 
-                time.sleep(ElveflowHandler_SDK.PRESSURELOOP_SLEEPTIME)
+                time.sleep(ElveflowHandlerSDK.PRESSURELOOP_SLEEPTIME)
 
-            # while self.run_flag.is_set() and not interruptEvent.is_set():
+            # while self.run_flag.is_set() and not interrupt_event.is_set():
             #     get_pressure = c_double()
             #     error = Elveflow_SDK.OB1_Get_Press(self.instr_ID.value, c_int32(channel_number), 1, byref(self.calib), byref(get_pressure), 1000)
-            #     starting_pressure = 
+            #     starting_pressure =
             #     if error != 0:
             #         self.errorlogger.warning('ERROR CODE GETTING PRESSURE %i: %s' % (i, error))
             #     else:
             #         # if we have an error reading, don't try to set anything
-            #         self.errorlogger.warning('max slope is %s' % ElveflowHandler_SDK.PRESSURE_MAXSLOPE)
+            #         self.errorlogger.warning('max slope is %s' % ElveflowHandlerSDK.PRESSURE_MAXSLOPE)
             #         self.errorlogger.warning('requested slope is %s' % abs(target - get_pressure.value))
             #         if target < 100 and get_pressure.value < 100:
             #             pressure_to_set = 0
-            #             interruptEvent.set()
-            #         elif abs(target - get_pressure.value) <= ElveflowHandler_SDK.PRESSURE_MAXSLOPE:
+            #             interrupt_event.set()
+            #         elif abs(target - get_pressure.value) <= ElveflowHandlerSDK.PRESSURE_MAXSLOPE:
             #             # if we're close, just set it and hope for the best
             #             pressure_to_set = target
-            #             interruptEvent.set()
+            #             interrupt_event.set()
             #         else:
-            #             pressure_to_set = get_pressure.value + math.copysign(ElveflowHandler_SDK.PRESSURE_MAXSLOPE, target - get_pressure.value)
+            #             pressure_to_set = get_pressure.value + math.copysign(ElveflowHandlerSDK.PRESSURE_MAXSLOPE, target - get_pressure.value)
             #         error = Elveflow_SDK.OB1_Set_Press(self.instr_ID.value, channel_number, pressure_to_set, byref(self.calib), 1000)
             #         if error != 0:
             #             self.errorlogger.warning('ERROR CODE SETTING PRESSURE %i: %s' % (channel_number, error))
             #         self.errorlogger.debug("setting pressure to %s", pressure_to_set)
-            #     time.sleep(ElveflowHandler_SDK.PRESSURELOOP_SLEEPTIME)
+            #     time.sleep(ElveflowHandlerSDK.PRESSURELOOP_SLEEPTIME)
 
             try:
                 self.errorlogger.info("ENDING PRESSURE LOOP CHANNEL %s THREAD %s." % (channel_number, threading.current_thread()))
-                if onFinish is not None:
-                    onFinish()
+                if on_finish is not None:
+                    on_finish()
             except RuntimeError:
                 print("Runtime error detected in pressure loop channel %s thread %s while trying to close. Ignoring." % (channel_number, threading.current_thread()))
 
-        self.reading_thread = threading.Thread(target=start_thread, args=(channel_number, value, interruptEvent))
+        self.reading_thread = threading.Thread(target=start_thread, args=(channel_number, value, interrupt_event))
         self.reading_thread.start()
         return self.reading_thread
 
-    def setVolumeLoop(self, channel_number, value, interruptEvent=None, pid_constants=None):
-        """starts a thread that sets the Elveflow flow rate"""
-        if interruptEvent is None:
+    def set_volume_loop(self, channel_number, value, interrupt_event=None, pid_constants=None):
+        """Start a thread that sets the Elveflow flow rate."""
+        if interrupt_event is None:
             # if there isn't one already, create a dummy one
-            interruptEvent = threading.Event()
-            interruptEvent.clear()
+            interrupt_event = threading.Event()
+            interrupt_event.clear()
         if pid_constants is None:
-            pid_constants = (ElveflowHandler_SDK.VOLUME_KP, ElveflowHandler_SDK.VOLUME_KI, ElveflowHandler_SDK.VOLUME_KD)
+            pid_constants = (ElveflowHandlerSDK.VOLUME_KP, ElveflowHandlerSDK.VOLUME_KI, ElveflowHandlerSDK.VOLUME_KD)
 
-        def start_thread(channel_number, target, interruptEvent, pid_constants):
+        def start_thread(channel_number, target, interrupt_event, pid_constants):
             self.errorlogger.info("STARTING PRESSURE LOOP CHANNEL %s THREAD %s." % (channel_number, threading.current_thread()))
             pid = PID(*pid_constants, setpoint=target)
             initial_pressure = c_double()
@@ -412,8 +436,8 @@ class ElveflowHandler_SDK:
                 self.errorlogger.warning('ERROR CODE GETTING PRESSURE %i: %s' % (channel_number, error))
             self.errorlogger.debug("INITIAL PRESSURE IS %f" % initial_pressure.value)
 
-            while self.run_flag.is_set() and not interruptEvent.is_set():
-                time.sleep(ElveflowHandler_SDK.PID_SLEEPTIME)
+            while self.run_flag.is_set() and not interrupt_event.is_set():
+                time.sleep(ElveflowHandlerSDK.PID_SLEEPTIME)
                 get_flowrate = c_double()
                 error = Elveflow_SDK.OB1_Get_Sens_Data(self.instr_ID.value, c_int32(channel_number), 1, byref(get_flowrate))
                 if error != 0:
@@ -435,20 +459,20 @@ class ElveflowHandler_SDK:
 
             try:
                 self.errorlogger.info("DONE WITH FLOW RATE LOOP CHANNEL %s THREAD %s; setting pressure to zero." % (channel_number, threading.current_thread()))
-                a = self.setPressureLoop(channel_number, 0)
+                a = self.set_pressure_loop(channel_number, 0)
                 a.join()
                 self.errorlogger.info("ENDING FLOW RATE LOOP CHANNEL %s THREAD %s." % (channel_number, threading.current_thread()))
             except RuntimeError:
                 print("Runtime error detected in flow rate loop channel %s thread %s while trying to close. Ignoring." % (channel_number, threading.current_thread()))
 
-        self.reading_thread = threading.Thread(target=start_thread, args=(channel_number, value, interruptEvent, pid_constants))
+        self.reading_thread = threading.Thread(target=start_thread, args=(channel_number, value, interrupt_event, pid_constants))
         self.reading_thread.start()
 
 
 if USE_SDK:
-    ElveflowHandler = ElveflowHandler_SDK
+    ElveflowHandler = ElveflowHandlerSDK
 else:
-    ElveflowHandler = ElveflowHandler_ESI
+    ElveflowHandler = ElveflowHandlerESI
 
 if __name__ == '__main__':
     print("STARTING")
@@ -457,12 +481,12 @@ if __name__ == '__main__':
         myhandler.start()
         time.sleep(4)
         print("AFTER 4 SECONDS")
-        print(list(map(lambda x: (x["Pressure 1 [mbar]"], x["Volume flow rate 1 [µL/min]"]), myhandler.fetchAll())))
+        print(list(map(lambda x: (x["Pressure 1 [mbar]"], x["Volume flow rate 1 [µL/min]"]), myhandler.fetch_all())))
         time.sleep(4)
         print("AFTER 8 SECONDS")
-        print(list(map(lambda x: x["Volume flow rate 1 [µL/min]"], myhandler.fetchAll())))
+        print(list(map(lambda x: x["Volume flow rate 1 [µL/min]"], myhandler.fetch_all())))
         time.sleep(4)
         print("AFTER 12 SECONDS")
-        print(list(map(lambda x: x["Volume flow rate 1 [µL/min]"], myhandler.fetchAll())))
+        print(list(map(lambda x: x["Volume flow rate 1 [µL/min]"], myhandler.fetch_all())))
     finally:
         myhandler.stop()

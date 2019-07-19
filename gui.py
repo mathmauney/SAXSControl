@@ -264,7 +264,7 @@ class MainGUI:
     def pump_refill_command(self):
         """Do nothing. It's a dummy command."""
         self.flowpath.set_unlock_state(False)
-        self.queue.put((self.elveflow_display.elveflow_handler.setPressure, 4, 100))  # Pressurize Oil with Elveflow
+        self.queue.put((self.elveflow_display.elveflow_handler.set_pressure, 4, 100))  # Pressurize Oil with Elveflow
         #   Switch valve (may be hooked to pump)
         self.queue.put(self.pump.set_mode_vol)
         self.queue.put((time.sleep, 0.1))
@@ -276,7 +276,7 @@ class MainGUI:
         self.queue.put((time.sleep, 10))
         self.queue.put(self.pump.infuse)    # Set pump to injection mode
         #   Switch valve
-        self.queue.put((self.elveflow_display.elveflow_handler.setPressure, 4, 0))  # Vent Oil
+        self.queue.put((self.elveflow_display.elveflow_handler.set_pressure, 4, 0))  # Vent Oil
         pass
 
     def pump_inject_command(self):
