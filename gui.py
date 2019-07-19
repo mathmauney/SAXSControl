@@ -106,7 +106,6 @@ class MainGUI:
         self.instruments = []
         self.NumberofPumps = 0
         # Setup Page
-        self.AvailablePorts = SAXSDrivers.list_available_ports()
         self.setup_page_buttons = []
         self.setup_page_variables = []
         self.refresh_com_ports = tk.Button(self.setup_page, text="Refresh COM", command=lambda: self.refresh_com_list())
@@ -114,8 +113,8 @@ class MainGUI:
         self.AddRheodyne = tk.Button(self.setup_page, text="Add Rheodyne", command=lambda: self.add_rheodyne_set_buttons())
         self.AddVICI = tk.Button(self.setup_page, text="Add VICI Valve", command=lambda: self.add_vici_set_buttons())
         self.ControllerCOM = COMPortSelector(self.setup_page, exportselection=0, height=3)
-        self.ControllerSet = tk.Button(self.setup_page, text="Set Microntroller", command=lambda: self.controller.setport(self.AvailablePorts[int(self.ControllerCOM.curselection()[0])].device))
-        self.I2CScanButton = tk.Button(self.setup_page, text="Scan I2C line", command=lambda: self.controller.ScanI2C())
+        self.ControllerSet = tk.Button(self.setup_page, text="Set Microntroller", command=lambda: self.controller.set_port(self.AvailablePorts[int(self.ControllerCOM.curselection()[0])].device))
+        self.I2CScanButton = tk.Button(self.setup_page, text="Scan I2C line", command=lambda: self.controller.scan_i2c())
         # self.spec_address = tk.StringVar(value='192.168.0.233')   # For Alex M home use
         self.config_spec_address = tk.Entry(self.config_page, textvariable=self.spec_address)
         self.config_spec_address_label = tk.Label(self.config_page, text='SPEC Address')
@@ -221,10 +220,9 @@ class MainGUI:
 
     def stop(self):
         """Stop all running widgets."""
-        self.oil_meter.stop()
         with self.queue.mutex:
             self.queue.queue.clear()
-        SAXSDrivers.InstrumentTerminateFunction(self.instruments)
+        SAXSDrivers.stop_instruments(self.instruments)
         # Add Elveflow stop if we use it for non-pressure
 
     def load_config(self, filename=None):
@@ -348,9 +346,9 @@ class MainGUI:
 
         newbuttons = [
          COMPortSelector(self.setup_page, exportselection=0, height=4),
-         tk.Button(self.setup_page, text="Set Port", command=lambda: self.instruments[instrument_index].setport(self.AvailablePorts[int(self.setup_page_buttons[instrument_index][0].curselection()[0])].device)),
+         tk.Button(self.setup_page, text="Set Port", command=lambda: self.instruments[instrument_index].set_port(self.AvailablePorts[int(self.setup_page_buttons[instrument_index][0].curselection()[0])].device)),
          tk.Label(self.setup_page, text="or"),
-         tk.Button(self.setup_page, text="Send to Controller", command=lambda: self.instruments[instrument_index].settocontroller(self.controller)),
+         tk.Button(self.setup_page, text="Send to Controller", command=lambda: self.instruments[instrument_index].set_to_controller(self.controller)),
          tk.Label(self.setup_page, text="   Pump Address:"),
          tk.Spinbox(self.setup_page, from_=1, to=100, textvariable=self.setup_page_variables[instrument_index][0]),
          tk.Label(self.setup_page, text="   Pump Name:"),
@@ -425,9 +423,9 @@ class MainGUI:
         self.setup_page_variables.append(newvars)
         newbuttons = [
          COMPortSelector(self.setup_page, exportselection=0, height=4),
-         tk.Button(self.setup_page, text="Set Port", command=lambda: self.instruments[instrument_index].setport(self.AvailablePorts[int(self.setup_page_buttons[instrument_index][0].curselection()[0])].device)),
+         tk.Button(self.setup_page, text="Set Port", command=lambda: self.instruments[instrument_index].set_port(self.AvailablePorts[int(self.setup_page_buttons[instrument_index][0].curselection()[0])].device)),
          tk.Label(self.setup_page, text="or"),
-         tk.Button(self.setup_page, text="Send to Controller", command=lambda: self.instruments[instrument_index].settocontroller(self.controller)),
+         tk.Button(self.setup_page, text="Send to Controller", command=lambda: self.instruments[instrument_index].set_to_controller(self.controller)),
          tk.Label(self.setup_page, text="   Type:"),
          tk.Spinbox(self.setup_page, values=(2, 6), textvariable=self.setup_page_variables[instrument_index][2]),
          tk.Label(self.setup_page, text="   I2C Address:"),
@@ -470,9 +468,9 @@ class MainGUI:
         self.setup_page_variables.append(newvars)
         newbuttons = [
          COMPortSelector(self.setup_page, exportselection=0, height=4),
-         tk.Button(self.setup_page, text="Set Port", command=lambda: self.instruments[instrument_index].setport(self.AvailablePorts[int(self.setup_page_buttons[instrument_index][0].curselection()[0])].device)),
+         tk.Button(self.setup_page, text="Set Port", command=lambda: self.instruments[instrument_index].set_port(self.AvailablePorts[int(self.setup_page_buttons[instrument_index][0].curselection()[0])].device)),
          tk.Label(self.setup_page, text="or"),
-         tk.Button(self.setup_page, text="Send to Controller", command=lambda:self.instruments[instrument_index].settocontroller(self.controller)),
+         tk.Button(self.setup_page, text="Send to Controller", command=lambda:self.instruments[instrument_index].set_to_controller(self.controller)),
          tk.Label(self.setup_page, text="   Valve Name:"),
          tk.Entry(self.setup_page, textvariable=self.setup_page_variables[instrument_index][1]),
          tk.Button(self.setup_page, text="Set values", command=lambda: self.instrument_change_values(instrument_index, False))

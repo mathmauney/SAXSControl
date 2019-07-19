@@ -84,11 +84,12 @@ class TextHandler(logging.Handler):
     POLLING_PERIOD = 100  # in milliseconds
 
     def __init__(self, text):
+        """Start the text handler."""
         # run the regular Handler __init__
         logging.Handler.__init__(self)
         # Store a reference to the Text it will log to
         self.text = text
-        self.messagesQueue = Queue()
+        self.messages_queue = Queue()
 
         # TKinter apparently isn't threadsafe. So instead of updating the GUI directly from the
         # emit callback, throw messages into a threadsafe queue and use .after in the main thread
@@ -96,15 +97,17 @@ class TextHandler(logging.Handler):
         self.text.after(TextHandler.POLLING_PERIOD, self._update)
 
     def emit(self, record):
+        """Add a message to the text handler."""
         msg = self.format(record)
-        self.messagesQueue.put(msg, False)
+        self.messages_queue.put(msg, False)
 
     def _update(self):
+        """Update self in a loop."""
         self.text.configure(state='normal')
         did_update = False
         try:
             while True:
-                msg = self.messagesQueue.get(False)
+                msg = self.messages_queue.get(False)
                 self.text.insert(tk.END, msg + '\n')
                 did_update = True
         except Queue_Empty:
@@ -118,7 +121,9 @@ class TextHandler(logging.Handler):
 
 
 class MiscLogger(ScrolledText):
+    """Extension of ScrolledText to handle other kinds of message logging such as responses from SPEC."""
     def append(self, msg):
+        """Add new message to the end of the log and scroll to the bottom after each update."""
         self.configure(state='normal')
         self.insert(tk.END, msg + '\n')
         self.configure(state='disabled')
@@ -127,12 +132,17 @@ class MiscLogger(ScrolledText):
 
 
 class Toggle(tk.Label):
-    # https://www.reddit.com/r/learnpython/comments/7sx953/how_to_add_a_toggle_switch_in_tkinter/
-    def __init__(self, master=None, variable=None, onFile='clicked_button.png', offFile='unclicked_button.png', onToggleOn=None, onToggleOff=None, defaultValue=None, **kwargs):
-        tk.Label.__init__(self, master, **kwargs)
+    """Button that toggles between two states.
 
-        self.ON = onFile
-        self.OFF = offFile
+    from: https://www.reddit.com/r/learnpython/comments/7sx953/how_to_add_a_toggle_switch_in_tkinter/
+    """
+
+    def __init__(self, master=None, variable=None, on_file='img/clicked_button.png', off_file='img/unclicked_button.png', on_toggle_on=None, on_toggle_off=None, default_value=None, **kwargs):
+        """Initialize the toggle."""
+        super().__init__(master, **kwargs)
+
+        self.ON = on_file
+        self.OFF = off_file
 
         if variable is None:
             self.var = tk.BooleanVar()
@@ -145,34 +155,37 @@ class Toggle(tk.Label):
         self.bind('<Button-1>', lambda e: self.set(not (self.get() ^ (self['state'] == tk.DISABLED))))
         self.var.trace('w', lambda *_: self.config(image=self.images[self.get()]))
 
-        if defaultValue is None:
+        if default_value is None:
             if variable is None:
-                defaultValue = True
+                default_value = True
             else:
-                defaultValue = variable.get()
-        self.set(defaultValue)
+                default_value = variable.get()
+        self.set(default_value)
 
-        self.onToggleOn = onToggleOn
-        self.onToggleOff = onToggleOff
-        self.var.trace("w", lambda *_: self.doToggle())
+        self.on_toggle_on = on_toggle_on
+        self.on_toggle_off = on_toggle_off
+        self.var.trace("w", lambda *_: self.do_toggle())
 
-    def doToggle(self):
+    def do_toggle(self):
+        """Process the diffrent functions based on toggle state."""
         if self['state'] != tk.DISABLED:
             if self.get():
                 # we just toggled on
-                if self.onToggleOn is not None:
-                    self.onToggleOn()
+                if self.on_toggle_on is not None:
+                    self.on_toggle_on()
             else:
-                if self.onToggleOff is not None:
-                    self.onToggleOff()
+                if self.on_toggle_off is not None:
+                    self.on_toggle_off()
 
 
 class PressureVolumeToggle(Toggle):
-    ON = 'Pressure_button.png'
-    OFF = 'Volume_button.png'
+    """Toggle that switches between pressure and volume control for the Elveflow."""
+    ON = 'img/Pressure_button.png'
+    OFF = 'img/Volume_button.png'
 
     def __init__(self, master=None, variable=None, **kwargs):
-        Toggle.__init__(self, master, variable, self.ON, self.OFF, **kwargs)
+        """Makes a toggle with the pressure and volume labels."""
+        super().__init__(master, variable, self.ON, self.OFF, **kwargs)
 
 
 class ElveflowDisplay(tk.Canvas):
@@ -305,8 +318,8 @@ class ElveflowDisplay(tk.Canvas):
                 self.pressureValue_entry[i].grid(row=1, column=i, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
                 self.pressureValue_var[i].set("")
                 self.isPressure_var[i].set(True)
-                self.pressureSettingActive_toggle[i] = Toggle(self.setElveflow_frame, defaultValue=False, text='Set', variable=self.pressureSettingActive_var[i], compound=tk.CENTER,
-                                                              onToggleOn=lambda i=i: self.start_pressure(channel=i+1, isPressure=self.isPressure_var[i].get()), onToggleOff=lambda i=i: self.stop_pressure(channel=i+1))
+                self.pressureSettingActive_toggle[i] = Toggle(self.setElveflow_frame, default_value=False, text='Set', variable=self.pressureSettingActive_var[i], compound=tk.CENTER,
+                                                              on_toggle_on=lambda i=i: self.start_pressure(channel=i+1, isPressure=self.isPressure_var[i].get()), on_toggle_off=lambda i=i: self.stop_pressure(channel=i+1))
                 self.pressureSettingActive_toggle[i].grid(row=2, column=i, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
 
             tk.Label(self.setElveflow_frame, text="P, I, D constants:").grid(row=3, column=0, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)

@@ -40,24 +40,24 @@ class HPump:
 
     # Pump intialization need pump number
     # need to set defsults fpr simpler impoementation
-    def __init__(self, address=0, PCConnect=True, running=False, infusing=True):
+    def __init__(self, address=0, pc_connect=True, running=False, infusing=True):
         self.address = str(address)
         self.running = running
         self.infusing = infusing
-        self.PCConnect = PCConnect
+        self.pc_connect = pc_connect
         # add init for syringe dismeter,flowrate, Direction etc
 
     # function  to send control over the controller
     def set_to_controller(self, controller):
         """Send control to the controller"""
-        self.PCConnect = False
+        self.pc_connect = False
         self.controller = controller
 
 # Pump action commands
 # To do in all. Read in confirmstion from pump.
 
     def start_pump(self, resource=pumpserial):
-        if self.PCConnect:
+        if self.pc_connect:
             resource.open()
             resource.write((self.address+"RUN\n\r").encode())  # needs both terminators
             # val=resource.read_until("\n\r")
@@ -71,7 +71,7 @@ class HPump:
         # return val.decode()
 
     def stop_pump(self, resource=pumpserial):
-        if self.PCConnect:
+        if self.pc_connect:
             resource.open()
             resource.write((self.address+"STP\n\r").encode())
             # val=resource.read_until("\n\r")
@@ -87,7 +87,7 @@ class HPump:
     def set_infuse_rate(self, rate, units="UM", resource=pumpserial):
         # consider moving to after checking with pump
         ratestr = str(rate).zfill(5)
-        if self.PCConnect:
+        if self.pc_connect:
             resource.open()
             resource.write((self.address+"RAT"+ratestr+units+"\n\r").encode())
             # val = resource.read(4)
@@ -104,7 +104,7 @@ class HPump:
     def set_refill_rate(self, rate, units="UM", resource=pumpserial):
         # consider moving to after checking with pump
         ratestr = str(rate).zfill(5)
-        if self.PCConnect:
+        if self.pc_connect:
             resource.open()
             resource.write((self.address+"RFR"+ratestr+units+"\n\r").encode())
             resource.close()
@@ -132,7 +132,7 @@ class HPump:
 
     def infuse(self, resource=pumpserial):
         self.infusing = True
-        if self.PCConnect:
+        if self.pc_connect:
             resource.open()
             resource.write((self.address+'DIRINF'+"\n\r").encode())
             resource.close()
@@ -143,7 +143,7 @@ class HPump:
 
     def refill(self,  resource=pumpserial):
         self.infusing = False
-        if self.PCConnect:
+        if self.pc_connect:
             resource.open()
             resource.write((self.address+'DIRREF'+"\n\r").encode())
             resource.close()
@@ -154,7 +154,7 @@ class HPump:
 
     def reverse(self,  resource=pumpserial):
         self.infusing = not self.infusing
-        if self.PCConnect:
+        if self.pc_connect:
             resource.open()
             resource.write((self.address+'DIRREV'+"\n\r").encode())
             resource.close()
@@ -164,7 +164,7 @@ class HPump:
             self.controller.write(("-"+self.address+"DIRREV"+"\n\r").encode())
 
     def set_mode_pump(self,  resource=pumpserial):
-        if self.PCConnect:
+        if self.pc_connect:
             resource.open()
             resource.write((self.address+'MOD PMP'+"\n\r").encode())
             resource.close()
@@ -174,7 +174,7 @@ class HPump:
             self.controller.write(("-"+self.address+"MOD PMP"+"\n\r").encode())
 
     def set_mode_vol(self,  resource=pumpserial):
-        if self.PCConnect:
+        if self.pc_connect:
             resource.open()
             resource.write((self.address+'MOD VOL'+"\n\r").encode())
             resource.close()
@@ -184,7 +184,7 @@ class HPump:
             self.controller.write(("-"+self.address+"MOD VOL"+"\n\r").encode())
 
     def set_mode_program(self, resource=pumpserial):
-        if self.PCConnect:
+        if self.pc_connect:
             resource.open()
             resource.write((self.address+'MOD PGM'+"\n\r").encode())
             resource.close()
@@ -195,7 +195,7 @@ class HPump:
 
     def set_target_vol(self, vol, resource=pumpserial):
         volstr = str(vol).zfill(5)
-        if self.PCConnect:
+        if self.pc_connect:
             resource.open()
             resource.write((self.address+'TGT'+volstr+"\n\r").encode())
             resource.close()
@@ -205,7 +205,7 @@ class HPump:
             self.controller.write(("-"+self.address+'TGT'+volstr+"\n\r").encode())
 
     def stop_all(self, resource=pumpserial):
-        if self.PCConnect:
+        if self.pc_connect:
             resource.open()
             resource.write(("\n\r").encode())
             resource.close()

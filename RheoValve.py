@@ -8,11 +8,11 @@ import serial  # Needed for direct communication
 
 
 class Valve:
-    def __init__(self, name="", valvetype=0, position=0, PCConnect=True, addressI2C=-1):
+    def __init__(self, name="", valvetype=0, position=0, pc_connect=True, addressI2C=-1):
         self.name = name                      # valve nickname
         self.valvetype = valvetype            # int to mark max number of valve possions 2 or 6
         self.position = position
-        self.PCConnect = PCConnect
+        self.pc_connect = pc_connect
         # now lets create a serial object within the class to address the valve
         # I am presetting baudrate to that expdcted from rheodyne valves.
         # Actual baudrate can change- they just must agree.
@@ -30,13 +30,13 @@ class Valve:
         # set port through another function.
         # TODO: error handler to  avoid using withouth port being configured!!!
 
-    def setport(self, number):  # will keep set port accross different classes
+    def set_port(self, number):  # will keep set port accross different classes
         if self.serialobject.is_open:
             self.serialobject.close()
         self.serialobject.port = "COM" + str(number)
 
     def set_to_controller(self, controller):
-        self.PCConnect = False
+        self.pc_connect = False
         self.controller = controller
 
     def switchvalve(self, position):     # Lets take int
@@ -45,7 +45,7 @@ class Valve:
         # to add that functionality the number must be
         # in hex format => P##  so 10 P0A
         # Need errror handler to check position is integer and less than valve type
-        if self.PCConnect:
+        if self.pc_connect:
             if not self.serialobject.is_open:
                 self.serialobject.open()
             self.serialobject.write(("P0" + str(position) + "\n\r").encode())
@@ -72,7 +72,7 @@ class Valve:
 
         # todo maybe incorporate status check to confirm valve is in the right position
     def statuscheck(self):
-        if self.PCConnect:
+        if self.pc_connect:
             if not self.serialobject.is_open:
                 self.serialobject.open()
             self.serialobject.write("S\n\r".encode())
@@ -94,7 +94,7 @@ class Valve:
     def seti2caddress(self, address: int):  # Address is in int format
         # Address needs to be even int
         if address % 2 == 0:
-            if self.PCConnect:
+            if self.pc_connect:
                 s = hex(address)
                 self.serialobject.open()
                 self.serialobject.write(("N"+s[2:4]+"\n\r").encode())
