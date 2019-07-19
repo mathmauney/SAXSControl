@@ -21,10 +21,10 @@ from matplotlib import pyplot as plt
 class COMPortSelector(tk.Listbox):
     """Custom listbox for COM port selection."""
 
-    def updatelist(self, COMList):
+    def updatelist(self, com_list):
         """Delete the listbox items and rebuild based on an updated list."""
         self.delete(0, tk.END)
-        for item in COMList:
+        for item in com_list:
             self.insert(tk.END, item.device+"  "+item.description)
 
 
@@ -877,7 +877,7 @@ class FlowPath(tk.Canvas):
                 self.canvas.tag_raise(self.circles[i])
 
         def set_manual_position(self, position):    # TODO: Add in actual valve switching
-        """Change the valve position after being clicked both visually and physically."""
+            """Change the valve position after being clicked both visually and physically."""
             if self.canvas.is_unlocked:
                 self.set_position(position)
 
