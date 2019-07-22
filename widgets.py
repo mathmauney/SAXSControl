@@ -652,6 +652,7 @@ class FlowPath(tk.Canvas):
             self.center_circle = canvas.create_circle(x, y, self.small_radius, fill='dimgray', outline='dimgray', tag=self.name)
             self.circles = []
             self.fluid_lines = []
+            self.hardware = None
             for i in range(0, 6):
                 circle = canvas.create_circle(x+self.offset*math.cos(i*self.rads), y+self.offset*math.sin(i*self.rads), self.small_radius, fill='white', outline='white', tag=self.name)
                 self.circles.append(circle)
@@ -663,6 +664,30 @@ class FlowPath(tk.Canvas):
             if position == 'center':
                 position = 6
             self.fluid_lines[position].append(link_object)   # TODO: Add way to associate real valve to diagram
+
+        def assign_to_hardware(self):
+            """Spawn a popup that allows the valve graphic to be associated with a hardware valve."""
+            def set_choice(self, selected):
+                choice_index = options.index(selected)
+                self.hardware = self.canvas.window.instruments[choice_index]
+                win.destroy()
+            win = tk.Toplevel()
+            win.wm_title("Valve Assignment")
+            label = tk.Label(win, text='Select hardware:')
+            label.grid(row=0, column=0, columnspan=2)
+            options = []
+            if len(self.canvas.window.instruments) > 0:
+                for i in range(0, len(self.canvas.window.instruments)):
+                    options.append(self.canvas.window.instruments[i].name)
+                selection = tk.StringVar(options[0])
+                menu = tk.OptionMenu(win, selection, *options)
+                menu.grid(row=1, column=0, columnspan=2)
+                ok_button = tk.Button(win, text="Unlock", command=lambda: set_choice(selection.get()))
+                ok_button.grid(row=2, column=0)
+            else:
+                tk.Label(win, text='No hardware found.').grid(row=1, column=0, columnspan=2)
+            cancel_button = tk.Button(win, text="Cancel", command=win.destroy)
+            cancel_button.grid(row=2, column=1)
 
     class SelectionValve(Valve):
         """Extends Valve class for rheodyne selection valves.
@@ -704,7 +729,11 @@ class FlowPath(tk.Canvas):
                 self.canvas.tag_raise(self.circles[i])
 
         def set_manual_position(self, position):    # TODO: Add in actual valve switching
-            if self.canvas.is_unlocked:
+            """Change the valve position after being clicked both visually and physically."""
+            if self.hardware is None:
+                self.assign_to_hardware()
+            elif self.canvas.is_unlocked:
+                self.hardware.switchvalve(position+1)
                 self.set_position(position)
 
     class SampleValve(Valve):
@@ -772,9 +801,11 @@ class FlowPath(tk.Canvas):
 
         def set_manual_position(self, position):    # TODO: Add in actual valve switching
             """Change the valve position after being clicked both visually and physically."""
-            if self.canvas.is_unlocked:
+            if self.hardware is None:
+                self.assign_to_hardware()
+            elif self.canvas.is_unlocked:
+                self.hardware.switchvalve(position+1)
                 self.set_position(position)
-                print('Set position %i' % position)
 
     class InjectionValve(Valve):
         """Extends Valve class for rheodyne injection valves.
@@ -878,7 +909,10 @@ class FlowPath(tk.Canvas):
 
         def set_manual_position(self, position):    # TODO: Add in actual valve switching
             """Change the valve position after being clicked both visually and physically."""
-            if self.canvas.is_unlocked:
+            if self.hardware is None:
+                self.assign_to_hardware()
+            elif self.canvas.is_unlocked:
+                self.hardware.switchvalve(position+1)
                 self.set_position(position)
 
     class FluidLevel():
@@ -948,13 +982,14 @@ class FlowPath(tk.Canvas):
             else:
                 raise ValueError('Invalid lock state')
 
-    def __init__(self, window, **kwargs):
-        super().__init__(window, **kwargs)
+    def __init__(self, frame, main_window, **kwargs):
+        super().__init__(frame, **kwargs)
         self.is_unlocked = False
         self.valve_scale = 2/3
         self.lock_scale = .3
         self.fluid_line_width = 20
-        self.window = window
+        self.frame = frame
+        self.window = main_window
         self.lock = self.Lock(self, 10, 10)
         self.tag_bind('lock', '<Button-1>', lambda event: self.lock_popup())
         # Add Elements
@@ -964,7 +999,7 @@ class FlowPath(tk.Canvas):
         self.draw_fluid_lines()
         self.initialize()
         # Scale for computers smaller than 1800 log_width
-        scale = self.window.winfo_screenwidth()/1920
+        scale = self.frame.winfo_screenwidth()/1920
         self.scale("all", 0, 0, scale, scale)
         self.config(width=1800*scale, height=300*scale)
 

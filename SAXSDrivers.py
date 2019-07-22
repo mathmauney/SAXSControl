@@ -1,5 +1,5 @@
-"""
-Class definition to control a Hardvard pump through UART serial communication
+"""Class definition to control a Hardvard pump through UART serial communication.
+
 The class shares a COM port. This ennables to configure several pumps though a
 PUMP chai- Therefore it doesn't support multiple pumps connected directly to
 Computer
@@ -473,6 +473,10 @@ class VICI:
         self.logger.append(self.name+" set to Microntroller")
 
     def switchvalve(self, position):
+        if position == 1:
+            position = 'A'
+        if position == 2:
+            position = 'B'
         if not self.enabled:
             self.logger.append(self.name+" not set up, switching ignored")
             return
