@@ -8,7 +8,7 @@ import serial  # Needed for direct communication
 
 
 class Valve:
-    def __init__(self, name="", valvetype=0, position=0, pc_connect=True, addressI2C=-1):
+    def __init__(self, name="", valvetype=0, position=0, pc_connect=True, address_ic2=-1):
         self.name = name                      # valve nickname
         self.valvetype = valvetype            # int to mark max number of valve possions 2 or 6
         self.position = position
@@ -16,7 +16,7 @@ class Valve:
         # now lets create a serial object within the class to address the valve
         # I am presetting baudrate to that expdcted from rheodyne valves.
         # Actual baudrate can change- they just must agree.
-        self.serialobject = serial.Serial(baudrate=19200, timeout=1)
+        self.serial_object = serial.Serial(baudrate=19200, timeout=1)
         # set port throughuh another function.
 
     def __init2__(self, name="", valvetype=0, position=0):
@@ -26,14 +26,14 @@ class Valve:
         # now lets create a serial object within the class to address the valve
         # I am presetting baudrate to that expdcted from rheodyne valves.
         # Actual baudrate can change- they just must agree.
-        self.serialobject = serial.Serial(baudrate=19200, timeout=1)
+        self.serial_object = serial.Serial(baudrate=19200, timeout=1)
         # set port through another function.
         # TODO: error handler to  avoid using withouth port being configured!!!
 
     def set_port(self, number):  # will keep set port accross different classes
-        if self.serialobject.is_open:
-            self.serialobject.close()
-        self.serialobject.port = "COM" + str(number)
+        if self.serial_object.is_open:
+            self.serial_object.close()
+        self.serial_object.port = "COM" + str(number)
 
     def set_to_controller(self, controller):
         self.pc_connect = False
@@ -46,22 +46,22 @@ class Valve:
         # in hex format => P##  so 10 P0A
         # Need errror handler to check position is integer and less than valve type
         if self.pc_connect:
-            if not self.serialobject.is_open:
-                self.serialobject.open()
-            self.serialobject.write(("P0" + str(position) + "\n\r").encode())
-            ans = self.serialobject.read()
-            # self.serialobject.close()           #Trying to be polite and leaving the ports closed
+            if not self.serial_object.is_open:
+                self.serial_object.open()
+            self.serial_object.write(("P0" + str(position) + "\n\r").encode())
+            ans = self.serial_object.read()
+            # self.serial_object.close()           #Trying to be polite and leaving the ports closed
             if ans == b'\r':     # pump returns this if command acknowledged
                 self.position = position
                 return 0    # Valve acknowledged command
             else:
                 return -1   # error valve didnt acknowledge
-        elif self.addressI2C == -1:
+        elif self.address_ic2 == -1:
             return -1
         else:
             if not self.controller.is_open:
                 self.controller.open()
-            self.controller.write(("P%03i%i" % (self.addressI2C, position)).encode())
+            self.controller.write(("P%03i%i" % (self.address_ic2, position)).encode())
             ans = self.controller.read()
             # self.controller.close()           #Trying to be polite and leaving the ports closed
             if ans == b'0':  # pump returns this if command acknowledged
@@ -73,19 +73,19 @@ class Valve:
         # todo maybe incorporate status check to confirm valve is in the right position
     def statuscheck(self):
         if self.pc_connect:
-            if not self.serialobject.is_open:
-                self.serialobject.open()
-            self.serialobject.write("S\n\r".encode())
-            ans = self.serialobject.read(2)  # need to ensure thwt buffer doesnt build up-> if so switch to readln
-            self.serialobject.close()
+            if not self.serial_object.is_open:
+                self.serial_object.open()
+            self.serial_object.write("S\n\r".encode())
+            ans = self.serial_object.read(2)  # need to ensure thwt buffer doesnt build up-> if so switch to readln
+            self.serial_object.close()
             return int(ans)   # returns valve position
             # TODO: add error handlers
-        elif self.addressI2C == -1:
+        elif self.address_ic2 == -1:
             return -1
         else:
             if not self.controller.is_open:
                 self.controller.open()
-                self.controller.write(("S%03i" % self.addressI2C).encode())
+                self.controller.write(("S%03i" % self.address_ic2).encode())
                 ans = self.controller.read()     # need to ensure thwt buffer doesnt build up-> if so switch to readln
             # self.controller.close()
         return int(ans)   # returns valve position
@@ -96,16 +96,16 @@ class Valve:
         if address % 2 == 0:
             if self.pc_connect:
                 s = hex(address)
-                self.serialobject.open()
-                self.serialobject.write(("N"+s[2:4]+"\n\r").encode())
-                self.serialobject.close()
+                self.serial_object.open()
+                self.serial_object.write(("N"+s[2:4]+"\n\r").encode())
+                self.serial_object.close()
                 return 0
-            elif self.addressI2C == -1:
+            elif self.address_ic2 == -1:
                 return -1
             else:
                 if not self.controller.is_open:
                     self.controller.open()
-                self.controller.write(("N%03i%03i" % (self.addressI2C, address)).encode())
+                self.controller.write(("N%03i%03i" % (self.address_ic2, address)).encode())
                 while(self.controller.in_waiting() > 0):
                     print(self.controller.readline())
                 # self.controller.close()

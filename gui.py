@@ -371,7 +371,7 @@ class MainGUI:
 
     def instrument_change_values(self, instrument_index, isvalve=False):
         """Set the name and address of an instrument. If the instrument is a valve also configures the proper number of ports in the GUI."""
-        self.instruments[instrument_index].changevalues(int((self.setup_page_variables[instrument_index][0]).get()), (self.setup_page_variables[instrument_index][1]).get())
+        self.instruments[instrument_index].change_values(int((self.setup_page_variables[instrument_index][0]).get()), (self.setup_page_variables[instrument_index][1]).get())
         self.manual_page_variables[instrument_index][0].set(self.instruments[instrument_index].name+":  ")
         if isvalve:
             self.manual_page_buttons[instrument_index][2].config(to=self.setup_page_variables[instrument_index][2].get())
@@ -384,8 +384,8 @@ class MainGUI:
         self.manual_page_variables.append(newvars)
         newbuttons = [
          tk.Label(self.manual_page, textvariable=self.manual_page_variables[instrument_index][0]),
-         tk.Button(self.manual_page, text="Run", command=lambda: self.instruments[instrument_index].startpump()),
-         tk.Button(self.manual_page, text="Stop", command=lambda:self.instruments[instrument_index].stoppump()),
+         tk.Button(self.manual_page, text="Run", command=lambda: self.instruments[instrument_index].start_pump()),
+         tk.Button(self.manual_page, text="Stop", command=lambda:self.instruments[instrument_index].stop_pump()),
          tk.Label(self.manual_page, text="  Infuse Rate:"),
          tk.Spinbox(self.manual_page, from_=0, to=1000, textvariable=self.manual_page_variables[instrument_index][1]),
          tk.Button(self.manual_page, text="Set"),
