@@ -350,7 +350,7 @@ class MainGUI:
          tk.Label(self.setup_page, text="or"),
          tk.Button(self.setup_page, text="Send to Controller", command=lambda: self.instruments[instrument_index].set_to_controller(self.controller)),
          tk.Label(self.setup_page, text="   Pump Address:"),
-         tk.Spinbox(self.setup_page, from_=1, to=100, textvariable=self.setup_page_variables[instrument_index][0]),
+         tk.Spinbox(self.setup_page, from_=0, to=100, textvariable=self.setup_page_variables[instrument_index][0]),
          tk.Label(self.setup_page, text="   Pump Name:"),
          tk.Entry(self.setup_page, textvariable=self.setup_page_variables[instrument_index][1]),
          tk.Button(self.setup_page, text="Set values", command=lambda: self.instrument_change_values(instrument_index))

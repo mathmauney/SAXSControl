@@ -645,7 +645,7 @@ class FlowPath(tk.Canvas):
             self.small_radius = 20 * canvas.valve_scale
             self.offset = 60 * canvas.valve_scale
             self.arc_radius = self.offset + self.small_radius
-            self.position = -1
+            self.position = 1
             self.rads = math.radians(60)
             self.canvas = canvas
             self.big_circle = canvas.create_circle(x, y, self.big_radius, fill='dimgray', outline='dimgray', tag=self.name)
@@ -667,9 +667,9 @@ class FlowPath(tk.Canvas):
 
         def assign_to_hardware(self):
             """Spawn a popup that allows the valve graphic to be associated with a hardware valve."""
-            def set_choice(self, selected):
+            def set_choice(selected):
                 choice_index = options.index(selected)
-                self.hardware = self.canvas.window.instruments[choice_index]
+                self.hardware = self.canvas.window. instruments[choice_index]
                 win.destroy()
             win = tk.Toplevel()
             win.wm_title("Valve Assignment")
@@ -679,7 +679,8 @@ class FlowPath(tk.Canvas):
             if len(self.canvas.window.instruments) > 0:
                 for i in range(0, len(self.canvas.window.instruments)):
                     options.append(self.canvas.window.instruments[i].name)
-                selection = tk.StringVar(options[0])
+                selection = tk.StringVar()
+                selection.set(options[0])
                 menu = tk.OptionMenu(win, selection, *options)
                 menu.grid(row=1, column=0, columnspan=2)
                 ok_button = tk.Button(win, text="Unlock", command=lambda: set_choice(selection.get()))
@@ -804,8 +805,9 @@ class FlowPath(tk.Canvas):
             if self.hardware is None:
                 self.assign_to_hardware()
             elif self.canvas.is_unlocked:
-                self.hardware.switchvalve(position+1)
                 self.set_position(position)
+                self.hardware.switchvalve(self.position)
+
 
     class InjectionValve(Valve):
         """Extends Valve class for rheodyne injection valves.

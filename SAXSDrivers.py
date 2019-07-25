@@ -23,7 +23,7 @@ def list_available_ports(optional_list=[]):   # Does the optional list input do 
 def stop_instruments(instrument_list):
     """Stop all instruments in a list if they can be stopped."""
     for instrument in instrument_list:
-        if callable(instrument.stop):
+        if hasattr(instrument,"stop"):
             instrument.stop()
 
 
@@ -114,16 +114,18 @@ class HPump:
         if not HPump.enabled:
             return
         if self.pc_connect:
-            resource.open()
+            if not resource.is_open:
+                resource.open()
             resource.write((self.address+"RUN\n\r").encode())   # needs both terminators
             # val=resource.read_until("\n\r")
-            resource.close()
+
         else:
             if not self.controller.is_open:
                 self.controller.open()
             self.controller.write(("-"+self.address+"RUN\n\r").encode())
 
         self.running = True     # Consider switching to after checking with pump
+        self.logger.append("Started " + self.name)
         # return val.decode()
 
     def stop_pump(self, resource=pumpserial):
@@ -131,10 +133,11 @@ class HPump:
         if not HPump.enabled:
             return
         if self.pc_connect:
-            resource.open()
+            if not resource.is_open:
+                resource.open()
             resource.write((self.address+"STP\n\r").encode())
             # val=resource.read_until("\n\r")
-            resource.close()
+
         else:
             if not self.controller.is_open:
                 self.controller.open()
@@ -149,11 +152,12 @@ class HPump:
             return
         ratestr = str(rate).zfill(5)
         if self.pc_connect:
-            resource.open()
+            if not resource.is_open:
+                resource.open()
             resource.write((self.address+"RAT"+ratestr+units+"\n\r").encode())
             # val = resource.read(4)
             # TODO: add possibillity to change units
-            resource.close()
+
         else:
             if not self.controller.is_open:
                 self.controller.open()
@@ -169,10 +173,10 @@ class HPump:
 
         ratestr = str(rate).zfill(5)
         if self.pc_connect:
-            resource.open()
+            if not resource.is_open:
+                resource.open()
             resource.write((self.address+"RFR"+ratestr+units+"\n\r").encode())
-            resource.close()
-            # val=resource.read(4)
+
         else:
             if not self.controller.is_open:
                 self.controller.open()
@@ -195,18 +199,22 @@ class HPump:
     def send_command(self, command, resource=pumpserial):   # sends an albitrary command
         if not HPump.enabled:
             return
-        resource.open()
-        resource.write((command).encode())
-        resource.close()
+        if self.pc_connect:
+            if not resource.is_open:
+                resource.open()
+            resource.write((command).encode())
+        else:
+            self.controller.write(("-"+command).encode())
 
     def infuse(self, resource=pumpserial):
         if not HPump.enabled:
             return
         self.infusing = True
         if self.pc_connect:
-            resource.open()
+            if not resource.is_open:
+                resource.open()
             resource.write((self.address+'DIRINF'+"\n\r").encode())
-            resource.close()
+
         else:
             if not self.controller.is_open:
                 self.controller.open()
@@ -217,9 +225,10 @@ class HPump:
             return
         self.infusing = False
         if self.pc_connect:
-            resource.open()
+            if not resource.is_open:
+                resource.open()
             resource.write((self.address+'DIRREF'+"\n\r").encode())
-            resource.close()
+
         else:
             if not self.controller.is_open:
                 self.controller.open()
@@ -230,9 +239,10 @@ class HPump:
             return
         self.infusing = not self.infusing
         if self.pc_connect:
-            resource.open()
+            if not resource.is_open:
+                resource.open()
             resource.write((self.address+'DIRREV'+"\n\r").encode())
-            resource.close()
+
         else:
             if not self.controller.is_open:
                 self.controller.open()
@@ -242,9 +252,10 @@ class HPump:
         if not HPump.enabled:
             return
         if self.pc_connect:
-            resource.open()
+            if not resource.is_open:
+                resource.open()
             resource.write((self.address+'MOD PMP'+"\n\r").encode())
-            resource.close()
+
         else:
             if not self.controller.is_open:
                 self.controller.open()
@@ -254,9 +265,10 @@ class HPump:
         if not HPump.enabled:
             return
         if self.pc_connect:
-            resource.open()
+            if not resource.is_open:
+                resource.open()
             resource.write((self.address+'MOD VOL'+"\n\r").encode())
-            resource.close()
+
         else:
             if not self.controller.is_open:
                 self.controller.open()
@@ -266,9 +278,10 @@ class HPump:
         if not HPump.enabled:
             return
         if self.pc_connect:
-            resource.open()
+            if not resource.is_open:
+                resource.open()
             resource.write((self.address+'MOD PGM'+"\n\r").encode())
-            resource.close()
+
         else:
             if not self.controller.is_open:
                 self.controller.open()
@@ -279,29 +292,50 @@ class HPump:
             return
         volstr = str(vol).zfill(5)
         if self.pc_connect:
-            resource.open()
+            if not resource.is_open:
+                resource.open()
             resource.write((self.address+'TGT'+volstr+"\n\r").encode())
-            resource.close()
+
         else:
             if not self.controller.is_open:
                 self.controller.open()
             self.controller.write(("-"+self.address+'TGT'+volstr+"\n\r").encode())
 
-    def stopall(self, resource=pumpserial):
+    def statuscheck(self, resource=pumpserial):
         if not HPump.enabled:
             return
         if self.pc_connect:
-            resource.open()
-            resource.write(("\n\r").encode())
-            resource.close()
+            if not resource.is_open:
+                resource.open()
+            resource.write((self.address+"\n\r").encode())
+            while(resource.in_waiting>0):
+                print(resource.read())
+
         else:
             if not self.controller.is_open:
                 self.controller.open()
-            self.controller.write(("\n\r").encode())
+            self.controller.write(("-"+self.address+'TGT'+volstr+"\n\r").encode())
+            while(self.controller.in_waiting>0):
+                print(self.controller.read())
+
+
+    def stop(self, resource=pumpserial):
+        if not HPump.enabled:
+            return
+        if self.pc_connect:
+            if not resource.is_open:
+                resource.open()
+            resource.write(("\n\r").encode())
+
+        else:
+            if not self.controller.is_open:
+                self.controller.open()
+            self.controller.write(("!").encode())
 
     def close(self):
         if HPump.pumpserial.is_open:
             HPump.pumpserial.close()
+
 
 
 class Rheodyne:
@@ -360,13 +394,7 @@ class Rheodyne:
             self.serial_object.write(("P0"+str(position)+"\n\r").encode())
             ans = self.serial_object.read()
             # self.serial_object.close()           #Trying to be polite and leaving the ports closed
-            if ans == b'\r':  # pump returns this if command acknowledged
-                self.position = position
-                self.logger.append(self.name+" switched to "+str(position))
-                return 0    # Valve acknowledged commsnd
-            else:
-                self.logger.append("Error Switching "+self.name)
-                return -1   # error valve didnt acknowledge
+
         elif self.address_ic2 == -1:
             self.logger.append(self.name+"I2C Address not set")
             return -1
@@ -375,14 +403,15 @@ class Rheodyne:
                 self.controller.open()
             self.controller.write(("P%03i%i" % (self.address_ic2, position)).encode())
             ans = self.controller.read()
-            # self.controller.close()           #Trying to be polite and leaving the ports closed
-            if ans == b'0':  # pump returns this if command acknowledged
-                self.position = position
-                self.logger.append(self.name+" switched to "+str(position))
-                return 0    # Valve acknowledged commsnd
-            else:
-                self.logger.append("Error Switching "+self.name)
-                return -1   # error valve didnt acknowledge
+
+        #check if switched
+        if self.statuscheck() == position: # pump returns this if command acknowledged
+            self.position = position
+            self.logger.append(self.name+" switched to "+str(position))
+            return 0    # Valve acknowledged commsnd
+        else:
+            self.logger.append("Error Switching "+self.name)
+            return -1   # error valve didnt acknowledge
 
     # Todo maybe incorporate status check to confirm valve is in the right position
     def statuscheck(self):
@@ -392,20 +421,26 @@ class Rheodyne:
         if self.pc_connect:
             if not self.serial_object.is_open:
                 self.serial_object.open()
+            while self.serial_object.in_waiting>0:
+                self.serial_object.read()
             self.serial_object.write("S\n\r".encode())
-            ans = self.serial_object.read(2)  # need to ensure thwt buffer doesnt build up-> if so switch to readln
-            self.serial_object.close()
+            ans = self.serial_object.read(2).decode()
+            self.serial_object.read()
+            print(ans)
             return int(ans)   # returns valve position
             # TODO: add error handlers
         elif self.address_ic2 == -1:
-            return -1
+            self.logger.append("Error: I2C Address not set for "+self.name)
+            return
         else:
             if not self.controller.is_open:
                 self.controller.open()
-                self.controller.write(("S%03i" % self.address_ic2).encode())
-                ans = self.controller.read()  # need to ensure thwt buffer doesnt build up-> if so switch to readln
+            while self.controller.in_waiting>0:
+                self.controller.read()
+            self.controller.write(("S%03i" % self.address_ic2).encode())
+            ans = self.controller.read().decode()  # need to ensure thwt buffer doesnt build up-> if so switch to readln
             # self.controller.close()
-        return int(ans)   # returns valve position
+            return int(ans)   # returns valve position
         # TODO: add error handlers
 
     def seti2caddress(self, address: int):  # Address is in int format
@@ -415,9 +450,9 @@ class Rheodyne:
         if address % 2 == 0:
             if self.pc_connect:
                 s = hex(address)
-                self.serial_object.open()
+                if not self.serial_object.is_open:
+                    self.serial_object.open()
                 self.serial_object.write(("N"+s[2:4]+"\n\r").encode())
-                self.serial_object.close()
                 return 0
             elif self.address_ic2 == -1:
                 return -1
@@ -469,25 +504,25 @@ class VICI:
         self.serial_object = controller
         self.enabled = True
         self.controller_key = "+"
-        self.serial_object.open()
         self.logger.append(self.name+" set to Microntroller")
 
     def switchvalve(self, position):
-        if position == 1:
-            position = 'A'
-        if position == 2:
-            position = 'B'
+        if isinstance(position,int):
+            if position == 0:
+                position = 'A'
+            if position == 1:
+                position = 'B'
         if not self.enabled:
             self.logger.append(self.name+" not set up, switching ignored")
             return
 
         if not self.serial_object.is_open:
             self.serial_object.open()
-        commandtosend = self.controller_key+"GO"+position
+        commandtosend = self.controller_key+"GO"+position+"\r"
         self.serial_object.write(commandtosend.encode())
-        self.logger.append(self.name+" switched to "+position)
+        self.logger.append(self.name+" switched to "+ position)
         while self.serial_object.in_waiting > 0:
-            self.logger.append(self.serial_object.readline())
+            self.logger.append(self.serial_object.readline().decode())
 
     def currentposition(self):
         if not self.enabled:
@@ -496,11 +531,11 @@ class VICI:
 
         if not self.serial_object.is_open:
             self.serial_object.open()
-        commandtosend = self.controller_key+"CP"
+        commandtosend = self.controller_key+"CP\r"
         self.serial_object.write(commandtosend.encode())
         self.logger.append(self.name+" Position Query ")
         while self.serial_object.in_waiting > 0:
-            self.logger.append(self.serial_object.readline())
+            self.logger.append(self.serial_object.readline().decode())
 
     def change_values(self, address, name):
         if self.name != name:
