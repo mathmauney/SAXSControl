@@ -23,7 +23,7 @@ def list_available_ports(optional_list=[]):   # Does the optional list input do 
 def stop_instruments(instrument_list):
     """Stop all instruments in a list if they can be stopped."""
     for instrument in instrument_list:
-        if hasattr(instrument,"stop"):
+        if hasattr(instrument, "stop"):
             instrument.stop()
 
 
@@ -308,16 +308,15 @@ class HPump:
             if not resource.is_open:
                 resource.open()
             resource.write((self.address+"\n\r").encode())
-            while(resource.in_waiting>0):
+            while(resource.in_waiting > 0):
                 print(resource.read())
 
         else:
             if not self.controller.is_open:
                 self.controller.open()
-            self.controller.write(("-"+self.address+'TGT'+volstr+"\n\r").encode())
-            while(self.controller.in_waiting>0):
+            self.controller.write(("-"+self.address+"\n\r").encode())
+            while(self.controller.in_waiting > 0):
                 print(self.controller.read())
-
 
     def stop(self, resource=pumpserial):
         if not HPump.enabled:
@@ -335,7 +334,6 @@ class HPump:
     def close(self):
         if HPump.pumpserial.is_open:
             HPump.pumpserial.close()
-
 
 
 class Rheodyne:
@@ -392,7 +390,7 @@ class Rheodyne:
             if not self.serial_object.is_open:
                 self.serial_object.open()
             self.serial_object.write(("P0"+str(position)+"\n\r").encode())
-            ans = self.serial_object.read()
+            self.serial_object.read()
             # self.serial_object.close()           #Trying to be polite and leaving the ports closed
 
         elif self.address_ic2 == -1:
@@ -402,10 +400,10 @@ class Rheodyne:
             if not self.controller.is_open:
                 self.controller.open()
             self.controller.write(("P%03i%i" % (self.address_ic2, position)).encode())
-            ans = self.controller.read()
+            self.controller.read()
 
-        #check if switched
-        if self.statuscheck() == position: # pump returns this if command acknowledged
+        # check if switched
+        if self.statuscheck() == position:  # pump returns this if command acknowledged
             self.position = position
             self.logger.append(self.name+" switched to "+str(position))
             return 0    # Valve acknowledged commsnd
@@ -421,7 +419,7 @@ class Rheodyne:
         if self.pc_connect:
             if not self.serial_object.is_open:
                 self.serial_object.open()
-            while self.serial_object.in_waiting>0:
+            while self.serial_object.in_waiting > 0:
                 self.serial_object.read()
             self.serial_object.write("S\n\r".encode())
             ans = self.serial_object.read(2).decode()
@@ -435,7 +433,7 @@ class Rheodyne:
         else:
             if not self.controller.is_open:
                 self.controller.open()
-            while self.controller.in_waiting>0:
+            while self.controller.in_waiting > 0:
                 self.controller.read()
             self.controller.write(("S%03i" % self.address_ic2).encode())
             ans = self.controller.read().decode()  # need to ensure thwt buffer doesnt build up-> if so switch to readln
@@ -507,7 +505,7 @@ class VICI:
         self.logger.append(self.name+" set to Microntroller")
 
     def switchvalve(self, position):
-        if isinstance(position,int):
+        if isinstance(position, int):
             if position == 0:
                 position = 'A'
             if position == 1:
@@ -520,7 +518,7 @@ class VICI:
             self.serial_object.open()
         commandtosend = self.controller_key+"GO"+position+"\r"
         self.serial_object.write(commandtosend.encode())
-        self.logger.append(self.name+" switched to "+ position)
+        self.logger.append(self.name+" switched to "+position)
         while self.serial_object.in_waiting > 0:
             self.logger.append(self.serial_object.readline().decode())
 
