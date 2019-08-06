@@ -10,6 +10,7 @@ Josue San Emeterio
 """
 import serial
 import serial.tools.list_ports
+import time
 
 
 def list_available_ports(optional_list=[]):   # Does the optional list input do anything? Should we just initialize an empty list for the output?
@@ -403,7 +404,8 @@ class Rheodyne:
             self.controller.read()
 
         # check if switched
-        if self.statuscheck() == position:  # pump returns this if command acknowledged
+        time.sleep(0.1)
+        if int(self.statuscheck()) == position:  # pump returns this if command acknowledged
             self.position = position
             self.logger.append(self.name+" switched to "+str(position))
             return 0    # Valve acknowledged commsnd
@@ -412,7 +414,8 @@ class Rheodyne:
             return -1   # error valve didnt acknowledge
 
     # Todo maybe incorporate status check to confirm valve is in the right position
-    def statuscheck(self):
+    def statuscheck(self, iter=0):
+        maxiterations = 10
         if not self.enabled:
             return
 
@@ -424,8 +427,14 @@ class Rheodyne:
             self.serial_object.write("S\n\r".encode())
             ans = self.serial_object.read(2).decode()
             self.serial_object.read()
-            print(ans)
-            return int(ans)   # returns valve position
+            while ans not in ["01", "02", "03", "04", "05", "06"]:
+                self.logger.append("Rechecking Valve: iteration " + str(iter+1))
+                if iter == maxiterations:
+                    self.logger.append("Error Checking Valve Status for "+self.name)
+                    return -1
+                time.sleep(0.2)
+                ans = self.statuscheck(iter+1)
+            return ans   # returns valve position
             # TODO: add error handlers
         elif self.address_ic2 == -1:
             self.logger.append("Error: I2C Address not set for "+self.name)
@@ -437,8 +446,14 @@ class Rheodyne:
                 self.controller.read()
             self.controller.write(("S%03i" % self.address_ic2).encode())
             ans = self.controller.read().decode()  # need to ensure thwt buffer doesnt build up-> if so switch to readln
-            # self.controller.close()
-            return int(ans)   # returns valve position
+            while ans not in ["1", "2", "3", "4", "5", "6"]:
+                self.logger.append("Rechecking Valve: iteration " + str(iter+1))
+                if iter == maxiterations:
+                    self.logger.append("Error Checking Valve Status for "+self.name)
+                    return -1
+                time.sleep(0.2)
+                ans = self.statuscheck(iter+1)
+            return ans   # returns valve position
         # TODO: add error handlers
 
     def seti2caddress(self, address: int):  # Address is in int format

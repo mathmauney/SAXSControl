@@ -808,7 +808,6 @@ class FlowPath(tk.Canvas):
                 self.set_position(position)
                 self.hardware.switchvalve(self.position)
 
-
     class InjectionValve(Valve):
         """Extends Valve class for rheodyne injection valves.
 
