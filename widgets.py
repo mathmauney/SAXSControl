@@ -814,7 +814,7 @@ class FlowPath(tk.Canvas):
         """
 
         def __init__(self, canvas, x, y, name):
-            """Initialize the injectoin valve and draw its unique parts."""
+            """Initialize the injection valve and draw its unique parts."""
             super().__init__(canvas, x, y, name)
             self.color1 = 'white'
             self.color2 = 'white'
@@ -950,7 +950,10 @@ class FlowPath(tk.Canvas):
                 self.canvas.itemconfig(self.level, fill=self.color, outline=self.color)
 
     class Lock():
+        """Lock GUI item with onclick toggle."""
+
         def __init__(self, canvas, x, y):
+            """Draw the lock."""
             self.x = x
             self.y = y
             self.canvas = canvas
@@ -964,6 +967,7 @@ class FlowPath(tk.Canvas):
             self.moveable_arc2 = self.canvas.create_arc(x+.3*self.size, y+.2*self.size, x+.7*self.size, y+.6*self.size, start=0, extent=180, fill=self.canvas['background'], outline='', tag='lock')
 
         def toggle(self, state=None):
+            """Toggle the visual state of the lock."""
             if state is not None:
                 self.state = state
             elif self.state == 'locked':
@@ -983,6 +987,7 @@ class FlowPath(tk.Canvas):
                 raise ValueError('Invalid lock state')
 
     def __init__(self, frame, main_window, **kwargs):
+        """Set up initial variables and draw initial states."""
         super().__init__(frame, **kwargs)
         self.is_unlocked = False
         self.valve_scale = 2/3
@@ -1004,19 +1009,23 @@ class FlowPath(tk.Canvas):
         self.config(width=1800*scale, height=300*scale)
 
     def draw_pumps(self):
+        """Draw the pumps."""
         self.pump1 = self.FluidLevel(self, 0, 125, height=50, color='black', orientation='right', name='pump')
 
     def draw_valves(self):
+        """Draw the valves."""
         self.valve1 = self.InjectionValve(self, 300, 150, 'valve1')
         self.valve2 = self.SelectionValve(self, 700, 150, 'valve2')
         self.valve3 = self.SampleValve(self, 1100, 150, 'valve3')
         self.valve4 = self.SelectionValve(self, 1500, 150, 'valve4')
 
     def draw_loops(self):
+        """Draw the sample and buffer loops."""
         self.sample_level = self.FluidLevel(self, 1025, 0, height=30, color='red', background='black', orientation='right', border=0)
         self.buffer_level = self.FluidLevel(self, 1025, 250, height=30, color='cyan', background='black', orientation='right', border=0)
 
     def draw_fluid_lines(self):
+        """Draw the fluid lines and set associate them with the correct valves."""
         # Line from syringe to valve 1
         self.syringe_line = self.create_fluid_line('x', 150, 150, 100)
         self.tag_lower(self.syringe_line)
@@ -1036,6 +1045,7 @@ class FlowPath(tk.Canvas):
         self.oil_line3 = self.create_fluid_line('y', x_avg, y1, 50)
 
     def initialize(self):
+        """Set initial levels, colors, and valve positions."""
         self.pump1.update(25)
         self.sample_level.update(25)
         self.buffer_level.update(25)
@@ -1045,9 +1055,11 @@ class FlowPath(tk.Canvas):
         self.valve4.set_position(0, color='red')
 
     def create_circle(self, x, y, r, **kwargs):
+        """Draw a circle by center and radius."""
         return self.create_oval(x-r, y-r, x+r, y+r, **kwargs)
 
     def create_fluid_line(self, direction, x, y, length, **kwargs):
+        """Draw a fluid line from a location by length and direction."""
         width = kwargs.pop('width', self.fluid_line_width)
         color = kwargs.pop('color', 'black')
         r = width/2
@@ -1063,6 +1075,7 @@ class FlowPath(tk.Canvas):
                 return self.create_rectangle(x-r, y+length-r, x+r, y+r, fill=color, outline=color)
 
     def set_unlock_state(self, state=None):
+        """Set the GUI lock state."""
         if state is None:
             self.is_unlocked = not self.is_unlocked
         else:
@@ -1073,12 +1086,14 @@ class FlowPath(tk.Canvas):
             self.lock.toggle('locked')
 
     def manual_switch_lock(self):
+        """Lock the GUI and the lock icon."""
         if self.is_unlocked:
             self.is_unlocked = False
         else:
             self.lock_popup()
 
     def lock_popup(self):
+        """Popup a window to unlock the GUI with a password."""
         def check_password(password):
             if password == 'asaxsisgr8':
                 self.set_unlock_state(True)
