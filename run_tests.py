@@ -1,3 +1,5 @@
+"""Module to run all the unittests built for SAXSControl."""
+
 import unittest
 import os
 
