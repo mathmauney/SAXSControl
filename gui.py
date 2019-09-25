@@ -99,6 +99,19 @@ class MainGUI:
         self.sample_volume_box = tk.Entry(self.config_page, textvariable=self.sample_volume)
         self.last_buffer_volume = tk.IntVar(value=25)      # May need ot be a doublevar
         self.last_buffer_volume_box = tk.Entry(self.config_page, textvariable=self.last_buffer_volume)
+        self.oil_valve_names_label = tk.Label(self.config_page, text='Oil Valve Hardware Port Names')
+        self.oil_valve_names = []
+        self.oil_valve_name_boxes = []
+        self.set_oil_valve_names_button = tk.Button(self.config_page, text='Set Names', command=self.set_oil_valve_names)
+        self.loading_valve_names_label = tk.Label(self.config_page, text='Loading Valve Hardware Port Names')
+        self.loading_valve_names = []
+        self.loading_valve_name_boxes = []
+        self.set_loading_valve_names_button = tk.Button(self.config_page, text='Set Names', command=self.set_loading_valve_names)
+        for i in range(0, 6):
+            self.oil_valve_names.append(tk.StringVar(value=''))
+            self.oil_valve_name_boxes.append(tk.Entry(self.config_page, textvariable=self.oil_valve_names[i]))
+            self.loading_valve_names.append(tk.StringVar(value=''))
+            self.loading_valve_name_boxes.append(tk.Entry(self.config_page, textvariable=self.loading_valve_names[i]))
 
         # Make Instrument
         self.AvailablePorts = SAXSDrivers.list_available_ports()
@@ -187,6 +200,13 @@ class MainGUI:
         self.first_buffer_volume_box.grid(row=4, column=1)
         self.sample_volume_box.grid(row=4, column=2)
         self.last_buffer_volume_box.grid(row=4, column=3)
+        self.oil_valve_names_label.grid(row=5, column=0)
+        self.set_oil_valve_names_button.grid(row=5, column=7)
+        self.loading_valve_names_label.grid(row=6, column=0)
+        self.set_loading_valve_names_button.grid(row=6, column=7)
+        for i in range(0, 6):
+            self.oil_valve_name_boxes[i].grid(row=5, column=i+1)
+            self.loading_valve_name_boxes[i].grid(row=6, column=i+1)
         # Setup page
         self.refresh_com_ports.grid(row=0, column=0)
         self.AddPump.grid(row=0, column=2)
@@ -232,14 +252,42 @@ class MainGUI:
             filename = filedialog.askopenfilename(initialdir=".", title="Select file", filetypes=(("config files", "*.ini"), ("all files", "*.*")))
         if filename != '':
             self.config.read(filename)
-            self.config_oil_tick_size.delete(0, 'end')
-            self.config_oil_tick_size.insert(0, self.config.get('Default', 'oil_tick_size'))
+            oil_config = self.config['Oil Valve']
+            loading_config = self.config['Loading Valve']
+            for i in range(0, 6):
+                field = 'name'+str(i+1)
+                self.oil_valve_name_boxes[i].delete(0, 'end')
+                self.oil_valve_name_boxes[i].insert(0, oil_config.get(field, ''))
+                self.loading_valve_name_boxes[i].delete(0, 'end')
+                self.loading_valve_name_boxes[i].insert(0, loading_config.get(field, ''))
+        self.set_oil_valve_names()
+        self.set_loading_valve_names()
 
     def save_config(self):
         """Save a config.ini file."""
         filename = filedialog.asksaveasfilename(initialdir=".", title="Select file", filetypes=(("config files", "*.ini"), ("all files", "*.*")))
         if filename != '':
+            oil_config = self.config['Oil Valve']
+            loading_config = self.config['Loading Valve']
+            for i in range(0, 6):
+                field = 'name'+str(i+1)
+                oil_name = self.oil_valve_names[i].get()
+                if oil_name is not '':
+                    oil_config[field] = oil_name
+                loading_name = self.loading_valve_names[i].get()
+                if loading_name is not '':
+                    loading_config[field] = loading_name
             self.config.write(open(filename, 'w'))
+
+    def set_oil_valve_names(self):
+        """Send selection valve names to the control gui."""
+        for i in range(0, 6):
+            self.flowpath.valve2.name_position(i, self.oil_valve_names[i].get())
+
+    def set_loading_valve_names(self):
+        """Send selection valve names to the control gui."""
+        for i in range(0, 6):
+            self.flowpath.valve4.name_position(i, self.loading_valve_names[i].get())
 
     def connect_to_spec(self):
         """Connect to SPEC instance."""

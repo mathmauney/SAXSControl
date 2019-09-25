@@ -700,14 +700,28 @@ class FlowPath(tk.Canvas):
             super().__init__(canvas, x, y, name)
             self.canvas.itemconfig(self.center_circle, fill='white', outline='white', tag=self.name)
             self.color = 'black'
+            self.colors = [None, None, None, None, None, None]
+            self.gui_names = ['', '', '', '', '', '']   # 0 is rightmost, goes clockwise
+            self.hardware_names = ['', '', '', '', '', '']
             for i in range(0, 6):
                 self.canvas.itemconfig(self.circles[i], tag=self.name+str(i))
-                self.canvas.tag_bind(self.name+str(i), '<Button-1>', lambda event, position=i: self.set_manual_position(position))
+                self.canvas.tag_bind(self.name+str(i), '<Button-1>', lambda event, num=i: self.set_manual_position(self.gui_names[num]))
 
-        def set_position(self, position, color=None):
-            """Set the valve position to one of the 6 outputs."""
+        def set_position(self, position_in, color=None):
+            """Set the valve position to one of the 6 outputs on the gui."""
+            if type(position_in) is str:
+                position = self.gui_names.index(position_in)
+            elif position_in in range(0, 6):
+                position = position_in
             if color is not None:
                 self.color = color
+                self.colors[position] = color
+            elif self.colors[position] is not None:
+                self.color = self.colors[position]
+            if type(position_in) is str:
+                position = self.names.index(position_in)
+            else:
+                position = position_in - 1  # Matches the hardware indexing
             for line in self.fluid_lines[position]:
                 self.canvas.itemconfig(line, fill=self.color, outline=self.color)
             self.canvas.itemconfig(self.circles[self.position], fill='white', outline='white')
@@ -732,9 +746,22 @@ class FlowPath(tk.Canvas):
             """Change the valve position after being clicked both visually and physically."""
             if self.hardware is None:
                 self.assign_to_hardware()
-            elif self.canvas.is_unlocked:
-                self.hardware.switchvalve(position+1)
-                self.set_position(position)
+            elif self.canvas.is_unlocked and position is not '':
+                hardware_pos = self.hardware_names.index(position)
+                self.hardware.switchvalve(hardware_pos)
+                self.position = position
+
+        def name_position(self, position, name):
+            """Define the name for a hardware port position."""
+            if position > 6 or position < 0:
+                raise ValueError('Position out of Range')
+            elif type(name) is not str:
+                raise ValueError('Position names must be strings.')
+            elif name == '':
+                pass
+            elif name not in self.gui_names:
+                raise ValueError(str(name) + ' not in known valve names: ' + str(self.gui_names))
+            self.hardware_names[position] = name
 
     class SampleValve(Valve):
         """Extends Valve class for the vici valves.
@@ -804,7 +831,7 @@ class FlowPath(tk.Canvas):
             if self.hardware is None:
                 self.assign_to_hardware()
             elif self.canvas.is_unlocked:
-                self.hardware.switchvalve(position+1)
+                self.hardware.switchvalve(position)
                 self.set_position(position)
 
     class InjectionValve(Valve):
@@ -827,8 +854,8 @@ class FlowPath(tk.Canvas):
         def set_position(self, position, **kwargs):
             """Set the valve position to one of the 2 possible paths."""
             self.color1 = kwargs.pop('color1', self.color1)
-            self.color2 = kwargs.pop('color1', self.color2)
-            self.color3 = kwargs.pop('color1', self.color3)
+            self.color2 = kwargs.pop('color2', self.color2)
+            self.color3 = kwargs.pop('color3', self.color3)
             self.position = position % 2
             try:
                 self.canvas.delete(self.arc1)
@@ -912,7 +939,7 @@ class FlowPath(tk.Canvas):
             if self.hardware is None:
                 self.assign_to_hardware()
             elif self.canvas.is_unlocked:
-                self.hardware.switchvalve(position+1)
+                self.hardware.switchvalve(position)
                 self.set_position(position)
 
     class FluidLevel():
@@ -1016,8 +1043,16 @@ class FlowPath(tk.Canvas):
         """Draw the valves."""
         self.valve1 = self.InjectionValve(self, 300, 150, 'valve1')
         self.valve2 = self.SelectionValve(self, 700, 150, 'valve2')
+        self.valve2.gui_names[2] = 'Waste'
+        self.valve2.gui_names[4] = 'Run'
         self.valve3 = self.SampleValve(self, 1100, 150, 'valve3')
         self.valve4 = self.SelectionValve(self, 1500, 150, 'valve4')
+        self.valve4.gui_names[0] = 'Run'
+        self.valve4.gui_names[1] = 'Load'
+        self.valve4.gui_names[2] = 'Low Flow Soap'
+        self.valve4.gui_names[3] = 'High Flow Soap'
+        self.valve4.gui_names[4] = 'Water'
+        self.valve4.gui_names[5] = 'Air'
 
     def draw_loops(self):
         """Draw the sample and buffer loops."""
