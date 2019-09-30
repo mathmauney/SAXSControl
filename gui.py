@@ -144,7 +144,11 @@ class MainGUI:
         self.controller.logger = self.Instrument_logger
         #
         # Flow setup frames
-        self.flowpath = FlowPath(self.state_frame, self)
+        self.load_config(filename='config.ini', preload=True)
+        if self.sucrose:
+            self.flowpath = FlowPath(self.state_frame, self, sucrose=True)
+        else:
+            self.flowpath = FlowPath(self.state_frame, self)
         time.sleep(0.6)   # I have no idea why we need this but everything crashes and burns if we don't include it
         # It acts as though there's a race condition, but aren't we still single-threaded at this point?
         # I suspect something might be going wrong with the libraries, then, especially tkinter and matplotlib
@@ -245,7 +249,7 @@ class MainGUI:
         SAXSDrivers.stop_instruments(self.instruments)
         # Add Elveflow stop if we use it for non-pressure
 
-    def load_config(self, filename=None):
+    def load_config(self, filename=None, preload=False):
         """Load a config.ini file."""
         self.config = ConfigParser()
         if filename is None:
@@ -254,14 +258,17 @@ class MainGUI:
             self.config.read(filename)
             oil_config = self.config['Oil Valve']
             loading_config = self.config['Loading Valve']
+            main_config = self.config['Main']
+            self.sucrose = main_config.getboolean('Sucrose', False)
             for i in range(0, 6):
                 field = 'name'+str(i+1)
                 self.oil_valve_name_boxes[i].delete(0, 'end')
                 self.oil_valve_name_boxes[i].insert(0, oil_config.get(field, ''))
                 self.loading_valve_name_boxes[i].delete(0, 'end')
                 self.loading_valve_name_boxes[i].insert(0, loading_config.get(field, ''))
-        self.set_oil_valve_names()
-        self.set_loading_valve_names()
+        if not preload:
+            self.set_oil_valve_names()
+            self.set_loading_valve_names()
 
     def save_config(self):
         """Save a config.ini file."""

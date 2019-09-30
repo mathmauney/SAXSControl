@@ -1015,6 +1015,7 @@ class FlowPath(tk.Canvas):
 
     def __init__(self, frame, main_window, **kwargs):
         """Set up initial variables and draw initial states."""
+        self.sucrose = kwargs.pop('sucrose', False)
         super().__init__(frame, **kwargs)
         self.is_unlocked = False
         self.valve_scale = 2/3
