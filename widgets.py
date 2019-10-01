@@ -1018,8 +1018,8 @@ class FlowPath(tk.Canvas):
         self.sucrose = kwargs.pop('sucrose', False)
         super().__init__(frame, **kwargs)
         self.is_unlocked = False
-        self.valve_scale = 2/3
-        self.lock_scale = .3
+        self.valve_scale = 1/2
+        self.lock_scale = .2
         self.fluid_line_width = 20
         self.frame = frame
         self.window = main_window
@@ -1029,12 +1029,12 @@ class FlowPath(tk.Canvas):
         self.draw_pumps()
         self.draw_valves()
         self.draw_loops()
-        self.draw_fluid_lines()
+        # self.draw_fluid_lines()
         self.initialize()
         # Scale for computers smaller than 1800 log_width
         scale = self.frame.winfo_screenwidth()/1920
         self.scale("all", 0, 0, scale, scale)
-        self.config(width=1800*scale, height=300*scale)
+        self.config(width=1800*scale, height=400*scale)
 
     def draw_pumps(self):
         """Draw the pumps."""
@@ -1042,23 +1042,28 @@ class FlowPath(tk.Canvas):
 
     def draw_valves(self):
         """Draw the valves."""
-        self.valve1 = self.InjectionValve(self, 300, 150, 'valve1')
-        self.valve2 = self.SelectionValve(self, 700, 150, 'valve2')
+        row1_y = 100
+        row2_y = 300
+        self.valve1 = self.InjectionValve(self, 300, row1_y, 'valve1')
+        self.valve2 = self.SelectionValve(self, 700, row1_y, 'valve2')
         self.valve2.gui_names[2] = 'Waste'
         self.valve2.gui_names[4] = 'Run'
-        self.valve3 = self.SampleValve(self, 1100, 150, 'valve3')
-        self.valve4 = self.SelectionValve(self, 1500, 150, 'valve4')
+        self.valve3 = self.SampleValve(self, 1100, row1_y, 'valve3')
+        self.valve4 = self.SelectionValve(self, 1500, row1_y, 'valve4')
         self.valve4.gui_names[0] = 'Run'
         self.valve4.gui_names[1] = 'Load'
         self.valve4.gui_names[2] = 'Low Flow Soap'
         self.valve4.gui_names[3] = 'High Flow Soap'
         self.valve4.gui_names[4] = 'Water'
         self.valve4.gui_names[5] = 'Air'
+        self.valve5 = self.SelectionValve(self, 700, row2_y, 'valve5')
+        self.valve6 = self.SampleValve(self, 1100, row2_y, 'valve6')
+        self.valve7 = self.SelectionValve(self, 1500, row2_y, 'valve7')
 
     def draw_loops(self):
         """Draw the sample and buffer loops."""
         self.sample_level = self.FluidLevel(self, 1025, 0, height=30, color='red', background='black', orientation='right', border=0)
-        self.buffer_level = self.FluidLevel(self, 1025, 250, height=30, color='cyan', background='black', orientation='right', border=0)
+        self.buffer_level = self.FluidLevel(self, 1025, 200, height=30, color='cyan', background='black', orientation='right', border=0)
 
     def draw_fluid_lines(self):
         """Draw the fluid lines and set associate them with the correct valves."""

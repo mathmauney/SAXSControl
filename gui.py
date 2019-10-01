@@ -40,7 +40,7 @@ class MainGUI:
         window_height = self.main_window.winfo_screenheight()
         core_width = round(2*window_width/3)
         log_width = window_width - core_width - 3
-        state_height = 300
+        state_height = 400
         core_height = window_height - state_height - 50
         log_height = core_height
         if not FULLSCREEN:
