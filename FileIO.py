@@ -169,7 +169,7 @@ class ElveflowHandler_SDK:
 
     def __init__(self, sourcename=None, errorlogger=None, sensortypes=[], starttime=0):
         if sourcename is None or sourcename == '':
-            self.sourcename = b'01A377A5'
+            self.sourcename = b'Have you loaded the config file?'
         else:
             self.sourcename = bytes(sourcename, encoding='ascii')
 
@@ -185,7 +185,7 @@ class ElveflowHandler_SDK:
             self.errorlogger.critical = print
         else:
             self.errorlogger = errorlogger
-        self.errorlogger.info("Initializing Elveflow")
+        self.errorlogger.info("Initializing Elveflow at %s" % sourcename)
         self.starttime = starttime
 
         self.instr_ID = c_int32()
