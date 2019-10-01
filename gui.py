@@ -388,19 +388,19 @@ class MainGUI:
          tk.Button(self.manual_page, text="Stop", command=lambda:self.instruments[instrument_index].stop_pump()),
          tk.Label(self.manual_page, text="  Infuse Rate:"),
          tk.Spinbox(self.manual_page, from_=0, to=1000, textvariable=self.manual_page_variables[instrument_index][1]),
-         tk.Button(self.manual_page, text="Set"),
+         tk.Button(self.manual_page, text="Set", command=lambda: self.instruments[instrument_index].set_infuse_rate(self.manual_page_variables[instrument_index][1])),
          tk.Label(self.manual_page, text="  Refill Rate:"),
          tk.Spinbox(self.manual_page, from_=0, to=1000, textvariable=self.manual_page_variables[instrument_index][2]),
-         tk.Button(self.manual_page, text="Set"),
+         tk.Button(self.manual_page, text="Set", command=lambda: self.instruments[instrument_index].set_refill_rate(self.manual_page_variables[instrument_index][2])),
          tk.Label(self.manual_page, text="  Direction:"),
-         tk.Button(self.manual_page, text="Infuse"),
-         tk.Button(self.manual_page, text="Refill"),
+         tk.Button(self.manual_page, text="Infuse", command=lambda: self.instruments[instrument_index].infuse()),
+         tk.Button(self.manual_page, text="Refill", command=lambda: self.instruments[instrument_index].refill()),
          tk.Label(self.manual_page, text="Mode"),
-         tk.Button(self.manual_page, text="Pump"),
-         tk.Button(self.manual_page, text="Vol"),
+         tk.Button(self.manual_page, text="Pump", command=lambda: self.instruments[instrument_index].set_mode_pump()),
+         tk.Button(self.manual_page, text="Vol", command=lambda: self.instruments[instrument_index].set_mode_vol()),
          tk.Label(self.manual_page, text="  Target Vol:"),
          tk.Spinbox(self.manual_page, from_=0, to=1000, textvariable=self.manual_page_variables[instrument_index][3]),
-         tk.Button(self.manual_page, text="Set")
+         tk.Button(self.manual_page, text="Set", command=lambda: self.instruments[instrument_index].set_target_vol())
          ]
         self.manual_page_buttons.append(newbuttons)
         # Build Pump

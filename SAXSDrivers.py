@@ -249,7 +249,7 @@ class HPump:
                 self.controller.open()
             self.controller.write(("-"+self.address+"DIRREV"+"\n\r").encode())
 
-    def setmodepump(self,  resource=pumpserial):
+    def set_mode_pump(self,  resource=pumpserial):
         if not HPump.enabled:
             return
         if self.pc_connect:
@@ -262,7 +262,7 @@ class HPump:
                 self.controller.open()
             self.controller.write(("-"+self.address+"MOD PMP"+"\n\r").encode())
 
-    def setmodevol(self,  resource=pumpserial):
+    def set_mode_vol(self,  resource=pumpserial):
         if not HPump.enabled:
             return
         if self.pc_connect:
@@ -275,7 +275,7 @@ class HPump:
                 self.controller.open()
             self.controller.write(("-"+self.address+"MOD VOL"+"\n\r").encode())
 
-    def setmodeprogam(self,  resource=pumpserial):
+    def set_mode_progam(self,  resource=pumpserial):
         if not HPump.enabled:
             return
         if self.pc_connect:
@@ -288,7 +288,7 @@ class HPump:
                 self.controller.open()
             self.controller.write(("-"+self.address+"MOD PGM"+"\n\r").encode())
 
-    def settargetvol(self, vol, resource=pumpserial):
+    def set_target_vol(self, vol, resource=pumpserial):
         if not HPump.enabled:
             return
         volstr = str(vol).zfill(5)
@@ -310,14 +310,14 @@ class HPump:
                 resource.open()
             resource.write((self.address+"\n\r").encode())
             while(resource.in_waiting > 0):
-                print(resource.read())
+                self.logger.append(resource.read().decode())
 
         else:
             if not self.controller.is_open:
                 self.controller.open()
             self.controller.write(("-"+self.address+"\n\r").encode())
             while(self.controller.in_waiting > 0):
-                print(self.controller.read())
+                self.logger.append(resource.read().decode())
 
     def stop(self, resource=pumpserial):
         if not HPump.enabled:
