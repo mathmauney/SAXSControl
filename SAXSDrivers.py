@@ -10,6 +10,7 @@ Josue San Emeterio
 """
 import serial
 import serial.tools.list_ports
+import time
 
 
 def list_available_ports(optional_list=[]):   # Does the optional list input do anything? Should we just initialize an empty list for the output?
@@ -145,17 +146,40 @@ class HPump:
         if self.pc_connect:
             if not resource.is_open:
                 resource.open()
-            resource.write((self.address+"RUN\n\r").encode())   # needs both terminators
-            # val=resource.read_until("\n\r")
+            while resource.in_waiting > 0:  # Clear Buffer
+                resource.readline()
+            resource.write((self.address+"RUN\n\r").encode())
+            time.sleep(0.1)
+            resource.readline()
+            pumpanswer = resource.readline().decode()
+            if self.address+"<" in pumpanswer:
+                self.running = True
+                self.logger.append("Refilling " + self.name)
+            elif self.address+">" in pumpanswer:
+                self.running = True
+                self.logger.append("Infusing " + self.name)
+            else:
+                self.running = False
+                self.logger.append("ERROR on pump feedback")
 
         else:
             if not self.controller.is_open:
                 self.controller.open()
+            while self.controller.in_waiting > 0:  # Clear Buffer
+                self.controller.readline()
             self.controller.write(("-"+self.address+"RUN\n\r").encode())
-
-        self.running = True     # Consider switching to after checking with pump
-        self.logger.append("Started " + self.name)
-        # return val.decode()
+            time.sleep(0.1)
+            self.controller.readline()
+            pumpanswer = self.controller.readline().decode()
+            if self.address+"<" in pumpanswer:
+                self.running = True
+                self.logger.append("Refilling " + self.name)
+            elif self.address+">" in pumpanswer:
+                self.running = True
+                self.logger.append("Infusing " + self.name)
+            else:
+                self.running = False
+                self.logger.append("ERROR on pump feedback")
 
 
     def stoppump(self,resource=pumpserial):
@@ -165,16 +189,40 @@ class HPump:
         if self.pc_connect:
             if not resource.is_open:
                 resource.open()
+            while resource.in_waiting > 0:  # Clear Buffer
+                resource.readline()
             resource.write((self.address+"STP\n\r").encode())
-            # val=resource.read_until("\n\r")
+            time.sleep(0.1)
+            resource.readline()
+            pumpanswer = resource.readline().decode()
+            if self.address+"*" in pumpanswer:
+                self.running = False
+                self.logger.append("Paused " + self.name)
+            elif self.address+":" in pumpanswer:
+                self.running = False
+                self.logger.append("Stopped " + self.name)
+            else:
+                self.running = True
+                self.logger.append("ERROR Stopping pump")
 
         else:
             if not self.controller.is_open:
                 self.controller.open()
+            while self.controller.in_waiting > 0:  # Clear Buffer
+                self.controller.readline()
             self.controller.write(("-"+self.address+"STP\n\r").encode())
-
-        self.running = False    # consider moving to after checking with pump
-        # return val.decode()
+            time.sleep(0.1)
+            self.controller.readline()
+            pumpanswer = self.controller.readline().decode()
+            if self.address+":" in pumpanswer:
+                self.running = False
+                self.logger.append("Paused " + self.name)
+            elif self.address+"*" in pumpanswer:
+                self.running = False
+                self.logger.append("Stopped " + self.name)
+            else:
+                self.running = True
+                self.logger.append("ERROR stopping pump")
 
     def set_infuse_rate(self, rate, units="UM", resource=pumpserial):
         # consider moving to after checking with pump
@@ -278,7 +326,7 @@ class HPump:
                 self.controller.open()
             self.controller.write(("-"+self.address+"DIRREV"+"\n\r").encode())
 
-    def setmodepump(self,  resource=pumpserial):
+    def set_mode_pump(self,  resource=pumpserial):
         if not HPump.enabled:
             return
         if self.pc_connect:
@@ -291,7 +339,7 @@ class HPump:
                 self.controller.open()
             self.controller.write(("-"+self.address+"MOD PMP"+"\n\r").encode())
 
-    def setmodevol(self,  resource=pumpserial):
+    def set_mode_vol(self,  resource=pumpserial):
         if not HPump.enabled:
             return
         if self.pc_connect:
@@ -304,7 +352,7 @@ class HPump:
                 self.controller.open()
             self.controller.write(("-"+self.address+"MOD VOL"+"\n\r").encode())
 
-    def setmodeprogam(self,  resource=pumpserial):
+    def set_mode_progam(self,  resource=pumpserial):
         if not HPump.enabled:
             return
         if self.pc_connect:
@@ -317,7 +365,7 @@ class HPump:
                 self.controller.open()
             self.controller.write(("-"+self.address+"MOD PGM"+"\n\r").encode())
 
-    def settargetvol(self, vol, resource=pumpserial):
+    def set_target_vol(self, vol, resource=pumpserial):
         if not HPump.enabled:
             return
         volstr = str(vol).zfill(5)
@@ -338,15 +386,15 @@ class HPump:
             if not resource.is_open:
                 resource.open()
             resource.write((self.address+"\n\r").encode())
-            while(resource.in_waiting > 0):
-                print(resource.read())
+            while resource.in_waiting > 0:
+                self.logger.append(resource.read().decode())
 
         else:
             if not self.controller.is_open:
                 self.controller.open()
             self.controller.write(("-"+self.address+"\n\r").encode())
-            while(self.controller.in_waiting > 0):
-                print(self.controller.read())
+            while self.controller.in_waiting > 0:
+                self.logger.append(resource.read().decode())
 
     def stop(self, resource=pumpserial):
         if not HPump.enabled:
@@ -434,7 +482,8 @@ class Rheodyne:
             self.controller.read()
 
         # check if switched
-        if self.statuscheck() == position:  # pump returns this if command acknowledged
+        time.sleep(0.1)
+        if int(self.statuscheck()) == position:  # pump returns this if command acknowledged
             self.position = position
             self.logger.append(self.name+" switched to "+str(position))
             return 0    # Valve acknowledged commsnd
@@ -443,7 +492,8 @@ class Rheodyne:
             return -1   # error valve didnt acknowledge
 
     # Todo maybe incorporate status check to confirm valve is in the right position
-    def statuscheck(self):
+    def statuscheck(self, iter=0):
+        maxiterations = 10
         if not self.enabled:
             return
 
@@ -455,8 +505,14 @@ class Rheodyne:
             self.serial_object.write("S\n\r".encode())
             ans = self.serial_object.read(2).decode()
             self.serial_object.read()
-            print(ans)
-            return int(ans)   # returns valve position
+            while ans not in ["01", "02", "03", "04", "05", "06"]:
+                self.logger.append("Rechecking Valve: iteration " + str(iter+1))
+                if iter == maxiterations:
+                    self.logger.append("Error Checking Valve Status for "+self.name)
+                    return -1
+                time.sleep(0.2)
+                ans = self.statuscheck(iter+1)
+            return ans   # returns valve position
             # TODO: add error handlers
         elif self.address_ic2 == -1:
             self.logger.append("Error: I2C Address not set for "+self.name)
@@ -468,8 +524,14 @@ class Rheodyne:
                 self.controller.read()
             self.controller.write(("S%03i" % self.address_ic2).encode())
             ans = self.controller.read().decode()  # need to ensure thwt buffer doesnt build up-> if so switch to readln
-            # self.controller.close()
-            return int(ans)   # returns valve position
+            while ans not in ["1", "2", "3", "4", "5", "6"]:
+                self.logger.append("Rechecking Valve: iteration " + str(iter+1))
+                if iter == maxiterations:
+                    self.logger.append("Error Checking Valve Status for "+self.name)
+                    return -1
+                time.sleep(0.2)
+                ans = self.statuscheck(iter+1)
+            return ans   # returns valve position
         # TODO: add error handlers
 
             self.controller.write(("S%03i"%self.addressI2C).encode())

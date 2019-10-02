@@ -722,7 +722,7 @@ class FlowPath(tk.Canvas):
         def set_manual_position(self, position):    # TODO: Add in actual valve switching
             if self.canvas.is_unlocked:
                 self.set_position(position)
-                print('Set position %i' % position)
+                self.hardware.switchvalve(self.position)
 
     class InjectionValve(Valve):
         def __init__(self, canvas, x, y, name):
