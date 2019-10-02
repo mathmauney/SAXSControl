@@ -187,15 +187,15 @@ class ElveflowDisplay(tk.Canvas):
 
         self.window = window
         # variables attached to tkinter elements
-        # self.dataXLabel_var = tk.StringVar()
-        # self.dataYLabel_var = tk.StringVar()
-        # self.sensorTypes_var = [tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar()]
-        # self.pressureValue_var = [tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar()]
-        # self.isPressure_var = [tk.BooleanVar(), tk.BooleanVar(), tk.BooleanVar(), tk.BooleanVar()]
-        self.x_data_label_var = tk.StringVar()
-        self.y_data_label_var = tk.StringVar()
-        self.pressure_value_var = [tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar()]
-        self.is_pressure_var = [tk.BooleanVar(), tk.BooleanVar(), tk.BooleanVar(), tk.BooleanVar()]
+        self.dataXLabel_var = tk.StringVar()
+        self.dataYLabel_var = tk.StringVar()
+        self.sensorTypes_var = [tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar()]
+        self.pressureValue_var = [tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar()]
+        self.isPressure_var = [tk.BooleanVar(), tk.BooleanVar(), tk.BooleanVar(), tk.BooleanVar()]
+        # self.x_data_label_var = tk.StringVar()
+        # self.y_data_label_var = tk.StringVar()
+        # self.pressure_value_var = [tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar()]
+        # self.is_pressure_var = [tk.BooleanVar(), tk.BooleanVar(), tk.BooleanVar(), tk.BooleanVar()]
         self.pressureSettingActive_var = [tk.BooleanVar(), tk.BooleanVar(), tk.BooleanVar(), tk.BooleanVar()]
         self.setPressureStop_flag = [None, None, None, None]
         self.axisLimits_var = [tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar()]
@@ -511,11 +511,12 @@ class ElveflowDisplay(tk.Canvas):
         # we haven't been using them elsewhere because they don't allow for graceful exiting/handling of
         # acquired resources, but I think it shouldn't matter if we crash-exit drawing to the screen
         # because we're closing the screen anyway, even if it becomes corrupted)
-        def thisIsDumb():
-            self.canvas.draw()
-        tempThread = threading.Thread(target=thisIsDumb, daemon=True)
-        tempThread.start()
-        print(tempThread)
+        # def thisIsDumb():
+        #     self.canvas.draw()
+        # tempThread = threading.Thread(target=thisIsDumb, daemon=True)
+        # tempThread.start()
+        # print(tempThread)
+        # DERRICK COME FIX THIS!!!!!
 
     def start_pressure(self, channel=1, isPressure=True):
         i = channel - 1
@@ -923,6 +924,7 @@ class FlowPath(tk.Canvas):
         self.valve_scale = 1/2
         self.lock_scale = .2
         self.fluid_line_width = 20
+        self.frame = frame
         self.window = main_window
         self.lock = self.Lock(self, 10, 10)
         self.tag_bind('lock', '<Button-1>', lambda event: self.lock_popup())

@@ -21,7 +21,7 @@ def list_available_ports(optional_list=[]):   # Does the optional list input do 
     return optional_list
 
 
-def stop_instruments(instrument_list):
+def InstrumentTerminateFunction(instrument_list):
     """Stop all instruments in a list if they can be stopped."""
     for instrument in instrument_list:
         if hasattr(instrument, "stop"):
