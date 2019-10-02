@@ -58,7 +58,7 @@ class main:
 
         # Button Bar
         self.buttons = tk.Frame(self.main_window)
-        self.exit_button = tk.Button(self.main_window, text='X', command=self.exit)
+        self.exit_button = tk.Button(self.main_window, text='X', command=self.exit_)
         self.stop_button = tk.Button(self.main_window, text='STOP', command=self.stop, fg='red', font='Arial 16 bold')
 
         # Main Structures
@@ -351,7 +351,7 @@ class main:
             csvwriter.writerow(main.CSV_HEADERS)
             csvwriter.writerows(self.history)
 
-    def exit(self):
+    def exit_(self):
         """Exit the GUI and stop all running things"""
         print("STARTING EXIT PROCEDURE")
         self.stop()
