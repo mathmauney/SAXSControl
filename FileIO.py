@@ -169,7 +169,7 @@ class ElveflowHandler_SDK:
 
     def __init__(self, sourcename=None, errorlogger=None, sensortypes=[], starttime=0):
         if sourcename is None or sourcename == '':
-            self.sourcename = b'01A377A5'
+            self.sourcename = b'Have you loaded the config file?'
         else:
             self.sourcename = bytes(sourcename, encoding='ascii')
 
@@ -185,7 +185,7 @@ class ElveflowHandler_SDK:
             self.errorlogger.critical = print
         else:
             self.errorlogger = errorlogger
-        self.errorlogger.info("Initializing Elveflow")
+        self.errorlogger.info("Initializing Elveflow at %s" % sourcename)
         self.starttime = starttime
 
         self.instr_ID = c_int32()
@@ -196,6 +196,7 @@ class ElveflowHandler_SDK:
         if err_code != 0:
             self.errorlogger.warning("Initialization error code %i" % err_code)
 
+        self.sensortypes = sensortypes
         for i in range(len(sensortypes)):
             err_code = Elveflow_SDK.OB1_Add_Sens(self.instr_ID.value, i+1, SensorType=sensortypes[i], DigitalAnalog=0,
                                                  FSens_Digit_Calib=0, FSens_Digit_Resolution=3)   # TODO: what is the resolution? What does that mean?
@@ -243,8 +244,20 @@ class ElveflowHandler_SDK:
                     pass
 
             try:
-                error = Elveflow_SDK.OB1_Destructor(self.instr_ID.value)
-                self.errorlogger.info("Closing connection with Elveflow%s." % ("" if error == 0 else (" (Error code %i)" % error)))
+                # error = Elveflow_SDK.OB1_Destructor(self.instr_ID.value)
+                # self.errorlogger.info("Closing connection with Elveflow%s." % ("" if error == 0 else (" (Error code %i)" % error)))
+                def closing_function(i):
+                    if i == 4:
+                        def on_finish():
+                            print("Closing Elveflow connection")
+                            print("Error code: %s" % Elveflow_SDK.OB1_Destructor(self.instr_ID.value))
+                    else:
+                        def on_finish():
+                            closing_function(i+1)
+
+                    self.set_pressure_loop(i, 0, on_finish=on_finish)
+
+                closing_function(1)
             except RuntimeError:
                 print("Runtime error detected in IO handler thread %s while trying to close. Ignoring." % threading.current_thread())
             finally:
@@ -306,35 +319,53 @@ class ElveflowHandler_SDK:
         TODO: make it stop when it reaches the target"""
         if interruptEvent is None:
             # if there isn't one already, create a dummy one
-            interruptEvent = threading.Event()
-            interruptEvent.clear()
+            interrupt_event = threading.Event()
+            interrupt_event.clear()
+        def start_thread(channel_number, target, interrupt_event):
+            if self.sensortypes[channel_number-1] == SDK_SENSOR_TYPES["none"]:
+                self.errorlogger.warning("Channel %s is set to \"none\" (%s); ignoring command to set pressure to %s." % (channel_number, self.sensortypes[channel_number-1], target))
+            else:
+                self.errorlogger.info("CHANNEL %s: starting to set pressure to %s THREAD %s." % (channel_number, target, threading.current_thread()))
+                if target > 8000:
+                    target = 8000
+                if target < 0:
+                    target = 0
 
-        def start_thread(channel_number, target, interruptEvent):
-            self.errorlogger.info("STARTING PRESSURE LOOP CHANNEL %s THREAD %s." % (channel_number, threading.current_thread()))
-
-            while self.run_flag.is_set() and not interruptEvent.is_set():
                 get_pressure = c_double()
                 error = Elveflow_SDK.OB1_Get_Press(self.instr_ID.value, c_int32(channel_number), 1, byref(self.calib), byref(get_pressure), 1000)
                 if error != 0:
                     self.errorlogger.warning('ERROR CODE GETTING PRESSURE %i: %s' % (channel_number, error))
-                else:
+                    if on_finish is not None:
+                        on_finish()
+                    return
+
+                curr_pressure = get_pressure.value
+
+                while self.run_flag.is_set() and not interrupt_event.is_set():
                     # if we have an error reading, don't try to set anything
-                    if abs(target - get_pressure.value) <= ElveflowHandler_SDK.PRESSURE_MAXSLOPE:
+                    # self.errorlogger.debug('max slope is %s' % ElveflowHandlerSDK.PRESSURE_MAXSLOPE)
+                    self.errorlogger.debug('requested slope is %s, and max slope is %s' % (abs(target - curr_pressure)))
+                    if abs(target - curr_pressure) <= ElveflowHandlerSDK.PRESSURE_MAXSLOPE:
                         # if we're close, just set it and hope for the best
-                        pressure_to_set = target
-                        interruptEvent.set()
+                        curr_pressure = target
+                        interrupt_event.set()
                     else:
-                        pressure_to_set = get_pressure.value + math.copysign(target - get_pressure.value, ElveflowHandler_SDK.PRESSURE_MAXSLOPE)
-                    error = Elveflow_SDK.OB1_Set_Press(self.instr_ID.value, channel_number, pressure_to_set, byref(self.calib), 1000)
+                        # otherwise, just make one PRESSURE_MAXSLOPE-sized step in the correct direction
+                        curr_pressure = curr_pressure + math.copysign(ElveflowHandlerSDK.PRESSURE_MAXSLOPE, target - curr_pressure)
+
+                    self.errorlogger.info("setting pressure to %s", curr_pressure)
+                    error = Elveflow_SDK.OB1_Set_Press(self.instr_ID.value, channel_number, curr_pressure, byref(self.calib), 1000)
                     if error != 0:
                         self.errorlogger.warning('ERROR CODE SETTING PRESSURE %i: %s' % (channel_number, error))
-                    self.errorlogger.debug("setting pressure to %s", pressure_to_set)
-                time.sleep(ElveflowHandler_SDK.PID_SLEEPTIME)
+                    # self.errorlogger.debug("setting pressure to %s", curr_pressure)
+
+                    time.sleep(ElveflowHandlerSDK.PRESSURELOOP_SLEEPTIME)
+
+                self.errorlogger.info("CHANNEL %s: finished setting pressure THREAD %s." % (channel_number, threading.current_thread()))
 
             try:
-                self.errorlogger.info("ENDING PRESSURE LOOP CHANNEL %s THREAD %s." % (channel_number, threading.current_thread()))
-                if onFinish is not None:
-                    onFinish()
+                if on_finish is not None:
+                    on_finish()
             except RuntimeError:
                 print("Runtime error detected in pressure loop channel %s thread %s while trying to close. Ignoring." % (channel_number, threading.current_thread()))
 

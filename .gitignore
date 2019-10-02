@@ -104,7 +104,7 @@ venv.bak/
 .mypy_cache/
 
 # any test files
-test*
 log/
-log
+log*
 Elveflow/*.csv
+GLineCode/
