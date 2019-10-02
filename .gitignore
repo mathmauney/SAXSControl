@@ -105,5 +105,6 @@ venv.bak/
 
 # any test files
 log/
-log
+log*
 Elveflow/*.csv
+GLineCode/
