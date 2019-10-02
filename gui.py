@@ -11,6 +11,7 @@ from widgets import FluidLevel, FlowPath, ElveflowDisplay, TextHandler, MiscLogg
 import tkinter.ttk as ttk
 import time
 import SPEC
+import FileIO
 from configparser import ConfigParser
 import logging
 import queue
@@ -86,7 +87,7 @@ class MainGUI:
         self.manual_page_buttons = []
         self.manual_page_variables = []
         # Config page
-
+        self.config = None
         self.save_config_button = tk.Button(self.config_page, text='Save Config', command=self.save_config)
         self.load_config_button = tk.Button(self.config_page, text='Load Config', command=self.load_config)
         self.spec_address = tk.StringVar(value='')
@@ -107,11 +108,23 @@ class MainGUI:
         self.loading_valve_names = []
         self.loading_valve_name_boxes = []
         self.set_loading_valve_names_button = tk.Button(self.config_page, text='Set Names', command=self.set_loading_valve_names)
-        for i in range(0, 6):
+        for i in range(6):
             self.oil_valve_names.append(tk.StringVar(value=''))
             self.oil_valve_name_boxes.append(tk.Entry(self.config_page, textvariable=self.oil_valve_names[i]))
             self.loading_valve_names.append(tk.StringVar(value=''))
             self.loading_valve_name_boxes.append(tk.Entry(self.config_page, textvariable=self.loading_valve_names[i]))
+        self.elveflow_sourcename = tk.StringVar()
+        self.elveflow_sourcename_label = tk.Label(self.config_page, text='Elveflow sourcename')
+        self.elveflow_sourcename_box = tk.Entry(self.config_page, textvariable=self.elveflow_sourcename)
+        self.elveflow_sensortypes_label = tk.Label(self.config_page, text='Elveflow sensor types')
+        self.elveflow_sensortypes = [tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar()]
+        self.elveflow_sensortypes_optionmenu = [None, None, None, None]
+        for i in range(4):
+            self.elveflow_sensortypes_optionmenu[i] = tk.OptionMenu(self.config_page, self.elveflow_sensortypes[i], None)
+            self.elveflow_sensortypes_optionmenu[i]['menu'].delete(0, 'end')  # there's a default empty option, so get rid of that first
+            for item in FileIO.SDK_SENSOR_TYPES:
+                self.elveflow_sensortypes_optionmenu[i]['menu'].add_command(label=item,
+                                                                            command=lambda i=i, item=item: self.elveflow_sensortypes[i].set(item))  # weird default argument for scoping
 
         # Make Instrument
         self.AvailablePorts = SAXSDrivers.list_available_ports()
@@ -149,7 +162,7 @@ class MainGUI:
         # It acts as though there's a race condition, but aren't we still single-threaded at this point?
         # I suspect something might be going wrong with the libraries, then, especially tkinter and matplotlib
         self.draw_static()
-        self.elveflow_display = ElveflowDisplay(self.elveflow_page, core_height, core_width, self.python_logger)
+        self.elveflow_display = ElveflowDisplay(self.elveflow_page, core_height, core_width, self.config['Elveflow'], self.python_logger)
         self.elveflow_display.grid(row=0, column=0)
         self.queue = solocomm.controlQueue
         self.queue_busy = False
@@ -198,9 +211,15 @@ class MainGUI:
         self.set_oil_valve_names_button.grid(row=5, column=7)
         self.loading_valve_names_label.grid(row=6, column=0)
         self.set_loading_valve_names_button.grid(row=6, column=7)
-        for i in range(0, 6):
+        for i in range(6):
             self.oil_valve_name_boxes[i].grid(row=5, column=i+1)
             self.loading_valve_name_boxes[i].grid(row=6, column=i+1)
+        self.elveflow_sourcename_label.grid(row=7, column=0)
+        self.elveflow_sourcename_box.grid(row=7, column=1)
+        self.elveflow_sensortypes_label.grid(row=8, column=0)
+        for i in range(4):
+            self.elveflow_sensortypes_optionmenu[i].grid(row=8, column=i+1)
+
         # Setup page
         self.refresh_com_ports.grid(row=0, column=0)
         self.AddPump.grid(row=0, column=2)
@@ -216,7 +235,7 @@ class MainGUI:
         self.python_logger_gui.grid(row=0, column=0, sticky='NSEW')
         nowtime = time.time()
         python_handler = TextHandler(self.python_logger_gui)
-        file_handler = logging.FileHandler(os.path.join(LOG_FOLDER, "log%010d.txt" % nowtime))
+        file_handler = logging.FileHandler(os.path.join(LOG_FOLDER, "log%010d.txt" % nowtime), encoding='utf-8')
         python_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
         file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
         python_handler.setLevel(logging.DEBUG)
@@ -241,14 +260,20 @@ class MainGUI:
 
     def load_config(self, filename=None, preload=False):
         """Load a config.ini file."""
-        self.config = ConfigParser()
+        if self.config is None:
+            # don't create a new one if there's an old one already
+            # this lets us keep all the same old pointers to the old config parser
+            self.config = ConfigParser()
         if filename is None:
             filename = filedialog.askopenfilename(initialdir=".", title="Select file", filetypes=(("config files", "*.ini"), ("all files", "*.*")))
         if filename != '':
-            self.config.read(filename)
+            self.config.read(filename, encoding='utf-8')
+            # TODO: there's a race condition here
+            time.sleep(0.5)
             oil_config = self.config['Oil Valve']
             loading_config = self.config['Loading Valve']
             main_config = self.config['Main']
+            elveflow_config = self.config['Elveflow']
             self.sucrose = main_config.getboolean('Sucrose', False)
             self.config_spec_address.delete(0, 'end')
             self.config_spec_address.insert(0, main_config.get('spec_host', ''))
@@ -258,6 +283,11 @@ class MainGUI:
                 self.oil_valve_name_boxes[i].insert(0, oil_config.get(field, ''))
                 self.loading_valve_name_boxes[i].delete(0, 'end')
                 self.loading_valve_name_boxes[i].insert(0, loading_config.get(field, ''))
+            self.elveflow_sourcename.set(elveflow_config['elveflow_sourcename'])
+            self.elveflow_sensortypes[0].set(elveflow_config['sensor1_type'])
+            self.elveflow_sensortypes[1].set(elveflow_config['sensor2_type'])
+            self.elveflow_sensortypes[2].set(elveflow_config['sensor3_type'])
+            self.elveflow_sensortypes[3].set(elveflow_config['sensor4_type'])
         if not preload:
             self.set_oil_valve_names()
             self.set_loading_valve_names()
@@ -268,6 +298,8 @@ class MainGUI:
         if filename != '':
             oil_config = self.config['Oil Valve']
             loading_config = self.config['Loading Valve']
+            elveflow_config = self.config['Elveflow']
+
             for i in range(0, 6):
                 field = 'name'+str(i+1)
                 oil_name = self.oil_valve_names[i].get()
@@ -276,7 +308,15 @@ class MainGUI:
                 loading_name = self.loading_valve_names[i].get()
                 if loading_name is not '':
                     loading_config[field] = loading_name
-            self.config.write(open(filename, 'w'))
+
+            # TODO: do this update when you enter something, not just when saving
+            elveflow_config['elveflow_sourcename'] = self.elveflow_sourcename.get()
+            elveflow_config['sensor1_type'] = self.elveflow_sensortypes[0].get()
+            elveflow_config['sensor2_type'] = self.elveflow_sensortypes[1].get()
+            elveflow_config['sensor3_type'] = self.elveflow_sensortypes[2].get()
+            elveflow_config['sensor4_type'] = self.elveflow_sensortypes[3].get()
+
+            self.config.write(open(filename, 'w', encoding='utf-8'))
 
     def set_oil_valve_names(self):
         """Send selection valve names to the control gui."""
