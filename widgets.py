@@ -923,7 +923,7 @@ class FlowPath(tk.Canvas):
         self.valve_scale = 1/2
         self.lock_scale = .2
         self.fluid_line_width = 20
-        self.window = window
+        self.window = main_window
         self.lock = self.Lock(self, 10, 10)
         self.tag_bind('lock', '<Button-1>', lambda event: self.lock_popup())
         # Add Elements

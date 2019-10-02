@@ -5,7 +5,7 @@ Alex Mauney
 """
 
 import tkinter as tk
-import tkinter.scrolledtext as ScrolledText
+from tkinter.scrolledtext import ScrolledText
 from tkinter import filedialog
 from widgets import FluidLevel, FlowPath, ElveflowDisplay, TextHandler, MiscLogger, COMPortSelector
 import tkinter.ttk as ttk
@@ -128,12 +128,12 @@ class main:
                                                                             command=lambda i=i, item=item: self.elveflow_sensortypes[i].set(item))  # weird default argument for scoping
 
         # Make Instrument
-        self.AvailablePorts = SAXSDrivers.ListAvailablePorts()
+        self.AvailablePorts = SAXSDrivers.list_available_ports()
         self.controller = SAXSDrivers.SAXSController(timeout=0.1)
         self.Instruments = []
         self.NumberofPumps = 0
         # Setup Page
-        self.AvailablePorts = SAXSDrivers.ListAvailablePorts()
+        self.AvailablePorts = SAXSDrivers.list_available_ports()
         self.setup_page_buttons = []
         self.setup_page_variables = []
         self.refresh_com_ports = tk.Button(self.setup_page, text="Refresh COM", command=lambda: self.RefreshCOMList())
@@ -508,10 +508,10 @@ class main:
                 self.manual_page_buttons[i][y].grid(row=i, column=y)
 
     def RefreshCOMList(self):
-        self.ControllerCOM.updatelist(SAXSDrivers.ListAvailablePorts(self.AvailablePorts))
+        self.ControllerCOM.updatelist(SAXSDrivers.list_available_ports(self.AvailablePorts))
         for button in self.setup_page_buttons:
             if isinstance(button[0], COMPortSelector):
-                button[0].updatelist(SAXSDrivers.ListAvailablePorts(self.AvailablePorts))
+                button[0].updatelist(SAXSDrivers.list_available_ports(self.AvailablePorts))
 
     def AddRheodyneSetButtons(self):
         self.Instruments.append(SAXSDrivers.Rheodyne(logger=self.Instrument_logger))
