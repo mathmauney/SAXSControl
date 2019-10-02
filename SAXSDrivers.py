@@ -117,17 +117,40 @@ class HPump:
         if self.pc_connect:
             if not resource.is_open:
                 resource.open()
-            resource.write((self.address+"RUN\n\r").encode())   # needs both terminators
-            # val=resource.read_until("\n\r")
+            while resource.in_waiting > 0:  # Clear Buffer
+                resource.readline()
+            resource.write((self.address+"RUN\n\r").encode())
+            time.sleep(0.1)
+            resource.readline()
+            pumpanswer = resource.readline().decode()
+            if self.address+"<" in pumpanswer:
+                self.running = True
+                self.logger.append("Refilling " + self.name)
+            elif self.address+">" in pumpanswer:
+                self.running = True
+                self.logger.append("Infusing " + self.name)
+            else:
+                self.running = False
+                self.logger.append("ERROR on pump feedback")
 
         else:
             if not self.controller.is_open:
                 self.controller.open()
+            while self.controller.in_waiting > 0:  # Clear Buffer
+                self.controller.readline()
             self.controller.write(("-"+self.address+"RUN\n\r").encode())
-
-        self.running = True     # Consider switching to after checking with pump
-        self.logger.append("Started " + self.name)
-        # return val.decode()
+            time.sleep(0.1)
+            self.controller.readline()
+            pumpanswer = self.controller.readline().decode()
+            if self.address+"<" in pumpanswer:
+                self.running = True
+                self.logger.append("Refilling " + self.name)
+            elif self.address+">" in pumpanswer:
+                self.running = True
+                self.logger.append("Infusing " + self.name)
+            else:
+                self.running = False
+                self.logger.append("ERROR on pump feedback")
 
     def stop_pump(self, resource=pumpserial):
         """Send a stop command to the pump."""
@@ -136,16 +159,40 @@ class HPump:
         if self.pc_connect:
             if not resource.is_open:
                 resource.open()
+            while resource.in_waiting > 0:  # Clear Buffer
+                resource.readline()
             resource.write((self.address+"STP\n\r").encode())
-            # val=resource.read_until("\n\r")
+            time.sleep(0.1)
+            resource.readline()
+            pumpanswer = resource.readline().decode()
+            if self.address+"*" in pumpanswer:
+                self.running = False
+                self.logger.append("Paused " + self.name)
+            elif self.address+":" in pumpanswer:
+                self.running = False
+                self.logger.append("Stopped " + self.name)
+            else:
+                self.running = True
+                self.logger.append("ERROR Stopping pump")
 
         else:
             if not self.controller.is_open:
                 self.controller.open()
+            while self.controller.in_waiting > 0:  # Clear Buffer
+                self.controller.readline()
             self.controller.write(("-"+self.address+"STP\n\r").encode())
-
-        self.running = False    # consider moving to after checking with pump
-        # return val.decode()
+            time.sleep(0.1)
+            self.controller.readline()
+            pumpanswer = self.controller.readline().decode()
+            if self.address+":" in pumpanswer:
+                self.running = False
+                self.logger.append("Paused " + self.name)
+            elif self.address+"*" in pumpanswer:
+                self.running = False
+                self.logger.append("Stopped " + self.name)
+            else:
+                self.running = True
+                self.logger.append("ERROR stopping pump")
 
     def set_infuse_rate(self, rate, units="UM", resource=pumpserial):
         # consider moving to after checking with pump
@@ -309,14 +356,14 @@ class HPump:
             if not resource.is_open:
                 resource.open()
             resource.write((self.address+"\n\r").encode())
-            while(resource.in_waiting > 0):
+            while resource.in_waiting > 0:
                 self.logger.append(resource.read().decode())
 
         else:
             if not self.controller.is_open:
                 self.controller.open()
             self.controller.write(("-"+self.address+"\n\r").encode())
-            while(self.controller.in_waiting > 0):
+            while self.controller.in_waiting > 0:
                 self.logger.append(resource.read().decode())
 
     def stop(self, resource=pumpserial):
