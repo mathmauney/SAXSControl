@@ -181,7 +181,7 @@ class ElveflowDisplay(tk.Canvas):
     PADDING = 2
     OUTPUT_FOLDER = "Elveflow"
 
-    def __init__(self, window, height, width, elveflow_config, errorlogger, **kwargs):
+    def __init__(self, window, height, width, errorlogger, **kwargs):
         """Start the FluidLevel object with default paramaters."""
         super().__init__(window, **kwargs)
 
@@ -189,15 +189,14 @@ class ElveflowDisplay(tk.Canvas):
         # variables attached to tkinter elements
         self.dataXLabel_var = tk.StringVar()
         self.dataYLabel_var = tk.StringVar()
-        # self.sensorTypes_var = [tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar()]
+        self.sensorTypes_var = [tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar()]
         self.pressureValue_var = [tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar()]
         self.isPressure_var = [tk.BooleanVar(), tk.BooleanVar(), tk.BooleanVar(), tk.BooleanVar()]
-
         self.pressureSettingActive_var = [tk.BooleanVar(), tk.BooleanVar(), tk.BooleanVar(), tk.BooleanVar()]
         self.setPressureStop_flag = [None, None, None, None]
         self.axisLimits_var = [tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar()]
         self.axisLimits_numbers = [None, None, None, None]
-        # self.sourcename_var = tk.StringVar()
+        self.sourcename_var = tk.StringVar()
         self.saveFileName_var = tk.StringVar()
         self.saveFileNameSuffix_var = tk.StringVar()
         (self.kp_var, self.ki_var, self.kd_var) = (tk.StringVar(), tk.StringVar(), tk.StringVar())
@@ -205,7 +204,6 @@ class ElveflowDisplay(tk.Canvas):
 
         self.dataTitle = "Elveflow data"
         self.errorlogger = errorlogger
-        self.elveflow_config = elveflow_config
         self.saveFile = None
         self.saveFileWriter = None
         self.shutdown = False
@@ -236,32 +234,32 @@ class ElveflowDisplay(tk.Canvas):
         # self.clear_button.grid(row=0, column=3, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
         # # TODO: make the clear button actually work
 
-        # tk.Label(self, text="Reading from:").grid(row=rowcounter, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
-        self.sourcename_entry = tk.Entry(self, textvariable=None, justify="left")
-        # if not FileIO.USE_SDK:
-        #     self.sourcename_entry.config(state="readonly")
-        # self.sourcename_entry.grid(row=rowcounter, column=2, columnspan=2, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+        tk.Label(self, text="Reading from:").grid(row=rowcounter, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+        self.sourcename_entry = tk.Entry(self, textvariable=self.sourcename_var, justify="left")
+        if not FileIO.USE_SDK:
+            self.sourcename_entry.config(state="readonly")
+        self.sourcename_entry.grid(row=rowcounter, column=2, columnspan=2, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
         fontsize = tkinter.font.Font(font=self.sourcename_entry['font'])['size']
-        # self.sourcename_entry.config(width=2 * int(remaining_width_per_column / fontsize))  # width is in units of font size
-        # rowcounter += 1
+        self.sourcename_entry.config(width=2 * int(remaining_width_per_column / fontsize))  # width is in units of font size
+        rowcounter += 1
 
-        # if FileIO.USE_SDK:
-        #     tk.Label(self, text="Sensors 1, 2:").grid(row=rowcounter, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
-        #     tk.Label(self, text="Sensors 3, 4:").grid(row=rowcounter+1, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
-        #     self.sensorTypes_optionmenu = [None, None, None, None]
-        #     for i in range(4):
-        #         self.sensorTypes_optionmenu[i] = tk.OptionMenu(self, self.sensorTypes_var[i], None)
-        #         self.sensorTypes_optionmenu[i]['menu'].delete(0, 'end')  # there's a default empty option, so get rid of that first
-        #         self.sensorTypes_optionmenu[i].config(width=int(remaining_width_per_column / fontsize))  # width is in units of font size
-        #         self.sensorTypes_optionmenu[i].grid(row=rowcounter+i//2, column=2+(i % 2), padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
-        #         self.sensorTypes_var[i].set("none")
-        #         for item in FileIO.SDK_SENSOR_TYPES:
-        #             self.sensorTypes_optionmenu[i]['menu'].add_command(label=item,
-        #                                                                command=lambda i=i, item=item: self.sensorTypes_var[i].set(item))  # weird default argument for scoping
-        #     rowcounter += 2
+        if FileIO.USE_SDK:
+            tk.Label(self, text="Sensors 1, 2:").grid(row=rowcounter, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+            tk.Label(self, text="Sensors 3, 4:").grid(row=rowcounter+1, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+            self.sensorTypes_optionmenu = [None, None, None, None]
+            for i in range(4):
+                self.sensorTypes_optionmenu[i] = tk.OptionMenu(self, self.sensorTypes_var[i], None)
+                self.sensorTypes_optionmenu[i]['menu'].delete(0, 'end')  # there's a default empty option, so get rid of that first
+                self.sensorTypes_optionmenu[i].config(width=int(remaining_width_per_column / fontsize))  # width is in units of font size
+                self.sensorTypes_optionmenu[i].grid(row=rowcounter+i//2, column=2+(i % 2), padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+                self.sensorTypes_var[i].set("none")
+                for item in FileIO.SDK_SENSOR_TYPES:
+                    self.sensorTypes_optionmenu[i]['menu'].add_command(label=item,
+                                                                       command=lambda i=i, item=item: self.sensorTypes_var[i].set(item))  # weird default argument for scoping
+            rowcounter += 2
 
-        # tkinter.ttk.Separator(self, orient=tk.HORIZONTAL).grid(row=rowcounter, column=1, columnspan=3, sticky='ew', padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
-        # rowcounter += 1
+        tkinter.ttk.Separator(self, orient=tk.HORIZONTAL).grid(row=rowcounter, column=1, columnspan=3, sticky='ew', padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+        rowcounter += 1
 
         tk.Label(self, text="X axis").grid(row=rowcounter, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
         self.dataXLabel_optionmenu = tk.OptionMenu(self, self.dataXLabel_var, None)
@@ -359,8 +357,7 @@ class ElveflowDisplay(tk.Canvas):
         self.start_button.config(state=tk.NORMAL)
         self.stop_button.config(state=tk.DISABLED)
         if not FileIO.USE_SDK:
-            pass
-            # self.sourcename_var.set("None")
+            self.sourcename_var.set("None")
         else:
             self.startSaving_button.config(state=tk.DISABLED)
             self.stopSaving_button.config(state=tk.DISABLED)
@@ -386,27 +383,26 @@ class ElveflowDisplay(tk.Canvas):
         self.dataYLabel_optionmenu.config(state=tk.NORMAL)
 
         if FileIO.USE_SDK:
-            # self.sourcename_entry.config(state=tk.DISABLED)
+            self.sourcename_entry.config(state=tk.DISABLED)
             for item in self.pressureSettingActive_toggle:
                 item.config(state=tk.NORMAL)
             for item in self.pressureValue_entry:
                 item.config(state=tk.NORMAL)
-            # for item in self.sensorTypes_optionmenu:
-            #     item.config(state=tk.DISABLED)
+            for item in self.sensorTypes_optionmenu:
+                item.config(state=tk.DISABLED)
 
-            self.elveflow_handler = FileIO.ElveflowHandler(sourcename=self.elveflow_config['elveflow_sourcename'],
+            self.elveflow_handler = FileIO.ElveflowHandler(sourcename=self.sourcename_var.get(),
                                                            errorlogger=self.errorlogger,
-                                                           sensortypes=list(map(lambda x: FileIO.SDK_SENSOR_TYPES[x],
-                                                                                [self.elveflow_config['sensor1_type'], self.elveflow_config['sensor2_type'], self.elveflow_config['sensor3_type'], self.elveflow_config['sensor4_type']])), #TODO: make this not ugly
+                                                           sensortypes=list(map(lambda x: FileIO.SDK_SENSOR_TYPES[x.get()], self.sensorTypes_var)),
                                                            starttime=self.starttime)
-            # self.sourcename_var.set(str(self.elveflow_handler.sourcename, encoding='ascii'))
+            self.sourcename_var.set(str(self.elveflow_handler.sourcename, encoding='ascii'))
         else:
             self.elveflow_handler = FileIO.ElveflowHandler()
-            # if self.elveflow_handler.sourcename is None:
-            #     # abort if empty
-            #     self._initialize_variables()
-            #     return
-            # self.sourcename_var.set(self.elveflow_handler.sourcename)
+            if self.elveflow_handler.sourcename is None:
+                # abort if empty
+                self._initialize_variables()
+                return
+            self.sourcename_var.set(self.elveflow_handler.sourcename)
 
         self.dataXLabel_optionmenu['menu'].delete(0, 'end')
         self.dataYLabel_optionmenu['menu'].delete(0, 'end')
@@ -454,9 +450,9 @@ class ElveflowDisplay(tk.Canvas):
             self.elveflow_handler.stop()
         if FileIO.USE_SDK and not shutdown:
             # if we're actually exiting, no need to update the GUI
-            # self.sourcename_entry.config(state=tk.NORMAL)
-            # for item in self.sensorTypes_optionmenu:
-            #     item.config(state=tk.NORMAL)
+            self.sourcename_entry.config(state=tk.NORMAL)
+            for item in self.sensorTypes_optionmenu:
+                item.config(state=tk.NORMAL)
             for item in self.pressureSettingActive_var:
                 item.set(False)
             for item in self.pressureSettingActive_toggle:
@@ -548,7 +544,7 @@ class ElveflowDisplay(tk.Canvas):
                 self.elveflow_handler.setPressureLoop(channel, pressure_to_set, interruptEvent=self.setPressureStop_flag[i],
                                                       onFinish=lambda: self.pressureSettingActive_var[i].set(False))
             else:  # volume control
-                if self.elveflow_config['sensor%i_type' % i] == "none":
+                if self.sensorTypes_var[i].get() == "none":
                     self.errorlogger.error("Channel %d flow meter is not turned on" % channel)
                     self.pressureSettingActive_var[i].set(False)
                     return
