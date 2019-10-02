@@ -1,6 +1,6 @@
 """The butchered remains of the GLine robot software for SPEC control."""
 
-import socket, select, time, threading, sys, serial, wx, signal
+import socket, select, time, threading, sys, serial, signal
 import SpecClient
 from SpecClient import SpecCommand
 from SpecClient import SpecEventsDispatcher
@@ -471,17 +471,17 @@ class ControlThread(threading.Thread):
             raise CommException('None was returned in queueCommandAndGetAnswer on ' + str(command))
 
         elif answer[1] == '0301 Robot Not Homed':
-            wx.CallAfter(self.GUIFrame.OnSafetyButtonPressed, answer)
+            # wx.CallAfter(self.GUIFrame.OnSafetyButtonPressed, answer)
             self.abort()
         elif answer[1] == '0334 E-Stop':
-            wx.CallAfter(self.GUIFrame.OnSafetyButtonPressed, answer)
+            # wx.CallAfter(self.GUIFrame.OnSafetyButtonPressed, answer)
             self.abort()
         elif answer[0] == 'STATUS' and answer[1] == '0':
-            wx.CallAfter(self.GUIFrame.OnSafetyButtonPressed, answer)
+            # wx.CallAfter(self.GUIFrame.OnSafetyButtonPressed, answer)
             self.abort()
         elif len(answer[1].split())>1:
             if answer[1].split()[0] == '0316':
-                wx.CallAfter(self.GUIFrame.OnSafetyButtonPressed, answer)
+                # wx.CallAfter(self.GUIFrame.OnSafetyButtonPressed, answer)
                 self.abort()
         return answer
 

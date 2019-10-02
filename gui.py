@@ -407,25 +407,6 @@ class main:
         #   Inject Z uL
         pass
 
-    def listen(self):
-        """Look for queues of hardware commands and execute them."""
-        print("STARTING QUEUE LISTENING THREAD %s" % threading.current_thread())
-        while self.listen_run_flag.is_set():
-            if self.queue.empty():
-                if self.queue_busy:
-                    self.queue_busy = False
-                    self.toggle_buttons()
-            else:
-                if not self.queue_busy:
-                    self.queue_busy = True
-                    self.toggle_buttons()
-                queue_item = self.queue.get()
-                if isinstance(queue_item, tuple):
-                    queue_item[0](*queue_item[1:])
-                elif callable(queue_item):
-                    queue_item()
-        print("DONE WITH THIS QUEUE LISTENING THREAD %s" % threading.current_thread())
-
     def toggle_buttons(self):
         """Toggle certain buttons on and off when they should not be allowed to add to queue."""
         buttons = (self.pump_inject_button,
