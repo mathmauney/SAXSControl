@@ -701,14 +701,28 @@ class FlowPath(tk.Canvas):
             super().__init__(canvas, x, y, name)
             self.canvas.itemconfig(self.center_circle, fill='white', outline='white', tag=self.name)
             self.color = 'black'
+            self.colors = [None, None, None, None, None, None]
+            self.gui_names = ['', '', '', '', '', '']   # 0 is rightmost, goes clockwise
+            self.hardware_names = ['', '', '', '', '', '']
             for i in range(0, 6):
                 self.canvas.itemconfig(self.circles[i], tag=self.name+str(i))
-                self.canvas.tag_bind(self.name+str(i), '<Button-1>', lambda event, position=i: self.set_manual_position(position))
+                self.canvas.tag_bind(self.name+str(i), '<Button-1>', lambda event, num=i: self.set_manual_position(self.gui_names[num]))
 
-        def set_position(self, position, color=None):
-            """Set the valve position to one of the 6 outputs."""
+        def set_position(self, position_in, color=None):
+            """Set the valve position to one of the 6 outputs on the gui."""
+            if type(position_in) is str:
+                position = self.gui_names.index(position_in)
+            elif position_in in range(0, 6):
+                position = position_in
             if color is not None:
                 self.color = color
+                self.colors[position] = color
+            elif self.colors[position] is not None:
+                self.color = self.colors[position]
+            if type(position_in) is str:
+                position = self.names.index(position_in)
+            else:
+                position = position_in - 1  # Matches the hardware indexing
             for line in self.fluid_lines[position]:
                 self.canvas.itemconfig(line, fill=self.color, outline=self.color)
             self.canvas.itemconfig(self.circles[self.position], fill='white', outline='white')
@@ -733,9 +747,22 @@ class FlowPath(tk.Canvas):
             """Change the valve position after being clicked both visually and physically."""
             if self.hardware is None:
                 self.assign_to_hardware()
-            elif self.canvas.is_unlocked:
-                self.hardware.switchvalve(position+1)
-                self.set_position(position)
+            elif self.canvas.is_unlocked and position is not '':
+                hardware_pos = self.hardware_names.index(position)
+                self.hardware.switchvalve(hardware_pos)
+                self.position = position
+
+        def name_position(self, position, name):
+            """Define the name for a hardware port position."""
+            if position > 6 or position < 0:
+                raise ValueError('Position out of Range')
+            elif type(name) is not str:
+                raise ValueError('Position names must be strings.')
+            elif name == '':
+                pass
+            elif name not in self.gui_names:
+                raise ValueError(str(name) + ' not in known valve names: ' + str(self.gui_names))
+            self.hardware_names[position] = name
 
     class SampleValve(Valve):
         """Extends Valve class for the vici valves.
@@ -805,8 +832,8 @@ class FlowPath(tk.Canvas):
             if self.hardware is None:
                 self.assign_to_hardware()
             elif self.canvas.is_unlocked:
+                self.hardware.switchvalve(position)
                 self.set_position(position)
-                self.hardware.switchvalve(self.position)
 
 
     class InjectionValve(Valve):
@@ -816,7 +843,7 @@ class FlowPath(tk.Canvas):
         """
 
         def __init__(self, canvas, x, y, name):
-            """Initialize the injectoin valve and draw its unique parts."""
+            """Initialize the injection valve and draw its unique parts."""
             super().__init__(canvas, x, y, name)
             self.color1 = 'white'
             self.color2 = 'white'
@@ -829,8 +856,8 @@ class FlowPath(tk.Canvas):
         def set_position(self, position, **kwargs):
             """Set the valve position to one of the 2 possible paths."""
             self.color1 = kwargs.pop('color1', self.color1)
-            self.color2 = kwargs.pop('color1', self.color2)
-            self.color3 = kwargs.pop('color1', self.color3)
+            self.color2 = kwargs.pop('color2', self.color2)
+            self.color3 = kwargs.pop('color3', self.color3)
             self.position = position % 2
             try:
                 self.canvas.delete(self.arc1)
@@ -914,7 +941,7 @@ class FlowPath(tk.Canvas):
             if self.hardware is None:
                 self.assign_to_hardware()
             elif self.canvas.is_unlocked:
-                self.hardware.switchvalve(position+1)
+                self.hardware.switchvalve(position)
                 self.set_position(position)
 
     class FluidLevel():
@@ -952,7 +979,10 @@ class FlowPath(tk.Canvas):
                 self.canvas.itemconfig(self.level, fill=self.color, outline=self.color)
 
     class Lock():
+        """Lock GUI item with onclick toggle."""
+
         def __init__(self, canvas, x, y):
+            """Draw the lock."""
             self.x = x
             self.y = y
             self.canvas = canvas
@@ -966,6 +996,7 @@ class FlowPath(tk.Canvas):
             self.moveable_arc2 = self.canvas.create_arc(x+.3*self.size, y+.2*self.size, x+.7*self.size, y+.6*self.size, start=0, extent=180, fill=self.canvas['background'], outline='', tag='lock')
 
         def toggle(self, state=None):
+            """Toggle the visual state of the lock."""
             if state is not None:
                 self.state = state
             elif self.state == 'locked':
@@ -985,10 +1016,12 @@ class FlowPath(tk.Canvas):
                 raise ValueError('Invalid lock state')
 
     def __init__(self, frame, main_window, **kwargs):
+        """Set up initial variables and draw initial states."""
+        self.sucrose = kwargs.pop('sucrose', False)
         super().__init__(frame, **kwargs)
         self.is_unlocked = False
-        self.valve_scale = 2/3
-        self.lock_scale = .3
+        self.valve_scale = 1/2
+        self.lock_scale = .2
         self.fluid_line_width = 20
         self.frame = frame
         self.window = main_window
@@ -998,27 +1031,44 @@ class FlowPath(tk.Canvas):
         self.draw_pumps()
         self.draw_valves()
         self.draw_loops()
-        self.draw_fluid_lines()
+        # self.draw_fluid_lines()
         self.initialize()
         # Scale for computers smaller than 1800 log_width
         scale = self.frame.winfo_screenwidth()/1920
         self.scale("all", 0, 0, scale, scale)
-        self.config(width=1800*scale, height=300*scale)
+        self.config(width=1800*scale, height=400*scale)
 
     def draw_pumps(self):
+        """Draw the pumps."""
         self.pump1 = self.FluidLevel(self, 0, 125, height=50, color='black', orientation='right', name='pump')
 
     def draw_valves(self):
-        self.valve1 = self.InjectionValve(self, 300, 150, 'valve1')
-        self.valve2 = self.SelectionValve(self, 700, 150, 'valve2')
-        self.valve3 = self.SampleValve(self, 1100, 150, 'valve3')
-        self.valve4 = self.SelectionValve(self, 1500, 150, 'valve4')
+        """Draw the valves."""
+        row1_y = 100
+        row2_y = 300
+        self.valve1 = self.InjectionValve(self, 300, row1_y, 'valve1')
+        self.valve2 = self.SelectionValve(self, 700, row1_y, 'valve2')
+        self.valve2.gui_names[2] = 'Waste'
+        self.valve2.gui_names[4] = 'Run'
+        self.valve3 = self.SampleValve(self, 1100, row1_y, 'valve3')
+        self.valve4 = self.SelectionValve(self, 1500, row1_y, 'valve4')
+        self.valve4.gui_names[0] = 'Run'
+        self.valve4.gui_names[1] = 'Load'
+        self.valve4.gui_names[2] = 'Low Flow Soap'
+        self.valve4.gui_names[3] = 'High Flow Soap'
+        self.valve4.gui_names[4] = 'Water'
+        self.valve4.gui_names[5] = 'Air'
+        self.valve5 = self.SelectionValve(self, 700, row2_y, 'valve5')
+        self.valve6 = self.SampleValve(self, 1100, row2_y, 'valve6')
+        self.valve7 = self.SelectionValve(self, 1500, row2_y, 'valve7')
 
     def draw_loops(self):
+        """Draw the sample and buffer loops."""
         self.sample_level = self.FluidLevel(self, 1025, 0, height=30, color='red', background='black', orientation='right', border=0)
-        self.buffer_level = self.FluidLevel(self, 1025, 250, height=30, color='cyan', background='black', orientation='right', border=0)
+        self.buffer_level = self.FluidLevel(self, 1025, 200, height=30, color='cyan', background='black', orientation='right', border=0)
 
     def draw_fluid_lines(self):
+        """Draw the fluid lines and set associate them with the correct valves."""
         # Line from syringe to valve 1
         self.syringe_line = self.create_fluid_line('x', 150, 150, 100)
         self.tag_lower(self.syringe_line)
@@ -1038,6 +1088,7 @@ class FlowPath(tk.Canvas):
         self.oil_line3 = self.create_fluid_line('y', x_avg, y1, 50)
 
     def initialize(self):
+        """Set initial levels, colors, and valve positions."""
         self.pump1.update(25)
         self.sample_level.update(25)
         self.buffer_level.update(25)
@@ -1047,9 +1098,11 @@ class FlowPath(tk.Canvas):
         self.valve4.set_position(0, color='red')
 
     def create_circle(self, x, y, r, **kwargs):
+        """Draw a circle by center and radius."""
         return self.create_oval(x-r, y-r, x+r, y+r, **kwargs)
 
     def create_fluid_line(self, direction, x, y, length, **kwargs):
+        """Draw a fluid line from a location by length and direction."""
         width = kwargs.pop('width', self.fluid_line_width)
         color = kwargs.pop('color', 'black')
         r = width/2
@@ -1065,6 +1118,7 @@ class FlowPath(tk.Canvas):
                 return self.create_rectangle(x-r, y+length-r, x+r, y+r, fill=color, outline=color)
 
     def set_unlock_state(self, state=None):
+        """Set the GUI lock state."""
         if state is None:
             self.is_unlocked = not self.is_unlocked
         else:
@@ -1075,12 +1129,14 @@ class FlowPath(tk.Canvas):
             self.lock.toggle('locked')
 
     def manual_switch_lock(self):
+        """Lock the GUI and the lock icon."""
         if self.is_unlocked:
             self.is_unlocked = False
         else:
             self.lock_popup()
 
     def lock_popup(self):
+        """Popup a window to unlock the GUI with a password."""
         def check_password(password):
             if password == 'asaxsisgr8':
                 self.set_unlock_state(True)

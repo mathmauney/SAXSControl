@@ -17,6 +17,7 @@ import queue
 import threading
 import SAXSDrivers
 import os.path
+import solocomm
 
 
 FULLSCREEN = True   # For testing, turn this off
@@ -40,7 +41,7 @@ class MainGUI:
         window_height = self.main_window.winfo_screenheight()
         core_width = round(2*window_width/3)
         log_width = window_width - core_width - 3
-        state_height = 300
+        state_height = 400
         core_height = window_height - state_height - 50
         log_height = core_height
         if not FULLSCREEN:
@@ -76,7 +77,6 @@ class MainGUI:
         self.oil_refill_button = tk.Button(self.auto_page, text='Refill Oil', command=lambda: self.oil_meter.update(100))
         self.oil_start_button = tk.Button(self.auto_page, text='Start Oil', command=self.oil_meter.start)
         self.spec_connect_button = tk.Button(self.auto_page, text='Connect to SPEC', command=self.connect_to_spec)
-        self.spec_send_button = tk.Button(self.auto_page, text='Send', command=lambda: self.SPEC_Connection.command(self.spec_command.get()))
         self.spec_command = tk.StringVar(value='')
         self.spec_command_entry = tk.Entry(self.auto_page, textvariable=self.spec_command)
         self.spec_command_entry.bind("<Return>", lambda event: self.SPEC_Connection.command(self.spec_command.get()))
@@ -89,9 +89,9 @@ class MainGUI:
 
         self.save_config_button = tk.Button(self.config_page, text='Save Config', command=self.save_config)
         self.load_config_button = tk.Button(self.config_page, text='Load Config', command=self.load_config)
-        self.config_oil_tick_size_label = tk.Label(self.config_page, text='Oil Use (mL/min)')
-        self.config_oil_tick_size = tk.Spinbox(self.config_page, from_=0, to=10, textvariable=self.oil_ticksize, increment=0.01)
-        self.spec_address = tk.StringVar(value='192.168.1.5')
+        self.spec_address = tk.StringVar(value='')
+        self.config_spec_address = tk.Entry(self.config_page, textvariable=self.spec_address)
+        self.config_spec_address_label = tk.Label(self.config_page, text='SPEC Address')
         self.volumes_label = tk.Label(self.config_page, text='Buffer/Sample/Buffer volumes in uL:')
         self.first_buffer_volume = tk.IntVar(value=25)     # May need ot be a doublevar
         self.first_buffer_volume_box = tk.Entry(self.config_page, textvariable=self.first_buffer_volume)
@@ -99,6 +99,19 @@ class MainGUI:
         self.sample_volume_box = tk.Entry(self.config_page, textvariable=self.sample_volume)
         self.last_buffer_volume = tk.IntVar(value=25)      # May need ot be a doublevar
         self.last_buffer_volume_box = tk.Entry(self.config_page, textvariable=self.last_buffer_volume)
+        self.oil_valve_names_label = tk.Label(self.config_page, text='Oil Valve Hardware Port Names')
+        self.oil_valve_names = []
+        self.oil_valve_name_boxes = []
+        self.set_oil_valve_names_button = tk.Button(self.config_page, text='Set Names', command=self.set_oil_valve_names)
+        self.loading_valve_names_label = tk.Label(self.config_page, text='Loading Valve Hardware Port Names')
+        self.loading_valve_names = []
+        self.loading_valve_name_boxes = []
+        self.set_loading_valve_names_button = tk.Button(self.config_page, text='Set Names', command=self.set_loading_valve_names)
+        for i in range(0, 6):
+            self.oil_valve_names.append(tk.StringVar(value=''))
+            self.oil_valve_name_boxes.append(tk.Entry(self.config_page, textvariable=self.oil_valve_names[i]))
+            self.loading_valve_names.append(tk.StringVar(value=''))
+            self.loading_valve_name_boxes.append(tk.Entry(self.config_page, textvariable=self.loading_valve_names[i]))
 
         # Make Instrument
         self.AvailablePorts = SAXSDrivers.list_available_ports()
@@ -115,35 +128,35 @@ class MainGUI:
         self.ControllerCOM = COMPortSelector(self.setup_page, exportselection=0, height=3)
         self.ControllerSet = tk.Button(self.setup_page, text="Set Microntroller", command=lambda: self.controller.set_port(self.AvailablePorts[int(self.ControllerCOM.curselection()[0])].device))
         self.I2CScanButton = tk.Button(self.setup_page, text="Scan I2C line", command=lambda: self.controller.scan_i2c())
-        # self.spec_address = tk.StringVar(value='192.168.0.233')   # For Alex M home use
-        self.config_spec_address = tk.Entry(self.config_page, textvariable=self.spec_address)
-        self.config_spec_address_label = tk.Label(self.config_page, text='SPEC Address')
-        self.spec_port = tk.IntVar(value=7)
-        self.config_spec_port = tk.Entry(self.config_page, textvariable=self.spec_port)
-        self.config_spec_port_label = tk.Label(self.config_page, text='SPEC Port')
+
         # logs
-        self.python_logger_gui = ScrolledText(self.python_logs, state='disabled', height=45)
+        log_length = 39  # in lines
+        self.python_logger_gui = ScrolledText(self.python_logs, state='disabled', height=log_length)
         self.python_logger_gui.configure(font='TkFixedFont')
-        self.SPEC_logger = MiscLogger(self.SPEC_logs, state='disabled', height=45)
+        self.SPEC_logger = MiscLogger(self.SPEC_logs, state='disabled', height=log_length)
         self.SPEC_logger.configure(font='TkFixedFont')
-        self.Instrument_logger = MiscLogger(self.Instrument_logs, state='disabled', height=45)
+        self.Instrument_logger = MiscLogger(self.Instrument_logs, state='disabled', height=log_length)
         self.Instrument_logger.configure(font='TkFixedFont')
         self.controller.logger = self.Instrument_logger
         #
         # Flow setup frames
-        self.flowpath = FlowPath(self.state_frame, self)
+        self.load_config(filename='config.ini', preload=True)
+        if self.sucrose:
+            self.flowpath = FlowPath(self.state_frame, self, sucrose=True)
+        else:
+            self.flowpath = FlowPath(self.state_frame, self)
         time.sleep(0.6)   # I have no idea why we need this but everything crashes and burns if we don't include it
         # It acts as though there's a race condition, but aren't we still single-threaded at this point?
         # I suspect something might be going wrong with the libraries, then, especially tkinter and matplotlib
         self.draw_static()
         self.elveflow_display = ElveflowDisplay(self.elveflow_page, core_height, core_width, self.python_logger)
         self.elveflow_display.grid(row=0, column=0)
-        self.queue = queue.Queue()
+        self.queue = solocomm.controlQueue
         self.queue_busy = False
         self.listen_run_flag = threading.Event()
         self.listen_run_flag.set()
-        self.listen_thread = threading.Thread(target=self.listen)
-        self.listen_thread.start()
+        # self.listen_thread = threading.Thread(target=self.listen)
+        # self.listen_thread.start()
         self.load_config(filename='config.ini')
 
     def draw_static(self):
@@ -169,24 +182,25 @@ class MainGUI:
         self.oil_refill_button.grid(row=1, column=0)
         self.oil_start_button.grid(row=1, column=1)
         self.spec_connect_button.grid(row=2, column=0)
-        self.spec_command_entry.grid(row=3, column=0)
-        self.spec_send_button.grid(row=3, column=1)
         self.pump_refill_button.grid(row=4, column=0)
         self.pump_inject_button.grid(row=4, column=1)
         # Manual page
         # Config page
         self.save_config_button.grid(row=0, column=0)
         self.load_config_button.grid(row=0, column=1)
-        self.config_oil_tick_size_label.grid(row=1, column=0)
-        self.config_oil_tick_size.grid(row=1, column=1)
         self.config_spec_address_label.grid(row=2, column=0)
         self.config_spec_address.grid(row=2, column=1)
-        self.config_spec_port_label.grid(row=3, column=0)
-        self.config_spec_port.grid(row=3, column=1)
         self.volumes_label.grid(row=4, column=0)
         self.first_buffer_volume_box.grid(row=4, column=1)
         self.sample_volume_box.grid(row=4, column=2)
         self.last_buffer_volume_box.grid(row=4, column=3)
+        self.oil_valve_names_label.grid(row=5, column=0)
+        self.set_oil_valve_names_button.grid(row=5, column=7)
+        self.loading_valve_names_label.grid(row=6, column=0)
+        self.set_loading_valve_names_button.grid(row=6, column=7)
+        for i in range(0, 6):
+            self.oil_valve_name_boxes[i].grid(row=5, column=i+1)
+            self.loading_valve_name_boxes[i].grid(row=6, column=i+1)
         # Setup page
         self.refresh_com_ports.grid(row=0, column=0)
         self.AddPump.grid(row=0, column=2)
@@ -225,25 +239,58 @@ class MainGUI:
         SAXSDrivers.stop_instruments(self.instruments)
         # Add Elveflow stop if we use it for non-pressure
 
-    def load_config(self, filename=None):
+    def load_config(self, filename=None, preload=False):
         """Load a config.ini file."""
         self.config = ConfigParser()
         if filename is None:
             filename = filedialog.askopenfilename(initialdir=".", title="Select file", filetypes=(("config files", "*.ini"), ("all files", "*.*")))
         if filename != '':
             self.config.read(filename)
-            self.config_oil_tick_size.delete(0, 'end')
-            self.config_oil_tick_size.insert(0, self.config.get('Default', 'oil_tick_size'))
+            oil_config = self.config['Oil Valve']
+            loading_config = self.config['Loading Valve']
+            main_config = self.config['Main']
+            self.sucrose = main_config.getboolean('Sucrose', False)
+            self.config_spec_address.delete(0, 'end')
+            self.config_spec_address.insert(0, main_config.get('spec_host', ''))
+            for i in range(0, 6):
+                field = 'name'+str(i+1)
+                self.oil_valve_name_boxes[i].delete(0, 'end')
+                self.oil_valve_name_boxes[i].insert(0, oil_config.get(field, ''))
+                self.loading_valve_name_boxes[i].delete(0, 'end')
+                self.loading_valve_name_boxes[i].insert(0, loading_config.get(field, ''))
+        if not preload:
+            self.set_oil_valve_names()
+            self.set_loading_valve_names()
 
     def save_config(self):
         """Save a config.ini file."""
         filename = filedialog.asksaveasfilename(initialdir=".", title="Select file", filetypes=(("config files", "*.ini"), ("all files", "*.*")))
         if filename != '':
+            oil_config = self.config['Oil Valve']
+            loading_config = self.config['Loading Valve']
+            for i in range(0, 6):
+                field = 'name'+str(i+1)
+                oil_name = self.oil_valve_names[i].get()
+                if oil_name is not '':
+                    oil_config[field] = oil_name
+                loading_name = self.loading_valve_names[i].get()
+                if loading_name is not '':
+                    loading_config[field] = loading_name
             self.config.write(open(filename, 'w'))
+
+    def set_oil_valve_names(self):
+        """Send selection valve names to the control gui."""
+        for i in range(0, 6):
+            self.flowpath.valve2.name_position(i, self.oil_valve_names[i].get())
+
+    def set_loading_valve_names(self):
+        """Send selection valve names to the control gui."""
+        for i in range(0, 6):
+            self.flowpath.valve4.name_position(i, self.loading_valve_names[i].get())
 
     def connect_to_spec(self):
         """Connect to SPEC instance."""
-        self.SPEC_Connection.connect((self.spec_address.get(), self.spec_port.get()))
+        self.SoloController = solocomm.initConnections(self, host=self.spec_address.get())
 
     def handle_exception(self, exception, value, traceback):
         """Add python exceptions to the GUI log."""

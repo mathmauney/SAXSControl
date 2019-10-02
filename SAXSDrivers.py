@@ -1,7 +1,7 @@
 """Class definition to control a Hardvard pump through UART serial communication.
 
 The class shares a COM port. This ennables to configure several pumps though a
-PUMP chai- Therefore it doesn't support multiple pumps connected directly to
+PUMP chain- Therefore it doesn't support multiple pumps connected directly to
 Computer
 
 Version 1-04/04/19
