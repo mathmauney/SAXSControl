@@ -4,10 +4,11 @@ Pollack Lab-Cornell
 Alex Mauney
 """
 
+
 import tkinter as tk
 from tkinter.scrolledtext import ScrolledText
 from tkinter import filedialog
-from widgets import FluidLevel, FlowPath, ElveflowDisplay, TextHandler, MiscLogger, COMPortSelector
+from widgets import FluidLevel, FlowPath, ElveflowDisplay, TextHandler, MiscLogger, COMPortSelector, ConsoleUi
 import tkinter.ttk as ttk
 import time
 import SPEC
@@ -26,7 +27,7 @@ FULLSCREEN = True   # For testing, turn this off
 LOG_FOLDER = "log"
 
 
-class main:
+class Main:
     """Class for the main window of the SAXS Control."""
 
     def __init__(self, window):
@@ -42,7 +43,7 @@ class main:
         window_width = self.main_window.winfo_screenwidth()
         window_height = self.main_window.winfo_screenheight()
         core_width = round(2*window_width/3)
-        log_width = window_width - core_width - 3
+        log_width = window_width - core_width - 10
         state_height = 400
         core_height = window_height - state_height - 50
         log_height = core_height
@@ -137,7 +138,7 @@ class main:
         self.setup_page_buttons = []
         self.setup_page_variables = []
         self.refresh_com_ports = tk.Button(self.setup_page, text="Refresh COM", command=lambda: self.RefreshCOMList())
-        self.AddPump = tk.Button(self.setup_page, text="Add Pump", command=lambda: self.AddPumpSetButtons())
+        self.AddPump = tk.Button(self.setup_page, text="Add Pump", command=lambda: self.add_pump_set_buttons())
         self.AddRheodyne = tk.Button(self.setup_page, text="Add Rheodyne", command=lambda: self.AddRheodyneSetButtons())
         self.AddVICI = tk.Button(self.setup_page, text="Add VICI Valve", command=lambda: self.AddVICISetButtons())
         self.ControllerCOM = COMPortSelector(self.setup_page, exportselection=0, height=3)
@@ -146,8 +147,9 @@ class main:
 
         # logs
         log_length = 39  # in lines
-        self.python_logger_gui = ScrolledText(self.python_logs, state='disabled', height=log_length)
-        self.python_logger_gui.configure(font='TkFixedFont')
+        self.python_logger_gui = ConsoleUi(self.python_logs)
+        #self.python_logger_gui = ScrolledText(self.python_logs, state='disabled', height=log_length)
+        #self.python_logger_gui.configure(font='TkFixedFont')
         self.SPEC_logger = MiscLogger(self.SPEC_logs, state='disabled', height=log_length)
         self.SPEC_logger.configure(font='TkFixedFont')
         self.Instrument_logger = MiscLogger(self.Instrument_logs, state='disabled', height=log_length)
@@ -234,13 +236,13 @@ class main:
         # FlowPath
         self.flowpath.grid(row=0, column=0)
         # Python Log
-        self.python_logger_gui.grid(row=0, column=0, sticky='NSEW')
+        # self.python_logger_gui.grid(row=0, column=0, sticky='NSEW')
         nowtime = time.time()
-        python_handler = TextHandler(self.python_logger_gui)
+        # python_handler = TextHandler(self.python_logger_gui)
         file_handler = logging.FileHandler(os.path.join(LOG_FOLDER, "log%010d.txt" % nowtime), encoding='utf-8')
-        python_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+        # python_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
         file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
-        python_handler.setLevel(logging.DEBUG)
+        # python_handler.setLevel(logging.DEBUG)
         file_handler.setLevel(logging.DEBUG)
         # SPEC Log
         self.SPEC_logger.grid(row=0, column=0, sticky='NSEW')
@@ -250,13 +252,15 @@ class main:
         #                     format='%(asctime)s - %(levelname)s - %(message)s')
         self.python_logger = logging.getLogger("python")
         self.python_logger.setLevel(logging.DEBUG)
-        self.python_logger.addHandler(python_handler)  # logging to the screen
+        # self.python_logger.addHandler(python_handler)  # logging to the screen
+        self.python_logger_gui.pass_logger(self.python_logger)
         self.python_logger.addHandler(file_handler)  # logging to a file
 
     def stop(self):
         """Stop all running widgets."""
         self.oil_meter.stop()
         with self.queue.mutex:
+
             self.queue.queue.clear()
         SAXSDrivers.InstrumentTerminateFunction(self.Instruments)
         # Add Elveflow stop if we use it for non-pressure
@@ -352,7 +356,7 @@ class main:
             csvwriter.writerows(self.history)
 
     def exit_(self):
-        """Exit the GUI and stop all running things"""
+        """Exit the GUI and stop all running things."""
         print("STARTING EXIT PROCEDURE")
         self.stop()
         if self.elveflow_display.run_flag.is_set():
@@ -418,7 +422,8 @@ class main:
             for button in buttons:
                 button['state'] = 'normal'
 
-    def AddPumpSetButtons(self):
+    def add_pump_set_buttons(self):
+        """Add pump buttons to the setup page."""
         self.Instruments.append(SAXSDrivers.HPump(logger=self.Instrument_logger))
         self.NumberofPumps += 1
         InstrumentIndex = len(self.Instruments)-1
@@ -579,6 +584,6 @@ class main:
 
 if __name__ == "__main__":
     window = tk.Tk()
-    main(window)
+    Main(window)
     window.mainloop()
     print("Main window now destroyed. Exiting.")

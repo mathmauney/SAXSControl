@@ -441,7 +441,7 @@ class ControlThread(threading.Thread):
 
         commands = []
 
-        command=command[1].lstrip('LOGFILE ')
+        command = command[1].lstrip('LOGFILE ')
         fname, log = command.split(',')
 
         new_command = 'fprintf("%s", "%s")' %(str(fname), str(log))
@@ -453,37 +453,6 @@ class ControlThread(threading.Thread):
         commands.append(new_command)
         commands.append(new_command2)
         return commands
-
-    def queueCommandAndGetAnswer(self, command):
-
-        if command[1] == 'RUN C:\looptest2.hso' or command[1] == 'HOME' or command[1] == '\x1a':
-            timeout = 300
-        else:
-            timeout = 30
-
-        soloSoftCommandQueue.put(command)
-        answer = soloSoftAnswerQueue.get(timeout = timeout)
-        soloSoftAnswerQueue.task_done()
-
-        print(answer)
-
-        if answer == None or answer[1] == None:
-            raise CommException('None was returned in queueCommandAndGetAnswer on ' + str(command))
-
-        elif answer[1] == '0301 Robot Not Homed':
-            # wx.CallAfter(self.GUIFrame.OnSafetyButtonPressed, answer)
-            self.abort()
-        elif answer[1] == '0334 E-Stop':
-            # wx.CallAfter(self.GUIFrame.OnSafetyButtonPressed, answer)
-            self.abort()
-        elif answer[0] == 'STATUS' and answer[1] == '0':
-            # wx.CallAfter(self.GUIFrame.OnSafetyButtonPressed, answer)
-            self.abort()
-        elif len(answer[1].split())>1:
-            if answer[1].split()[0] == '0316':
-                # wx.CallAfter(self.GUIFrame.OnSafetyButtonPressed, answer)
-                self.abort()
-        return answer
 
     def queueAdxCommandAndGetAnswer(self, command):
         if command[1].split()[0] == 'SNAPOFF':
@@ -508,17 +477,6 @@ class ControlThread(threading.Thread):
             adxCommandQueue.put(commands)
         else:
             adxCommandQueue.put([command[1]])
-
-    def waitFor(self, state):
-        solostate = None
-
-        while(solostate != state and self.abortProcess == False):
-            time.sleep(1)
-            answer = self.queueCommandAndGetAnswer(('S', 'GETSTATUS'))
-            solostate = answer[1]
-
-            if answer == None:
-                raise CommException('Recieved None in WaitFor function')
 
     def abort(self):
 
