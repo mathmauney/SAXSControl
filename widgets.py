@@ -402,7 +402,9 @@ class ElveflowDisplay(tk.Canvas):
                     newData = self.elveflow_handler.fetchAll()
                     self.data.extend(newData)
                     self.update_plot()
+                    self.errorlogger.debug("tick")
                     if save_flag.is_set():
+                        self.errorlogger.debug("UWAHHHH! saving. Hopefully?")
                         for dict in newData:
                             self.saveFileWriter.writerow([str(dict[key]) for key in self.elveflow_handler.header])
                     time.sleep(ElveflowDisplay.POLLING_PERIOD)
@@ -489,14 +491,14 @@ class ElveflowDisplay(tk.Canvas):
     def update_plot(self):
         dataXLabel_var = self.dataXLabel_var.get()
         dataYLabel_var = self.dataYLabel_var.get()
+        self.ax.set_xlabel(dataXLabel_var, fontsize=14)
+        self.ax.set_ylabel(dataYLabel_var, fontsize=14)
         try:
             dataX = [elt[dataXLabel_var] for elt in self.data if not np.isnan(elt[dataXLabel_var]) and not np.isnan(elt[dataYLabel_var])]
             dataY = [elt[dataYLabel_var] for elt in self.data if not np.isnan(elt[dataXLabel_var]) and not np.isnan(elt[dataYLabel_var])]
             extremes = [np.nanmin(dataX), np.nanmax(dataX), np.nanmin(dataY), np.nanmax(dataY)]
             if len(dataX) > 0:
                 self.the_line.set_data(dataX, dataY)
-            self.ax.set_xlabel(self.dataXLabel_var.get(), fontsize=14)
-            self.ax.set_ylabel(self.dataYLabel_var.get(), fontsize=14)
         except (ValueError, KeyError):
             extremes = [*self.ax.get_xlim(), *self.ax.get_ylim()]
 
@@ -511,12 +513,10 @@ class ElveflowDisplay(tk.Canvas):
         # we haven't been using them elsewhere because they don't allow for graceful exiting/handling of
         # acquired resources, but I think it shouldn't matter if we crash-exit drawing to the screen
         # because we're closing the screen anyway, even if it becomes corrupted)
-        # def thisIsDumb():
-        #     self.canvas.draw()
-        # tempThread = threading.Thread(target=thisIsDumb, daemon=True)
-        # tempThread.start()
-        # print(tempThread)
-        # DERRICK COME FIX THIS!!!!!
+        def thisIsDumb():
+            self.canvas.draw()
+        tempThread = threading.Thread(target=thisIsDumb, daemon=True)
+        tempThread.start()
 
     def start_pressure(self, channel=1, isPressure=True):
         i = channel - 1
@@ -527,8 +527,8 @@ class ElveflowDisplay(tk.Canvas):
             if isPressure:
                 pressure_to_set = int(float(pressureValue.get()))
                 pressureValue.set(str(pressure_to_set))
-                self.elveflow_handler.setPressureLoop(channel, pressure_to_set, interruptEvent=self.setPressureStop_flag[i],
-                                                      onFinish=lambda: self.pressureSettingActive_var[i].set(False))
+                self.elveflow_handler.set_pressure_loop(channel, pressure_to_set, interruptEvent=self.setPressureStop_flag[i],
+                                                      on_finish=lambda: self.pressureSettingActive_var[i].set(False))
             else:  # volume control
                 if self.elveflow_config['sensor%i_type' % i] == "none":
                     self.errorlogger.error("Channel %d flow meter is not turned on" % channel)
@@ -554,7 +554,7 @@ class ElveflowDisplay(tk.Canvas):
                     self.kd_var.set("0.0")
                 flowrate_to_set = int(float(pressureValue.get()))
                 pressureValue.set(str(flowrate_to_set))
-                self.elveflow_handler.setVolumeLoop(channel, flowrate_to_set, interruptEvent=self.setPressureStop_flag[i], pid_constants=(kp, ki, kd))
+                self.elveflow_handler.set_volume_loop(channel, flowrate_to_set, interruptEvent=self.setPressureStop_flag[i], pid_constants=(kp, ki, kd))
         except ValueError:
             self.errorlogger.error("unknown value for channel %i" % channel)
             pressureValue.set("")

@@ -20,6 +20,10 @@ import SAXSDrivers
 import os.path
 import csv
 import solocomm
+import numpy as np
+import matplotlib
+from matplotlib import pyplot as plt
+matplotlib.use('TkAgg')
 
 
 FULLSCREEN = True   # For testing, turn this off
@@ -84,6 +88,13 @@ class main:
         self.spec_command_entry.bind("<Return>", lambda event: self.SPEC_Connection.command(self.spec_command.get()))
         self.pump_refill_button = tk.Button(self.auto_page, text='Refill Oil', command=lambda: self.pump_refill_command())
         self.pump_inject_button = tk.Button(self.auto_page, text='Run Buffer/Sample/Buffer', command=lambda: self.pump_inject_command())
+
+        self.fig_dpi = 96  # this shouldn't matter too much (because we normalize against it) except in how font sizes are handled in the plot
+        self.main_tab_fig = plt.Figure(figsize=(core_width/2/self.fig_dpi, core_height*2/3/self.fig_dpi), dpi=self.fig_dpi)
+        self.main_tab_ax = self.main_tab_fig.add_subplot(111)
+        self.canvas = matplotlib.backends.backend_tkagg.FigureCanvasTkAgg(self.main_tab_fig, self.auto_page)
+        self.canvas.draw()
+
         # Manual Page
         self.manual_page_buttons = []
         self.manual_page_variables = []
@@ -197,8 +208,10 @@ class main:
         self.oil_refill_button.grid(row=1, column=0)
         self.oil_start_button.grid(row=1, column=1)
         self.spec_connect_button.grid(row=2, column=0)
-        self.pump_refill_button.grid(row=4, column=0)
-        self.pump_inject_button.grid(row=4, column=1)
+        self.pump_refill_button.grid(row=3, column=0)
+        self.pump_inject_button.grid(row=3, column=1)
+        self.canvas.get_tk_widget().grid(row=0, column=2, rowspan=4, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+
         # Manual page
         # Config page
         self.save_config_button.grid(row=0, column=0)
@@ -272,7 +285,7 @@ class main:
         if filename != '':
             self.config.read(filename, encoding='utf-8')
             # TODO: there's a race condition here
-            time.sleep(0.5)
+            time.sleep(0.6)
             oil_config = self.config['Oil Valve']
             loading_config = self.config['Loading Valve']
             main_config = self.config['Main']
@@ -363,6 +376,28 @@ class main:
             self.listen_run_flag.clear()
         self.main_window.destroy()
 
+    def update_graph(self):
+        """look into self's ElveflowDisplay and reproduce it on self.main_tab_fig"""
+        self.main_tab_ax.set_title("Elveflow readout for most recent scan", fontsize=16)
+        dataXLabel_var = self.elveflow_display.dataXLabel_var.get()
+        dataYLabel_var = self.elveflow_display.dataYLabel_var.get()
+        self.main_tab_ax.set_xlabel(dataXLabel_var, fontsize=14)
+        self.main_tab_ax.set_ylabel(dataYLabel_var, fontsize=14)
+        try:
+            dataX = [elt[dataXLabel_var] for elt in self.elveflow_display.data if not np.isnan(elt[dataXLabel_var]) and not np.isnan(elt[dataYLabel_var])]
+            dataY = [elt[dataYLabel_var] for elt in self.elveflow_display.data if not np.isnan(elt[dataXLabel_var]) and not np.isnan(elt[dataYLabel_var])]
+            extremes = [np.nanmin(dataX), np.nanmax(dataX), np.nanmin(dataY), np.nanmax(dataY)]
+            if len(dataX) > 0:
+                self.the_line.set_data(dataX, dataY)
+        except (ValueError, KeyError):
+            extremes = [*self.main_tab_ax.get_xlim(), *self.main_tab_ax.get_ylim()]
+        limits = [item if item is not None else extremes[i]
+                  for (i, item) in enumerate(self.elveflow_display.axisLimits_numbers)] # todo: set the axis limits differently
+        self.main_tab_ax.set_xlim(*limits[0:2])
+        self.main_tab_ax.set_ylim(*limits[2:4])
+
+        self.canvas.draw() # may need the stupid hack from widgets.py
+
     def pump_refill_command(self):
         """Do nothing. It's a dummy command."""
         self.flowpath.set_unlock_state(False)
@@ -382,30 +417,44 @@ class main:
         pass
 
     def pump_inject_command(self):
-        """Do nothing. It's a dummy command."""
+        """Run a buffer-sample-buffer cycle."""
+        # before scheduling anything, clear the graph
+        self.main_tab_ax.clear()
+        self.the_line = self.main_tab_ax.plot([], [])[0]
         self.flowpath.set_unlock_state(False)
-        self.queue.put(self.pump.set_mode_vol)
-        self.queue.put((time.sleep, 0.1))
-        self.queue.put(self.pump.infuse)  # Set pump refill params
-        self.queue.put((time.sleep, 0.1))
-        self.queue.put((self.pump.set_target_vol, self.first_buffer_volume.get()/1000))
-        self.queue.put((time.sleep, 0.1))
-        self.queue.put(self.pump.start_pump)
-        self.queue.put((time.sleep, 10))
-        self.queue.put((self.pump.set_target_vol, self.sample_volume.get()/1000))
-        self.queue.put((time.sleep, 0.1))
-        self.queue.put(self.pump.start_pump)
-        self.queue.put((time.sleep, 10))
-        self.queue.put((self.pump.set_target_vol, self.last_buffer_volume.get()/1000))
-        self.queue.put((time.sleep, 0.1))
-        self.queue.put(self.pump.start_pump)
+
+        # then start queuing stuff
+        self.update_graph()
+        self.python_logger.debug("HELLO THERE!")
+        self.elveflow_display.start_saving()
+        time.sleep(3) # this will hang the GUI for a second! ...including, I think, getting more data. Oops
+        self.update_graph()
+        self.elveflow_display.stop_saving()
+        self.python_logger.debug("GENERAL KENOBI!")
+        # self.queue.put(self.pump.set_mode_vol)
+        self.queue.put(self.update_graph)
+        # self.queue.put(self.pump_refill_command)
+        #
+        # self.queue.put((time.sleep, 0.1))
+        # self.queue.put(self.pump.infuse)  # Set pump refill params
+        # self.queue.put((time.sleep, 0.1))
+        # self.queue.put((self.pump.set_target_vol, self.first_buffer_volume.get()/1000))
+        # self.queue.put((time.sleep, 0.1))
+        # self.queue.put(self.pump.start_pump)
+        # self.queue.put((time.sleep, 10))
+        # self.queue.put((self.pump.set_target_vol, self.sample_volume.get()/1000))
+        # self.queue.put((time.sleep, 0.1))
+        # self.queue.put(self.pump.start_pump)
+        # self.queue.put((time.sleep, 10))
+        # self.queue.put((self.pump.set_target_vol, self.last_buffer_volume.get()/1000))
+        # self.queue.put((time.sleep, 0.1))
+        # self.queue.put(self.pump.start_pump)
         #   Check valve positions
         #   Inject X uL
         #   Switch sample valve to sample loop
         #   Inject Y uL
         #   Switch sample valve to buffer positions
         #   Inject Z uL
-        pass
 
     def toggle_buttons(self):
         """Toggle certain buttons on and off when they should not be allowed to add to queue."""
