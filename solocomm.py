@@ -104,7 +104,6 @@ class SpecCommThread(threading.Thread):
 
         while True:
             if self.connected:
-                logger.debug("In loop")
                 commandList = adxCommandQueue.get()
                 adxCommandQueue.task_done()
 
