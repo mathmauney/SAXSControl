@@ -394,7 +394,7 @@ class Main:
             return
         with open(filename, 'w') as f:
             csvwriter = csv.writer(f)
-            csvwriter.writerow(main.CSV_HEADERS)
+            csvwriter.writerow(Main.CSV_HEADERS)
             csvwriter.writerows(self.history)
 
     def exit_(self):
