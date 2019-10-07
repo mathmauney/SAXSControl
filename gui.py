@@ -38,6 +38,10 @@ class Main:
         self.main_window = window
         self.main_window.report_callback_exception = self.handle_exception
         self.main_window.title('Main Window')
+        self.adxIsDone = False
+        self.illegalChars = '!@#$%^&*()."\\|:;<>?=~ ' + "'"
+        self.OldBaseDirectory = '/mnt/currentdaq/BioSAXS/'
+        self.OldSubDirectory = ''
         self.main_window.attributes("-fullscreen", True)  # Makes the window fullscreen
         # Figure out geometry
         window_width = self.main_window.winfo_screenwidth()
@@ -71,20 +75,23 @@ class Main:
         self.elveflow_page = tk.Frame(self.core)
         self.logs = ttk.Notebook(self.main_window, width=log_width, height=log_height)
         self.python_logs = tk.Frame(self.logs)
-        self.SPEC_logs = tk.Frame(self.logs)
         self.Instrument_logs = tk.Frame(self.logs)
         self.state_frame = tk.Frame(self.main_window, width=window_width, height=state_height, bg='blue')
         # Widgets on Main page
-        self.oil_ticksize = tk.IntVar(value=5)
-        self.oil_meter = FluidLevel(self.auto_page, color='black', ticksize=self.oil_ticksize)
-        self.oil_refill_button = tk.Button(self.auto_page, text='Refill Oil', command=lambda: self.oil_meter.update(100))
-        self.oil_start_button = tk.Button(self.auto_page, text='Start Oil', command=self.oil_meter.start)
-        self.spec_connect_button = tk.Button(self.auto_page, text='Connect to SPEC', command=self.connect_to_spec)
-        self.spec_command = tk.StringVar(value='')
-        self.spec_command_entry = tk.Entry(self.auto_page, textvariable=self.spec_command)
-        self.spec_command_entry.bind("<Return>", lambda event: self.SPEC_Connection.command(self.spec_command.get()))
-        self.pump_refill_button = tk.Button(self.auto_page, text='Refill Oil', command=lambda: self.pump_refill_command())
-        self.pump_inject_button = tk.Button(self.auto_page, text='Run Buffer/Sample/Buffer', command=lambda: self.pump_inject_command())
+        self.spec_base_directory_label = tk.Label(self.auto_page, text='Spec Base Directory:')
+        self.spec_base_directory = tk.StringVar(value='')
+        self.spec_base_directory_box = tk.Entry(self.auto_page, textvariable=self.spec_base_directory)
+        self.spec_sub_directory_label = tk.Label(self.auto_page, text='Spec Subdirectory:')
+        self.spec_sub_directory = tk.StringVar(value='')
+        self.spec_sub_directory_box = tk.Entry(self.auto_page, textvariable=self.spec_sub_directory)
+        self.spec_directory_button = tk.Button(self.auto_page, text='Change/Make Directory', command=self.ChangeDirectory)
+        self.spec_filename_label = tk.Label(self.auto_page, text='Filename:')
+        self.spec_filename = tk.StringVar(value='')
+        self.spec_filename_box = tk.Entry(self.auto_page, textvariable=self.spec_filename)
+        self.spec_fileno_label = tk.Label(self.auto_page, text='File #:')
+        self.spec_fileno = tk.IntVar(value=0)
+        self.spec_fileno_box = tk.Entry(self.auto_page, textvariable=self.spec_fileno)
+        self.pump_inject_button = tk.Button(self.auto_page, text='Run Buffer/Sample/Buffer', command=self.pump_inject_command)
         # Manual Page
         self.manual_page_buttons = []
         self.manual_page_variables = []
@@ -95,6 +102,7 @@ class Main:
         self.spec_address = tk.StringVar(value='')
         self.config_spec_address = tk.Entry(self.config_page, textvariable=self.spec_address)
         self.config_spec_address_label = tk.Label(self.config_page, text='SPEC Address')
+        self.spec_connect_button = tk.Button(self.config_page, text='Connect to SPEC', command=self.connect_to_spec)
         self.volumes_label = tk.Label(self.config_page, text='Buffer/Sample/Buffer volumes in uL:')
         self.first_buffer_volume = tk.IntVar(value=25)     # May need ot be a doublevar
         self.first_buffer_volume_box = tk.Entry(self.config_page, textvariable=self.first_buffer_volume)
@@ -110,6 +118,11 @@ class Main:
         self.loading_valve_names = []
         self.loading_valve_name_boxes = []
         self.set_loading_valve_names_button = tk.Button(self.config_page, text='Set Names', command=self.set_loading_valve_names)
+        self.tseries_time = tk.IntVar(value=0)
+        self.tseries_time_box = tk.Entry(self.config_page, textvariable=self.tseries_time)
+        self.tseries_frames = tk.IntVar(value=0)
+        self.tseries_frames_box = tk.Entry(self.config_page, textvariable=self.tseries_frames)
+        self.tseries_label = tk.Label(self.config_page, text='tseries parameters:')
         for i in range(6):
             self.oil_valve_names.append(tk.StringVar(value=''))
             self.oil_valve_name_boxes.append(tk.Entry(self.config_page, textvariable=self.oil_valve_names[i]))
@@ -150,8 +163,6 @@ class Main:
         self.python_logger_gui = ConsoleUi(self.python_logs)
         #self.python_logger_gui = ScrolledText(self.python_logs, state='disabled', height=log_length)
         #self.python_logger_gui.configure(font='TkFixedFont')
-        self.SPEC_logger = MiscLogger(self.SPEC_logs, state='disabled', height=log_length)
-        self.SPEC_logger.configure(font='TkFixedFont')
         self.Instrument_logger = MiscLogger(self.Instrument_logs, state='disabled', height=log_length)
         self.Instrument_logger.configure(font='TkFixedFont')
         self.controller.logger = self.Instrument_logger
@@ -175,6 +186,7 @@ class Main:
         # self.listen_thread = threading.Thread(target=self.listen)
         # self.listen_thread.start()
         self.load_config(filename='config.ini')
+        self.connect_to_spec()
 
     def draw_static(self):
         """Define the geometry of the frames and objects."""
@@ -191,22 +203,26 @@ class Main:
         self.core.add(self.setup_page, text='Setup')
         self.core.add(self.elveflow_page, text='Elveflow')
         # Log Tab Bar
-        self.logs.add(self.SPEC_logs, text='SPEC')
         self.logs.add(self.python_logs, text='Python')
         self.logs.add(self.Instrument_logs, text='Instruments')
         # Main Page
-        self.oil_meter.grid(row=0, columnspan=2)
-        self.oil_refill_button.grid(row=1, column=0)
-        self.oil_start_button.grid(row=1, column=1)
-        self.spec_connect_button.grid(row=2, column=0)
-        self.pump_refill_button.grid(row=4, column=0)
-        self.pump_inject_button.grid(row=4, column=1)
+        self.spec_base_directory_label.grid(row=0, column=0)
+        self.spec_base_directory_box.grid(row=1, column=0)
+        self.spec_sub_directory_label.grid(row=0, column=1)
+        self.spec_sub_directory_box.grid(row=1, column=1)
+        self.spec_directory_button.grid(row=1, column=2)
+        self.spec_filename_label.grid(row=2, column=0)
+        self.spec_filename_box.grid(row=3, column=0)
+        self.spec_fileno_label.grid(row=2, column=1)
+        self.spec_fileno_box.grid(row=3, column=1)
+        self.pump_inject_button.grid(row=5, column=0, pady=25)
         # Manual page
         # Config page
         self.save_config_button.grid(row=0, column=0)
         self.load_config_button.grid(row=0, column=1)
         self.config_spec_address_label.grid(row=2, column=0)
         self.config_spec_address.grid(row=2, column=1)
+        self.spec_connect_button.grid(row=2, column=2)
         self.volumes_label.grid(row=4, column=0)
         self.first_buffer_volume_box.grid(row=4, column=1)
         self.sample_volume_box.grid(row=4, column=2)
@@ -223,6 +239,9 @@ class Main:
         self.elveflow_sensortypes_label.grid(row=8, column=0)
         for i in range(4):
             self.elveflow_sensortypes_optionmenu[i].grid(row=8, column=i+1)
+        self.tseries_label.grid(row=9, column=0)
+        self.tseries_time_box.grid(row=9, column=1)
+        self.tseries_frames_box.grid(row=9, column=2)
 
         # Setup page
         self.refresh_com_ports.grid(row=0, column=0)
@@ -245,8 +264,6 @@ class Main:
         # python_handler.setLevel(logging.DEBUG)
         file_handler.setLevel(logging.DEBUG)
         # SPEC Log
-        self.SPEC_logger.grid(row=0, column=0, sticky='NSEW')
-        self.SPEC_Connection = SPEC.connection(logger=self.SPEC_logger, button=self.spec_connect_button)
         self.Instrument_logger.grid(row=0, column=0, sticky='NSEW')
         # logging.basicConfig(level=logging.INFO,
         #                     format='%(asctime)s - %(levelname)s - %(message)s')
@@ -258,9 +275,7 @@ class Main:
 
     def stop(self):
         """Stop all running widgets."""
-        self.oil_meter.stop()
         with self.queue.mutex:
-
             self.queue.queue.clear()
         SAXSDrivers.InstrumentTerminateFunction(self.Instruments)
         # Add Elveflow stop if we use it for non-pressure
@@ -281,9 +296,20 @@ class Main:
             loading_config = self.config['Loading Valve']
             main_config = self.config['Main']
             elveflow_config = self.config['Elveflow']
+            spec_config = self.config['SPEC']
+            self.spec_sub_directory_box.delete(0, 'end')
+            self.spec_sub_directory_box.insert(0, spec_config.get('sub_dir', self.OldSubDirectory))
+            self.OldSubDirectory = self.spec_sub_directory.get()
+            self.spec_base_directory_box.delete(0, 'end')
+            self.spec_base_directory_box.insert(0, spec_config.get('base_dir', self.OldBaseDirectory))
+            self.OldBaseDirectory = self.spec_base_directory.get()
             self.sucrose = main_config.getboolean('Sucrose', False)
             self.config_spec_address.delete(0, 'end')
             self.config_spec_address.insert(0, main_config.get('spec_host', ''))
+            self.tseries_time_box.delete(0, 'end')
+            self.tseries_time_box.insert(0, main_config.get('tseries_time', '10'))
+            self.tseries_frames_box.delete(0, 'end')
+            self.tseries_frames_box.insert(0, main_config.get('tseries_frames', '10'))
             for i in range(0, 6):
                 field = 'name'+str(i+1)
                 self.oil_valve_name_boxes[i].delete(0, 'end')
@@ -306,6 +332,7 @@ class Main:
             oil_config = self.config['Oil Valve']
             loading_config = self.config['Loading Valve']
             elveflow_config = self.config['Elveflow']
+            spec_config = self.config['SPEC']
 
             for i in range(0, 6):
                 field = 'name'+str(i+1)
@@ -323,6 +350,9 @@ class Main:
             elveflow_config['sensor3_type'] = self.elveflow_sensortypes[2].get()
             elveflow_config['sensor4_type'] = self.elveflow_sensortypes[3].get()
 
+            spec_config['tseries_time'] = self.tseries_time.get()
+            spec_config['tseries_frames'] = self.tseries_frames.get()
+
             self.config.write(open(filename, 'w', encoding='utf-8'))
 
     def set_oil_valve_names(self):
@@ -337,7 +367,10 @@ class Main:
 
     def connect_to_spec(self):
         """Connect to SPEC instance."""
-        self.SoloController = solocomm.initConnections(self, host=self.spec_address.get())
+        try:
+            self.solo_controller.ADXComm.tryReconnect(TryOnce=True, host=self.spec_address.get())
+        except AttributeError:
+            self.solo_controller = solocomm.initConnections(self, host=self.spec_address.get())
 
     def handle_exception(self, exception, value, traceback):
         """Add python exceptions to the GUI log."""
@@ -361,8 +394,8 @@ class Main:
         self.stop()
         if self.elveflow_display.run_flag.is_set():
             self.elveflow_display.stop(shutdown=True)
-        if self.SPEC_Connection.run_flag.is_set():
-            self.SPEC_Connection.stop()
+        # if self.SPEC_Connection.run_flag.is_set():
+        #    self.SPEC_Connection.stop()
         if self.listen_run_flag.is_set():
             self.listen_run_flag.clear()
         self.main_window.destroy()
@@ -413,8 +446,7 @@ class Main:
 
     def toggle_buttons(self):
         """Toggle certain buttons on and off when they should not be allowed to add to queue."""
-        buttons = (self.pump_inject_button,
-                   self.pump_refill_button)
+        buttons = (self.pump_inject_button, self.pump_inject_button)
         if self.queue_busy:
             for button in buttons:
                 button['state'] = 'disabled'
@@ -580,6 +612,148 @@ class Main:
         for i in range(len(self.manual_page_buttons)):
             for y in range(len(self.manual_page_buttons[i])):
                 self.manual_page_buttons[i][y].grid(row=i, column=y)
+
+    def ChangeDirectory(self):
+        BaseDirectory = self.spec_base_directory.get()
+        SubDirectory = self.spec_sub_directory.get()
+
+        for eachChar in SubDirectory:
+            if eachChar in self.illegalChars:
+                tk.messagebox.showinfo("Error", 'Directory name contains invalid characters. \nThese include: %s (includes spaces).' % (self.illegalChars), 'Invalid Input')
+                return (False)
+
+        if '//' in SubDirectory:
+            tk.messagebox.showinfo("Error", 'Directory path is invalid. Please check path. \nHint: subdirectory name contains "//".', 'Invalid Input')
+            return (False)
+
+        if SubDirectory != "":
+            if SubDirectory[0] == '/':
+                SubDirectory = SubDirectory[1:]
+            if SubDirectory[-1] == '/':
+                SubDirectory = SubDirectory[:-1]
+        if BaseDirectory != "":
+            if BaseDirectory[-1] != '/':
+                BaseDirectory = BaseDirectory+'/'
+
+        Directory = os.path.join(BaseDirectory, SubDirectory)
+
+        OldDirectory = os.path.join(self.OldBaseDirectory, self.OldSubDirectory)
+
+        if OldDirectory != Directory:
+            # self.SetStatus('Changing Directory . . .')
+            # print 'Directory test:'
+            # print OldDirectory
+            # print Directory
+            if OldDirectory[-1] != '/':
+                OldDirectory = OldDirectory+'/'
+            if Directory[-1] != '/':
+                Directory = Directory+'/'
+
+            od_parts = OldDirectory.split('/')
+            nd_parts = Directory.split('/')
+
+            index = 0
+            check = min(len(od_parts), len(nd_parts))
+            found = False
+
+            for a in range(check):
+                if od_parts[a] != nd_parts[a]:
+                    index = a
+                    found = True
+                    break
+            if not found:
+                index = check
+
+            # print 'Index: %i' %(index)
+
+
+            cmd = ''
+            for a in range(index+1, len(nd_parts)):
+                self.adxIsDone = False
+                # print 'New directories to make'
+                tdirectory = '/'.join(nd_parts[:a])
+                # print tdirectory
+                if a < len(nd_parts)-1:
+                    cmd = cmd + 'MKDIR_NO ' + str(tdirectory)+','
+                    # solocomm.controlQueue.put([('A', 'MKDIR_NO ' + str(tdirectory))])
+                else:
+                    cmd = cmd + 'MKDIR ' + str(tdirectory)
+
+            solocomm.controlQueue.put([('A', cmd)])
+
+            self.main_window.after(1000, self.OnMkdirTimer)
+
+        self.OldBaseDirectory = BaseDirectory
+        self.OldSubDirectory = SubDirectory
+
+        return (True, Directory)
+
+    def OnMkdirTimer(self):
+        if self.adxIsDone:
+            if not self.exposing:
+                solocomm.controlQueue.put([('G', 'ADXDONE_OK')])
+        pass
+
+
+    def OnExposeButton(self, postfix=None):
+
+        ### Input Sanitation ###
+        try:
+            NoOfFrames = self.tseries_frames.get()
+            ExposureTime = self.tseries_time.get()
+            FileNumber = self.spec_fileno.get()
+
+            if NoOfFrames < 1 or FileNumber < 0:
+                raise ValueError
+
+        except ValueError:
+            tk.messagebox.showinfo('Error', 'Exposure time, number of frames or filenumber is invalid.', 'Invalid Input')
+            return
+        ###
+
+        Filename = self.spec_filename.get().strip()
+
+        for eachChar in Filename:
+            if eachChar in self.illegalChars:
+                tk.messagebox.showinfo('Error', 'Filename contains invalid characters. \nThese include: %s (includes spaces).' %(self.illegalChars), 'Invalid Input')
+                return
+
+        if Filename == '':
+            tk.messagebox.showinfo('Error', 'File must have a name.', 'Invalid Input')
+            return
+
+        changedir, Directory = self.ChangeDirectory()
+
+        if changedir:
+            #try:
+            #    self.writeLogFile()
+            #except:
+            #    pass
+            self.exposing = True
+            FileNumber = FileNumber = self.spec_fileno.get()
+            # NewDark = self.exposureChkboxForceDark.GetValue()
+            #self.exposeButton.Enable(False)
+            #self.SetStatus('Exposing Sample')
+
+            #self.counter.SetTime((ExposureTime+0.04) * int(NoOfFrames)+1)
+            #self.soundInitiatingExposure.Play()
+
+            NewDark = '0'
+
+            print(('A EXPOSE '+Filename + '_' + FileNumber + ',' + str(ExposureTime) + ',' + str(NoOfFrames)))
+
+            file = Filename
+            file += '_' + FileNumber
+            if postfix is not None:
+                file += '_' + postfix
+
+            solocomm.controlQueue.put([('A', 'EXPOSE '+ file + ',' +
+                                         str(ExposureTime) + ',' + str(NoOfFrames) +
+                                         ',' + str(Directory) + ',' + str(NewDark))])
+
+            self.spec_fileno.delete(0, 'end')
+            self.spec_fileno.insert(0, FileNumber+1)
+
 
 
 if __name__ == "__main__":

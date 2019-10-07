@@ -19,7 +19,7 @@ from matplotlib import pyplot as plt
 
 matplotlib.use('TkAgg')
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('python')
 
 
 class COMPortSelector(tk.Listbox):

@@ -85,6 +85,7 @@ class SpecCommThread(threading.Thread):
         self.conLost = False
         self.exposure = False
         self.LEDOn = False
+        self.connected = False
 
     def run(self):
 
@@ -92,55 +93,58 @@ class SpecCommThread(threading.Thread):
         try:
             self.specCommand = MySpecCommand('', self.host, self)
             print('Connected to SPEC')
+            self.connected = True
         except SpecClient.SpecClientError.SpecClientTimeoutError:
             self.specCommand = None
             controlQueue.put([('G', 'A LED_ERROR')])
             controlQueue.put([('G', 'A CONNECT_ERROR')])
-            logger.exception("Caught exception in SoloComm:")
+            logger.warning("Unable to connect to SPEC")
 
         ###############################################
 
         while True:
-            commandList = adxCommandQueue.get()
-            adxCommandQueue.task_done()
+            if self.connected:
+                commandList = adxCommandQueue.get()
+                adxCommandQueue.task_done()
 
-            print('SpecThread Processing : ', str(commandList))
+                print('SpecThread Processing : ', str(commandList))
 
-            self.abortProcess = False
-            self.exposure = False
-            self.LEDOn = False
+                self.abortProcess = False
+                self.exposure = False
+                self.LEDOn = False
 
-            for eachCommand in commandList:
+                for eachCommand in commandList:
 
-                if self.abortProcess:
-                    break
+                    if self.abortProcess:
+                        break
 
-                try:
-                    self.specCommand.ClearReply()
-                    self.specCommand.executeCommand(eachCommand)
-                    if eachCommand.split()[0] == 'rgseries':
-                        controlQueue.put([('G', 'A STARTWATCH')])
-                        self.exposure = True
-                    if len(eachCommand.split())>1:
-                        if eachCommand.split()[1] == 'mkdir':
-                            self.LEDOn = True
-                    answer = self.waitForAnswerFromSpec()
-                    print('Received Answer From SPEC :', str(answer))
-                except (AttributeError, SpecClient.SpecClientError.SpecClientNotConnectedError):
-                    controlQueue.put([('G', 'A LED_ERROR')])
-                    controlQueue.put([('G', 'A CONNECT_ERROR')])
-                    self.abortProcess = True
+                    try:
+                        self.specCommand.ClearReply()
+                        self.specCommand.executeCommand(eachCommand)
+                        if eachCommand.split()[0] == 'rgseries':
+                            controlQueue.put([('G', 'A STARTWATCH')])
+                            self.exposure = True
+                        if len(eachCommand.split())>1:
+                            if eachCommand.split()[1] == 'mkdir':
+                                self.LEDOn = True
+                        answer = self.waitForAnswerFromSpec()
+                        print('Received Answer From SPEC :', str(answer))
+                    except (AttributeError, SpecClient.SpecClientError.SpecClientNotConnectedError):
+                        controlQueue.put([('G', 'A LED_ERROR')])
+                        controlQueue.put([('G', 'A CONNECT_ERROR')])
+                        self.abortProcess = True
+                        self.connected = False
 
-            if not self.abortProcess and self.exposure and not self.LEDOn:
-                controlQueue.put([('G', 'ADXDONE_EXP')])
-            elif not self.abortProcess and not self.LEDOn:
-                controlQueue.put([('G', 'ADXDONE_OK')])
-            elif not self.abortProcess and self.LEDOn:
-                controlQueue.put([('G', 'ADXDONE_LED_ON')])
-            elif self.abortProcess and self.LEDOn:
-                controlQueue.put([('G', 'ADXDONE_ABORT_DIR')])
-            else:
-                controlQueue.put([('G', 'ADXDONE_ABORT')])
+                if not self.abortProcess and self.exposure and not self.LEDOn:
+                    controlQueue.put([('G', 'ADXDONE_EXP')])
+                elif not self.abortProcess and not self.LEDOn:
+                    controlQueue.put([('G', 'ADXDONE_OK')])
+                elif not self.abortProcess and self.LEDOn:
+                    controlQueue.put([('G', 'ADXDONE_LED_ON')])
+                elif self.abortProcess and self.LEDOn:
+                    controlQueue.put([('G', 'ADXDONE_ABORT_DIR')])
+                else:
+                    controlQueue.put([('G', 'ADXDONE_ABORT')])
 
     def waitForAnswerFromSpec(self):
         self.waitingForAnswer = True
@@ -185,8 +189,12 @@ class SpecCommThread(threading.Thread):
             loopcount = loopcount + 1
         print('Waiting for abort response timed out!!!')
 
-    def tryReconnect(self, TryOnce=False):
+    def tryReconnect(self, TryOnce=False, host=None):
         reconnected = False
+        if host is None:
+            host = self.host
+        else:
+            self.host = host
 
         if TryOnce:
             try:
@@ -196,6 +204,7 @@ class SpecCommThread(threading.Thread):
                 print('Connected!')
                 return True
             except SpecClient.SpecClientError.SpecClientTimeoutError:
+                logger.warning("Unable to connect to SPEC")
                 return False
         else:
             while not reconnected:
