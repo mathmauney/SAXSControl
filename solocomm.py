@@ -85,6 +85,7 @@ class SpecCommThread(threading.Thread):
         self.conLost = False
         self.exposure = False
         self.LEDOn = False
+        self.connected = False
 
     def run(self):
 
@@ -92,55 +93,59 @@ class SpecCommThread(threading.Thread):
         try:
             self.specCommand = MySpecCommand('', self.host, self)
             print('Connected to SPEC')
+            self.connected = True
         except SpecClient.SpecClientError.SpecClientTimeoutError:
             self.specCommand = None
             controlQueue.put([('G', 'A LED_ERROR')])
             controlQueue.put([('G', 'A CONNECT_ERROR')])
-            logger.exception("Caught exception in SoloComm:")
+            logger.warning("Unable to connect to SPEC")
 
         ###############################################
 
         while True:
-            commandList = adxCommandQueue.get()
-            adxCommandQueue.task_done()
+            if self.connected:
+                commandList = adxCommandQueue.get()
+                adxCommandQueue.task_done()
 
-            print('SpecThread Processing : ', str(commandList))
+                print('SpecThread Processing : ', str(commandList))
 
-            self.abortProcess = False
-            self.exposure = False
-            self.LEDOn = False
+                self.abortProcess = False
+                self.exposure = False
+                self.LEDOn = False
 
-            for eachCommand in commandList:
+                for eachCommand in commandList:
 
-                if self.abortProcess:
-                    break
+                    if self.abortProcess:
+                        break
 
-                try:
-                    self.specCommand.ClearReply()
-                    self.specCommand.executeCommand(eachCommand)
-                    if eachCommand.split()[0] == 'rgseries':
-                        controlQueue.put([('G', 'A STARTWATCH')])
-                        self.exposure = True
-                    if len(eachCommand.split())>1:
-                        if eachCommand.split()[1] == 'mkdir':
-                            self.LEDOn = True
-                    answer = self.waitForAnswerFromSpec()
-                    print('Received Answer From SPEC :', str(answer))
-                except (AttributeError, SpecClient.SpecClientError.SpecClientNotConnectedError):
-                    controlQueue.put([('G', 'A LED_ERROR')])
-                    controlQueue.put([('G', 'A CONNECT_ERROR')])
-                    self.abortProcess = True
+                    try:
+                        self.specCommand.ClearReply()
+                        self.specCommand.executeCommand(eachCommand)
+                        if eachCommand.split()[0] == 'rgseries':
+                            controlQueue.put([('G', 'A STARTWATCH')])
+                            self.exposure = True
+                        if len(eachCommand.split())>1:
+                            if eachCommand.split()[1] == 'mkdir':
+                                self.LEDOn = True
+                        answer = self.waitForAnswerFromSpec()
+                        print('Received Answer From SPEC :', str(answer))
+                    except (AttributeError, SpecClient.SpecClientError.SpecClientNotConnectedError):
+                        controlQueue.put([('G', 'A LED_ERROR')])
+                        controlQueue.put([('G', 'A CONNECT_ERROR')])
+                        self.abortProcess = True
+                        self.connected = False
 
-            if not self.abortProcess and self.exposure and not self.LEDOn:
-                controlQueue.put([('G', 'ADXDONE_EXP')])
-            elif not self.abortProcess and not self.LEDOn:
-                controlQueue.put([('G', 'ADXDONE_OK')])
-            elif not self.abortProcess and self.LEDOn:
-                controlQueue.put([('G', 'ADXDONE_LED_ON')])
-            elif self.abortProcess and self.LEDOn:
-                controlQueue.put([('G', 'ADXDONE_ABORT_DIR')])
-            else:
-                controlQueue.put([('G', 'ADXDONE_ABORT')])
+                if not self.abortProcess and self.exposure and not self.LEDOn:
+                    controlQueue.put([('G', 'ADXDONE_EXP')])
+                elif not self.abortProcess and not self.LEDOn:
+                    controlQueue.put([('G', 'ADXDONE_OK')])
+                elif not self.abortProcess and self.LEDOn:
+                    controlQueue.put([('G', 'ADXDONE_LED_ON')])
+                elif self.abortProcess and self.LEDOn:
+                    controlQueue.put([('G', 'ADXDONE_ABORT_DIR')])
+                else:
+                    controlQueue.put([('G', 'ADXDONE_ABORT')])
+            time.sleep(.1)
 
     def waitForAnswerFromSpec(self):
         self.waitingForAnswer = True
@@ -185,8 +190,12 @@ class SpecCommThread(threading.Thread):
             loopcount = loopcount + 1
         print('Waiting for abort response timed out!!!')
 
-    def tryReconnect(self, TryOnce=False):
+    def tryReconnect(self, TryOnce=False, host=None):
         reconnected = False
+        if host is None:
+            host = self.host
+        else:
+            self.host = host
 
         if TryOnce:
             try:
@@ -196,6 +205,7 @@ class SpecCommThread(threading.Thread):
                 print('Connected!')
                 return True
             except SpecClient.SpecClientError.SpecClientTimeoutError:
+                logger.warning("Unable to connect to SPEC")
                 return False
         else:
             while not reconnected:
@@ -322,8 +332,10 @@ class ControlThread(threading.Thread):
     def run(self):
         while self.MainGUI.listen_run_flag.is_set():
             if controlQueue.empty():
+                if self.MainGUI.queue_busy:
+                    self.MainGUI.toggle_buttons()
                 self.MainGUI.queue_busy = False
-                self.MainGUI.toggle_buttons()
+                time.sleep(.1)
             else:
                 queue_item = controlQueue.get()
                 if isinstance(queue_item, list):
@@ -338,9 +350,15 @@ class ControlThread(threading.Thread):
                     self.MainGUI.toggle_buttons()
 
                 if isinstance(queue_item, tuple):
-                    queue_item[0](*queue_item[1:])
+                    try:
+                        queue_item[0](*queue_item[1:])
+                    except:
+                        logger.exception("Caught exception in tuple queue item:")
                 elif callable(queue_item):
-                    queue_item()
+                    try:
+                        queue_item()
+                    except:
+                        logger.exception("Caught exception in tuple queue item:")
                 else:
                     commandList = queue_item
                     for command in commandList:
@@ -441,7 +459,7 @@ class ControlThread(threading.Thread):
 
         commands = []
 
-        command=command[1].lstrip('LOGFILE ')
+        command = command[1].lstrip('LOGFILE ')
         fname, log = command.split(',')
 
         new_command = 'fprintf("%s", "%s")' %(str(fname), str(log))
@@ -453,37 +471,6 @@ class ControlThread(threading.Thread):
         commands.append(new_command)
         commands.append(new_command2)
         return commands
-
-    def queueCommandAndGetAnswer(self, command):
-
-        if command[1] == 'RUN C:\looptest2.hso' or command[1] == 'HOME' or command[1] == '\x1a':
-            timeout = 300
-        else:
-            timeout = 30
-
-        soloSoftCommandQueue.put(command)
-        answer = soloSoftAnswerQueue.get(timeout = timeout)
-        soloSoftAnswerQueue.task_done()
-
-        print(answer)
-
-        if answer == None or answer[1] == None:
-            raise CommException('None was returned in queueCommandAndGetAnswer on ' + str(command))
-
-        elif answer[1] == '0301 Robot Not Homed':
-            # wx.CallAfter(self.GUIFrame.OnSafetyButtonPressed, answer)
-            self.abort()
-        elif answer[1] == '0334 E-Stop':
-            # wx.CallAfter(self.GUIFrame.OnSafetyButtonPressed, answer)
-            self.abort()
-        elif answer[0] == 'STATUS' and answer[1] == '0':
-            # wx.CallAfter(self.GUIFrame.OnSafetyButtonPressed, answer)
-            self.abort()
-        elif len(answer[1].split())>1:
-            if answer[1].split()[0] == '0316':
-                # wx.CallAfter(self.GUIFrame.OnSafetyButtonPressed, answer)
-                self.abort()
-        return answer
 
     def queueAdxCommandAndGetAnswer(self, command):
         if command[1].split()[0] == 'SNAPOFF':
@@ -509,19 +496,8 @@ class ControlThread(threading.Thread):
         else:
             adxCommandQueue.put([command[1]])
 
-    def waitFor(self, state):
-        solostate = None
-
-        while(solostate != state and self.abortProcess == False):
-            time.sleep(1)
-            answer = self.queueCommandAndGetAnswer(('S', 'GETSTATUS'))
-            solostate = answer[1]
-
-            if answer == None:
-                raise CommException('Recieved None in WaitFor function')
-
     def abort(self):
-
+        logger.warning("Queue Aborted")
         if self.busy:
             self.abortProcess = True
 
