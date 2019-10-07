@@ -286,7 +286,7 @@ class HPump:
             self.controller.write(("-"+self.address+"DIRINF"+"\n\r").encode())
         time.sleep(0.2)
         self.check_direction("INFUSE")
-        self.logger.append(self.name+" set to Infuse")
+        self.logger.append(self.name+" set to infuse")
 
     def refill(self, resource=pumpserial):
         if not HPump.enabled:
@@ -304,7 +304,7 @@ class HPump:
             self.controller.write(("-"+self.address+"DIRREF"+"\n\r").encode())
         time.sleep(0.2)
         self.check_direction("REFILL")
-        self.logger.append(self.name+" set to Infuse")
+        self.logger.append(self.name+" set to refill")
 
     def reverse(self, resource=pumpserial):
         if not HPump.enabled:
@@ -334,7 +334,8 @@ class HPump:
                 self.controller.open()
             self.controller.write(("-"+self.address+"MOD PMP"+"\n\r").encode())
         time.sleep(0.2)
-        self.logger.append(str(self.check_mode()))
+        self.check_mode("PUMP")
+        self.logger.append(self.name+" mode set to PUMP")
 
     def set_mode_vol(self,  resource=pumpserial):
         if not HPump.enabled:
@@ -351,7 +352,7 @@ class HPump:
             self.controller.write(("-"+self.address+"MOD VOL"+"\n\r").encode())
         time.sleep(0.2)
         self.check_mode("VOL")
-        self.logger.append(self.name+" Mode set to Volume")
+        self.logger.append(self.name+" mode set to VOL")
 
     def set_mode_progam(self,  resource=pumpserial):
         if not HPump.enabled:
@@ -500,7 +501,7 @@ class HPump:
             if not self.controller.is_open:
                 self.controller.open()
             while self.controller.in_waiting > 0:   # Clear Buffer
-                self.logger.append(self.controller.read().decode())
+                self.controller.read().decode()
             self.controller.write(("-"+self.address+"DIR"+"\n\r").encode())
             time.sleep(0.2)
             while self.controller.in_waiting > 0:
@@ -532,7 +533,7 @@ class HPump:
             if not self.controller.is_open:
                 self.controller.open()
             while self.controller.in_waiting > 0:   # Clear Buffer
-                self.logger.append(self.controller.read().decode())
+                self.controller.read().decode()
             self.controller.write(("-"+self.address+"MOD"+"\n\r").encode())
             time.sleep(0.2)
             while self.controller.in_waiting > 0:
