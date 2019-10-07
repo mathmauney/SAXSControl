@@ -6,7 +6,8 @@ import math
 import tkinter.font
 import logging
 import csv
-import tkinter.scrolledtext as ScrolledText
+from tkinter.scrolledtext import ScrolledText
+from tkinter import ttk, VERTICAL, HORIZONTAL, N, S, E, W
 import numpy as np
 import FileIO
 import threading
@@ -16,8 +17,11 @@ from queue import Queue, Empty as Queue_Empty
 import warnings
 import matplotlib
 from matplotlib import pyplot as plt
+
 matplotlib.use('TkAgg')
 warnings.filterwarnings("ignore", message="Attempting to set identical bottom==top")
+
+logger = logging.getLogger('python')
 
 
 class COMPortSelector(tk.Listbox):
@@ -25,6 +29,69 @@ class COMPortSelector(tk.Listbox):
         self.delete(0, tk.END)
         for item in COMList:
             self.insert(tk.END, item.device+"  "+item.description)
+
+
+class QueueHandler(logging.Handler):
+    """Class to send logging records to a queue
+    It can be used from different threads
+    The ConsoleUi class polls this queue to display records in a ScrolledText widget
+    """
+    # Example from Moshe Kaplan: https://gist.github.com/moshekaplan/c425f861de7bbf28ef06
+    # (https://stackoverflow.com/questions/13318742/python-logging-to-tkinter-text-widget) is not thread safe!
+    # See https://stackoverflow.com/questions/43909849/tkinter-python-crashes-on-new-thread-trying-to-log-on-main-thread
+
+    def __init__(self, log_queue):
+        super().__init__()
+        self.log_queue = log_queue
+
+    def emit(self, record):
+        self.log_queue.put(record)
+
+
+class ConsoleUi:
+    """Poll messages from a logging queue and display them in a scrolled text widget"""
+
+    def __init__(self, frame):
+        self.frame = frame
+        # Create a ScrolledText wdiget
+        self.scrolled_text = ScrolledText(frame, state='disabled', height=39)
+        self.scrolled_text.grid(row=0, column=0, sticky=(N, S, W, E))
+        self.scrolled_text.configure(font='TkFixedFont')
+        self.scrolled_text.tag_config('INFO', foreground='black')
+        self.scrolled_text.tag_config('DEBUG', foreground='gray')
+        self.scrolled_text.tag_config('WARNING', foreground='orange')
+        self.scrolled_text.tag_config('ERROR', foreground='red')
+        self.scrolled_text.tag_config('CRITICAL', foreground='red', underline=1)
+        # Create a logging handler using a queue
+        self.log_queue = Queue()
+        self.queue_handler = QueueHandler(self.log_queue)
+        formatter = logging.Formatter('%(asctime)s: %(message)s')
+        self.queue_handler.setFormatter(formatter)
+        logger.addHandler(self.queue_handler)
+        # Start polling messages from the queue
+        self.frame.after(100, self.poll_log_queue)
+
+    def display(self, record):
+        msg = self.queue_handler.format(record)
+        self.scrolled_text.configure(state='normal')
+        self.scrolled_text.insert(tk.END, msg + '\n', record.levelname)
+        self.scrolled_text.configure(state='disabled')
+        # Autoscroll to the bottom
+        self.scrolled_text.yview(tk.END)
+
+    def poll_log_queue(self):
+        # Check every 100ms if there is a new message in the queue to display
+        while True:
+            try:
+                record = self.log_queue.get(block=False)
+            except Queue_Empty:
+                break
+            else:
+                self.display(record)
+        self.frame.after(100, self.poll_log_queue)
+
+    def pass_logger(self, in_logger):
+        in_logger.addHandler(self.queue_handler)
 
 
 class FluidLevel(tk.Canvas):
@@ -119,7 +186,7 @@ class TextHandler(logging.Handler):
         self.text.after(TextHandler.POLLING_PERIOD, self._update)
 
 
-class MiscLogger(ScrolledText.ScrolledText):
+class MiscLogger(ScrolledText):
     def append(self, msg):
         self.configure(state='normal')
         self.insert(tk.END, msg + '\n')
@@ -627,6 +694,7 @@ class FlowPath(tk.Canvas):
             self.center_circle = canvas.create_circle(x, y, self.small_radius, fill='dimgray', outline='dimgray', tag=self.name)
             self.circles = []
             self.fluid_lines = []
+            self.hardware = None
             for i in range(0, 6):
                 circle = canvas.create_circle(x+self.offset*math.cos(i*self.rads), y+self.offset*math.sin(i*self.rads), self.small_radius, fill='white', outline='white', tag=self.name)
                 self.circles.append(circle)
@@ -638,6 +706,30 @@ class FlowPath(tk.Canvas):
             if position == 'center':
                 position = 6
             self.fluid_lines[position].append(object)   # TODO: Add way to associate real valve to diagram
+
+        def assign_to_hardware(self):
+            """Spawn a popup that allows the valve graphic to be associated with a hardware valve."""
+            def set_choice(self, selected):
+                choice_index = options.index(selected)
+                self.hardware = self.canvas.window.instruments[choice_index]
+                win.destroy()
+            win = tk.Toplevel()
+            win.wm_title("Valve Assignment")
+            label = tk.Label(win, text='Select hardware:')
+            label.grid(row=0, column=0, columnspan=2)
+            options = []
+            if len(self.canvas.window.instruments) > 0:
+                for i in range(0, len(self.canvas.window.instruments)):
+                    options.append(self.canvas.window.instruments[i].name)
+                selection = tk.StringVar(options[0])
+                menu = tk.OptionMenu(win, selection, *options)
+                menu.grid(row=1, column=0, columnspan=2)
+                ok_button = tk.Button(win, text="Unlock", command=lambda: set_choice(selection.get()))
+                ok_button.grid(row=2, column=0)
+            else:
+                tk.Label(win, text='No hardware found.').grid(row=1, column=0, columnspan=2)
+            cancel_button = tk.Button(win, text="Cancel", command=win.destroy)
+            cancel_button.grid(row=2, column=1)
 
     class SelectionValve(Valve):
         def __init__(self, canvas, x, y, name):
