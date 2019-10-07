@@ -21,9 +21,11 @@ import os.path
 import csv
 import solocomm
 import numpy as np
+import warnings
 import matplotlib
 from matplotlib import pyplot as plt
 matplotlib.use('TkAgg')
+warnings.filterwarnings("ignore", message="Attempting to set identical bottom==top")
 
 
 FULLSCREEN = True   # For testing, turn this off
@@ -91,7 +93,8 @@ class main:
 
         self.fig_dpi = 96  # this shouldn't matter too much (because we normalize against it) except in how font sizes are handled in the plot
         self.main_tab_fig = plt.Figure(figsize=(core_width/2/self.fig_dpi, core_height*2/3/self.fig_dpi), dpi=self.fig_dpi)
-        self.main_tab_ax = self.main_tab_fig.add_subplot(111)
+        self.main_tab_ax1 = self.main_tab_fig.add_subplot(111)
+        self.main_tab_ax2 = self.main_tab_ax1.twinx()
         self.canvas = matplotlib.backends.backend_tkagg.FigureCanvasTkAgg(self.main_tab_fig, self.auto_page)
         self.canvas.draw()
 
@@ -283,9 +286,9 @@ class main:
         if filename is None:
             filename = filedialog.askopenfilename(initialdir=".", title="Select file", filetypes=(("config files", "*.ini"), ("all files", "*.*")))
         if filename != '':
-            self.config.read(filename, encoding='utf-8')
-            # TODO: there's a race condition here
-            time.sleep(0.6)
+            with open(filename, encoding='utf-8') as f:
+                # why does it only sometimes find the file?
+                self.config.read_file(f)
             oil_config = self.config['Oil Valve']
             loading_config = self.config['Loading Valve']
             main_config = self.config['Main']
@@ -378,23 +381,29 @@ class main:
 
     def update_graph(self):
         """look into self's ElveflowDisplay and reproduce it on self.main_tab_fig"""
-        self.main_tab_ax.set_title("Elveflow readout for most recent scan", fontsize=16)
+
+        self.main_tab_ax1.set_title("Elveflow readout for most recent scan", fontsize=16)
         dataXLabel_var = self.elveflow_display.dataXLabel_var.get()
-        dataYLabel_var = self.elveflow_display.dataYLabel_var.get()
-        self.main_tab_ax.set_xlabel(dataXLabel_var, fontsize=14)
-        self.main_tab_ax.set_ylabel(dataYLabel_var, fontsize=14)
+        dataY1Label_var = self.elveflow_display.dataY1Label_var.get()
+        dataY2Label_var = self.elveflow_display.dataY2Label_var.get()
+        self.main_tab_ax1.set_xlabel(dataXLabel_var, fontsize=14)
+        self.main_tab_ax1.set_ylabel(dataY1Label_var, fontsize=14, color=ElveflowDisplay.COLOR_Y1)
+        self.main_tab_ax2.set_ylabel(dataY2Label_var, fontsize=14, color=ElveflowDisplay.COLOR_Y2)
         try:
-            dataX = [elt[dataXLabel_var] for elt in self.elveflow_display.data if not np.isnan(elt[dataXLabel_var]) and not np.isnan(elt[dataYLabel_var])]
-            dataY = [elt[dataYLabel_var] for elt in self.elveflow_display.data if not np.isnan(elt[dataXLabel_var]) and not np.isnan(elt[dataYLabel_var])]
-            extremes = [np.nanmin(dataX), np.nanmax(dataX), np.nanmin(dataY), np.nanmax(dataY)]
+            dataX = [elt[dataXLabel_var] for elt in self.elveflow_display.data if not np.isnan(elt[dataXLabel_var]) and not np.isnan(elt[dataY1Label_var])]
+            dataY1 = [elt[dataY1Label_var] for elt in self.elveflow_display.data if not np.isnan(elt[dataXLabel_var]) and not np.isnan(elt[dataY1Label_var])]
+            dataY2 = [elt[dataY2Label_var] for elt in self.elveflow_display.data if not np.isnan(elt[dataXLabel_var]) and not np.isnan(elt[dataY2Label_var])]
+            extremes = [np.nanmin(dataX), np.nanmax(dataX), np.nanmin(dataY1), np.nanmax(dataY1), np.nanmin(dataY2), np.nanmax(dataY2)]
             if len(dataX) > 0:
-                self.the_line.set_data(dataX, dataY)
+                self.the_line1.set_data(dataX, dataY1)
+                self.the_line2.set_data(dataX, dataY2)
         except (ValueError, KeyError):
-            extremes = [*self.main_tab_ax.get_xlim(), *self.main_tab_ax.get_ylim()]
+            extremes = [*self.main_tab_ax1.get_xlim(), *self.main_tab_ax1.get_ylim(), *self.main_tab_ax2.get_ylim()]
         limits = [item if item is not None else extremes[i]
                   for (i, item) in enumerate(self.elveflow_display.axisLimits_numbers)] # todo: set the axis limits differently
-        self.main_tab_ax.set_xlim(*limits[0:2])
-        self.main_tab_ax.set_ylim(*limits[2:4])
+        self.main_tab_ax1.set_xlim(*limits[0:2])
+        self.main_tab_ax1.set_ylim(*limits[2:4])
+        self.main_tab_ax2.set_ylim(*limits[4:6])
 
         self.canvas.draw() # may need the stupid hack from widgets.py
 
@@ -418,19 +427,25 @@ class main:
 
     def pump_inject_command(self):
         """Run a buffer-sample-buffer cycle."""
+        if self.elveflow_display is None:
+            self.python_logger.error("Elveflow connection not initialized! Please start the connection on the Elveflow tab.")
+            return
+
         # before scheduling anything, clear the graph
-        self.main_tab_ax.clear()
-        self.the_line = self.main_tab_ax.plot([], [])[0]
+        self.main_tab_ax1.clear()
+        self.main_tab_ax2.clear()
+        self.the_line1 = self.main_tab_ax1.plot([], [], color=ElveflowDisplay.COLOR_Y1)[0]
+        self.the_line2 = self.main_tab_ax2.plot([], [], color=ElveflowDisplay.COLOR_Y2)[0]
         self.flowpath.set_unlock_state(False)
 
         # then start queuing stuff
-        self.update_graph()
-        self.python_logger.debug("HELLO THERE!")
-        self.elveflow_display.start_saving()
-        time.sleep(3) # this will hang the GUI for a second! ...including, I think, getting more data. Oops
-        self.update_graph()
-        self.elveflow_display.stop_saving()
-        self.python_logger.debug("GENERAL KENOBI!")
+        # # self.update_graph()
+        # self.python_logger.debug("HELLO THERE!")
+        # self.elveflow_display.start_saving()
+        # # time.sleep(3) # this will hang the GUI for a second! ...including, I think, getting more data. Oops
+        # # self.update_graph()
+        # self.elveflow_display.stop_saving()
+        # self.python_logger.debug("GENERAL KENOBI!")
         # self.queue.put(self.pump.set_mode_vol)
         self.queue.put(self.update_graph)
         # self.queue.put(self.pump_refill_command)

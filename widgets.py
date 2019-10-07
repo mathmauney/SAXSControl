@@ -13,9 +13,11 @@ import threading
 import time
 import os.path
 from queue import Queue, Empty as Queue_Empty
+import warnings
 import matplotlib
 from matplotlib import pyplot as plt
 matplotlib.use('TkAgg')
+warnings.filterwarnings("ignore", message="Attempting to set identical bottom==top")
 
 
 class COMPortSelector(tk.Listbox):
@@ -180,6 +182,11 @@ class ElveflowDisplay(tk.Canvas):
     POLLING_PERIOD = 1
     PADDING = 2
     OUTPUT_FOLDER = "Elveflow"
+    COLOR_Y1 = 'tab:red'
+    COLOR_Y2 = 'tab:blue'
+    DEFAULT_X_LABEL = 'time [s]'
+    DEFAULT_Y1_LABEL = 'Pressure 1 [mbar]'
+    DEFAULT_Y2_LABEL = 'Volume flow rate 1 [µL/min]'
 
     def __init__(self, window, height, width, elveflow_config, errorlogger, **kwargs):
         """Start the FluidLevel object with default paramaters."""
@@ -188,7 +195,8 @@ class ElveflowDisplay(tk.Canvas):
         self.window = window
         # variables attached to tkinter elements
         self.dataXLabel_var = tk.StringVar()
-        self.dataYLabel_var = tk.StringVar()
+        self.dataY1Label_var = tk.StringVar()
+        self.dataY2Label_var = tk.StringVar()
         self.sensorTypes_var = [tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar()]
         self.pressureValue_var = [tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar()]
         self.isPressure_var = [tk.BooleanVar(), tk.BooleanVar(), tk.BooleanVar(), tk.BooleanVar()]
@@ -198,8 +206,8 @@ class ElveflowDisplay(tk.Canvas):
         # self.is_pressure_var = [tk.BooleanVar(), tk.BooleanVar(), tk.BooleanVar(), tk.BooleanVar()]
         self.pressureSettingActive_var = [tk.BooleanVar(), tk.BooleanVar(), tk.BooleanVar(), tk.BooleanVar()]
         self.setPressureStop_flag = [None, None, None, None]
-        self.axisLimits_var = [tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar()]
-        self.axisLimits_numbers = [None, None, None, None]
+        self.axisLimits_var = [tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar()] #x, y1, y2
+        self.axisLimits_numbers = [None, None, None, None, None, None]
         self.saveFileName_var = tk.StringVar()
         self.saveFileNameSuffix_var = tk.StringVar()
         (self.kp_var, self.ki_var, self.kd_var) = (tk.StringVar(), tk.StringVar(), tk.StringVar())
@@ -224,13 +232,13 @@ class ElveflowDisplay(tk.Canvas):
         remaining_width_per_column = width / 9
         dpi = 96  # this shouldn't matter too much (because we normalize against it) except in how font sizes are handled in the plot
         self.the_fig = plt.Figure(figsize=(width*2/3/dpi, height*3/4/dpi), dpi=dpi)
-        self.ax = self.the_fig.add_subplot(111)
-        self.ax.set_title(self.dataTitle, fontsize=16)
+        self.ax1 = self.the_fig.add_subplot(111)
+        self.ax1.set_title(self.dataTitle, fontsize=16)
+        self.ax2 = self.ax1.twinx()
 
         rowcounter = 0
         self.start_button = tk.Button(self, text='Start Connection', command=self.start)
         self.start_button.grid(row=rowcounter, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
-        print(self.start_button)
         self.stop_button = tk.Button(self, text='Stop Connection', command=self.stop)
         self.stop_button.grid(row=rowcounter, column=2, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
         rowcounter += 1
@@ -248,10 +256,16 @@ class ElveflowDisplay(tk.Canvas):
         self.dataXLabel_optionmenu.grid(row=rowcounter, column=2, columnspan=2, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
         rowcounter += 1
 
-        tk.Label(self, text="Y axis").grid(row=rowcounter, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
-        self.dataYLabel_optionmenu = tk.OptionMenu(self, self.dataYLabel_var, None)
-        self.dataYLabel_optionmenu.config(width=int(remaining_width_per_column * 2 / fontsize))
-        self.dataYLabel_optionmenu.grid(row=rowcounter, column=2, columnspan=2, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+        tk.Label(self, text="Y axis (left)").grid(row=rowcounter, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+        self.dataY1Label_optionmenu = tk.OptionMenu(self, self.dataY1Label_var, None)
+        self.dataY1Label_optionmenu.config(width=int(remaining_width_per_column * 2 / fontsize))
+        self.dataY1Label_optionmenu.grid(row=rowcounter, column=2, columnspan=2, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+        rowcounter += 1
+
+        tk.Label(self, text="Y axis (right)").grid(row=rowcounter, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+        self.dataY2Label_optionmenu = tk.OptionMenu(self, self.dataY2Label_var, None)
+        self.dataY2Label_optionmenu.config(width=int(remaining_width_per_column * 2 / fontsize))
+        self.dataY2Label_optionmenu.grid(row=rowcounter, column=2, columnspan=2, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
         rowcounter += 1
 
         if FileIO.USE_SDK:
@@ -306,14 +320,15 @@ class ElveflowDisplay(tk.Canvas):
         rowcounter += 1
 
         tk.Label(self, text="x axis limits:").grid(row=rowcounter, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
-        tk.Label(self, text="y axis limits:").grid(row=rowcounter+1, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
-        self.axisLimits_entry = [None, None, None, None]
-        for i in range(4):
+        tk.Label(self, text="y axis (left) limits:").grid(row=rowcounter+1, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+        tk.Label(self, text="y axis (right) limits:").grid(row=rowcounter+2, column=1, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+        self.axisLimits_entry = [None, None, None, None, None, None]
+        for i in range(6):
             self.axisLimits_entry[i] = tk.Entry(self, textvariable=self.axisLimits_var[i], justify="left")
             self.axisLimits_entry[i].config(width=int(remaining_width_per_column / fontsize))  # width is in units of font size
             self.axisLimits_entry[i].grid(row=rowcounter+i//2, column=2+(i % 2), padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
             self.axisLimits_var[i].set("")
-        rowcounter += 2
+        rowcounter += 3
         self.axisLimits_button = tk.Button(self, text='Set graph limits (leave blank for auto)', command=self.set_axis_limits)  # TODO
         self.axisLimits_button.grid(row=rowcounter, column=1, columnspan=3, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
         rowcounter += 1
@@ -331,9 +346,11 @@ class ElveflowDisplay(tk.Canvas):
         self.data = []
         self.run_flag.clear()
         self.save_flag.clear()
-        self.the_line = self.ax.plot([], [])[0]
+        self.the_line1 = self.ax1.plot([], [], color=ElveflowDisplay.COLOR_Y1)[0]
+        self.the_line2 = self.ax2.plot([], [], color=ElveflowDisplay.COLOR_Y2)[0]
         self.dataXLabel_optionmenu.config(state=tk.DISABLED)
-        self.dataYLabel_optionmenu.config(state=tk.DISABLED)
+        self.dataY1Label_optionmenu.config(state=tk.DISABLED)
+        self.dataY2Label_optionmenu.config(state=tk.DISABLED)
         self.start_button.config(state=tk.NORMAL)
         self.stop_button.config(state=tk.DISABLED)
         if not FileIO.USE_SDK:
@@ -352,16 +369,19 @@ class ElveflowDisplay(tk.Canvas):
 
     def populate_dropdowns(self):
         self.dataXLabel_optionmenu['menu'].delete(0, 'end')
-        self.dataYLabel_optionmenu['menu'].delete(0, 'end')  # these two deletions shouldn't be necessary, but I'm afraid of weird race conditions that realistically won't happen even if they're possible
+        self.dataY1Label_optionmenu['menu'].delete(0, 'end')
+        self.dataY2Label_optionmenu['menu'].delete(0, 'end')  # these deletions shouldn't be necessary, but I'm afraid of weird race conditions that realistically won't happen even if they're possible
         for item in self.elveflow_handler.header:
             self.dataXLabel_optionmenu['menu'].add_command(label=item, command=lambda item=item: self.dataXLabel_var.set(item))  # weird default argument for scoping
-            self.dataYLabel_optionmenu['menu'].add_command(label=item, command=lambda item=item: self.dataYLabel_var.set(item))
+            self.dataY1Label_optionmenu['menu'].add_command(label=item, command=lambda item=item: self.dataY1Label_var.set(item))
+            self.dataY2Label_optionmenu['menu'].add_command(label=item, command=lambda item=item: self.dataY2Label_var.set(item))
 
     def start(self):
         if self.elveflow_handler is not None:
             raise RuntimeError("the elveflow_handler is already running!")
         self.dataXLabel_optionmenu.config(state=tk.NORMAL)
-        self.dataYLabel_optionmenu.config(state=tk.NORMAL)
+        self.dataY1Label_optionmenu.config(state=tk.NORMAL)
+        self.dataY2Label_optionmenu.config(state=tk.NORMAL)
 
         if FileIO.USE_SDK:
             # self.sourcename_entry.config(state=tk.DISABLED)
@@ -388,9 +408,11 @@ class ElveflowDisplay(tk.Canvas):
             # self.sourcename_var.set(self.elveflow_handler.sourcename)
 
         self.dataXLabel_optionmenu['menu'].delete(0, 'end')
-        self.dataYLabel_optionmenu['menu'].delete(0, 'end')
-        self.dataXLabel_var.set('')
-        self.dataYLabel_var.set('')
+        self.dataY1Label_optionmenu['menu'].delete(0, 'end')
+        self.dataY2Label_optionmenu['menu'].delete(0, 'end')
+        self.dataXLabel_var.set(ElveflowDisplay.DEFAULT_X_LABEL)
+        self.dataY1Label_var.set(ElveflowDisplay.DEFAULT_Y1_LABEL)
+        self.dataY2Label_var.set(ElveflowDisplay.DEFAULT_Y2_LABEL)
         self.elveflow_handler.start(getheader_handler=self.populate_dropdowns)
 
         def pollElveflowThread(run_flag, save_flag):
@@ -402,7 +424,6 @@ class ElveflowDisplay(tk.Canvas):
                     newData = self.elveflow_handler.fetchAll()
                     self.data.extend(newData)
                     self.update_plot()
-                    self.errorlogger.debug("tick")
                     if save_flag.is_set():
                         self.errorlogger.debug("UWAHHHH! saving. Hopefully?")
                         for dict in newData:
@@ -482,30 +503,37 @@ class ElveflowDisplay(tk.Canvas):
             self.saveFile.close()
 
     def clear_graph(self):
-        self.ax.clear()
-        self.the_line = self.ax.plot([], [])[0]
-        self.ax.set_title(self.dataTitle, fontsize=16)
+        self.ax1.clear()
+        self.ax2.clear()
+        self.the_line1 = self.ax1.plot([], [], color=ElveflowDisplay.COLOR_Y1)[0]
+        self.the_line2 = self.ax2.plot([], [], color=ElveflowDisplay.COLOR_Y2)[0]
+        self.ax1.set_title(self.dataTitle, fontsize=16)
         self.update_plot()
         print("graph CLEARED!")
 
     def update_plot(self):
         dataXLabel_var = self.dataXLabel_var.get()
-        dataYLabel_var = self.dataYLabel_var.get()
-        self.ax.set_xlabel(dataXLabel_var, fontsize=14)
-        self.ax.set_ylabel(dataYLabel_var, fontsize=14)
+        dataY1Label_var = self.dataY1Label_var.get()
+        dataY2Label_var = self.dataY2Label_var.get()
+        self.ax1.set_xlabel(dataXLabel_var, fontsize=14)
+        self.ax1.set_ylabel(dataY1Label_var, fontsize=14, color=ElveflowDisplay.COLOR_Y1)
+        self.ax2.set_ylabel(dataY2Label_var, fontsize=14, color=ElveflowDisplay.COLOR_Y2)
         try:
-            dataX = [elt[dataXLabel_var] for elt in self.data if not np.isnan(elt[dataXLabel_var]) and not np.isnan(elt[dataYLabel_var])]
-            dataY = [elt[dataYLabel_var] for elt in self.data if not np.isnan(elt[dataXLabel_var]) and not np.isnan(elt[dataYLabel_var])]
-            extremes = [np.nanmin(dataX), np.nanmax(dataX), np.nanmin(dataY), np.nanmax(dataY)]
+            dataX = [elt[dataXLabel_var] for elt in self.data]# if not np.isnan(elt[dataXLabel_var]) and not np.isnan(elt[dataY1Label_var])]
+            dataY1 = [elt[dataY1Label_var] for elt in self.data]# if not np.isnan(elt[dataXLabel_var]) and not np.isnan(elt[dataY1Label_var])]
+            dataY2 = [elt[dataY2Label_var] for elt in self.data]# if not np.isnan(elt[dataXLabel_var]) and not np.isnan(elt[dataY1Label_var])]
+            extremes = [np.nanmin(dataX), np.nanmax(dataX), np.nanmin(dataY1), np.nanmax(dataY1), np.nanmin(dataY2), np.nanmax(dataY2)]
             if len(dataX) > 0:
-                self.the_line.set_data(dataX, dataY)
+                self.the_line1.set_data(dataX, dataY1)
+                self.the_line2.set_data(dataX, dataY2)
         except (ValueError, KeyError):
-            extremes = [*self.ax.get_xlim(), *self.ax.get_ylim()]
+            extremes = [*self.ax1.get_xlim(), *self.ax1.get_ylim(), *self.ax2.get_ylim()]
 
         limits = [item if item is not None else extremes[i]
                   for (i, item) in enumerate(self.axisLimits_numbers)]
-        self.ax.set_xlim(*limits[0:2])
-        self.ax.set_ylim(*limits[2:4])
+        self.ax1.set_xlim(*limits[0:2])
+        self.ax1.set_ylim(*limits[2:4])
+        self.ax2.set_ylim(*limits[4:6])
 
         # HACK:
         # self.canvas.draw doesn't shut down properly for whatever reason when clicking the exit button
