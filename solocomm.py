@@ -104,6 +104,7 @@ class SpecCommThread(threading.Thread):
 
         while True:
             if self.connected:
+                logger.debug("In loop")
                 commandList = adxCommandQueue.get()
                 adxCommandQueue.task_done()
 
@@ -145,6 +146,7 @@ class SpecCommThread(threading.Thread):
                     controlQueue.put([('G', 'ADXDONE_ABORT_DIR')])
                 else:
                     controlQueue.put([('G', 'ADXDONE_ABORT')])
+            time.sleep(.1)
 
     def waitForAnswerFromSpec(self):
         self.waitingForAnswer = True
@@ -331,8 +333,10 @@ class ControlThread(threading.Thread):
     def run(self):
         while self.MainGUI.listen_run_flag.is_set():
             if controlQueue.empty():
+                if self.MainGUI.queue_busy:
+                    self.MainGUI.toggle_buttons()
                 self.MainGUI.queue_busy = False
-                self.MainGUI.toggle_buttons()
+                time.sleep(.1)
             else:
                 queue_item = controlQueue.get()
                 if isinstance(queue_item, list):
@@ -347,9 +351,15 @@ class ControlThread(threading.Thread):
                     self.MainGUI.toggle_buttons()
 
                 if isinstance(queue_item, tuple):
-                    queue_item[0](*queue_item[1:])
+                    try:
+                        queue_item[0](*queue_item[1:])
+                    except:
+                        logger.exception("Caught exception in tuple queue item:")
                 elif callable(queue_item):
-                    queue_item()
+                    try:
+                        queue_item()
+                    except:
+                        logger.exception("Caught exception in tuple queue item:")
                 else:
                     commandList = queue_item
                     for command in commandList:
@@ -488,7 +498,7 @@ class ControlThread(threading.Thread):
             adxCommandQueue.put([command[1]])
 
     def abort(self):
-
+        logger.warning("Queue Aborted")
         if self.busy:
             self.abortProcess = True
 
