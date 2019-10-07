@@ -666,6 +666,7 @@ class FlowPath(tk.Canvas):
             self.center_circle = canvas.create_circle(x, y, self.small_radius, fill='dimgray', outline='dimgray', tag=self.name)
             self.circles = []
             self.fluid_lines = []
+            self.hardware = None
             for i in range(0, 6):
                 circle = canvas.create_circle(x+self.offset*math.cos(i*self.rads), y+self.offset*math.sin(i*self.rads), self.small_radius, fill='white', outline='white', tag=self.name)
                 self.circles.append(circle)
@@ -677,6 +678,30 @@ class FlowPath(tk.Canvas):
             if position == 'center':
                 position = 6
             self.fluid_lines[position].append(object)   # TODO: Add way to associate real valve to diagram
+
+        def assign_to_hardware(self):
+            """Spawn a popup that allows the valve graphic to be associated with a hardware valve."""
+            def set_choice(self, selected):
+                choice_index = options.index(selected)
+                self.hardware = self.canvas.window.instruments[choice_index]
+                win.destroy()
+            win = tk.Toplevel()
+            win.wm_title("Valve Assignment")
+            label = tk.Label(win, text='Select hardware:')
+            label.grid(row=0, column=0, columnspan=2)
+            options = []
+            if len(self.canvas.window.instruments) > 0:
+                for i in range(0, len(self.canvas.window.instruments)):
+                    options.append(self.canvas.window.instruments[i].name)
+                selection = tk.StringVar(options[0])
+                menu = tk.OptionMenu(win, selection, *options)
+                menu.grid(row=1, column=0, columnspan=2)
+                ok_button = tk.Button(win, text="Unlock", command=lambda: set_choice(selection.get()))
+                ok_button.grid(row=2, column=0)
+            else:
+                tk.Label(win, text='No hardware found.').grid(row=1, column=0, columnspan=2)
+            cancel_button = tk.Button(win, text="Cancel", command=win.destroy)
+            cancel_button.grid(row=2, column=1)
 
     class SelectionValve(Valve):
         def __init__(self, canvas, x, y, name):
