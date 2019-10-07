@@ -178,7 +178,7 @@ class ElveflowHandler_SDK:
     VOLUME_KI = 50
     VOLUME_KD = 0
 
-    def __init__(self, sourcename=None, errorlogger=None, sensortypes=[], starttime=0):
+    def __init__(self, sourcename=None, errorlogger=None, sensortypes=[]):
         if sourcename is None or sourcename == '':
             self.sourcename = b'Have you loaded the config file?'
         else:
@@ -197,7 +197,6 @@ class ElveflowHandler_SDK:
         else:
             self.errorlogger = errorlogger
         self.errorlogger.info("Initializing Elveflow at %s" % sourcename)
-        self.starttime = starttime
 
         self.instr_ID = c_int32()
         self.calib = (c_double*1000)()  # always define array that way, calibration should have 1000 elements
@@ -247,7 +246,7 @@ class ElveflowHandler_SDK:
                         self.errorlogger.warning('ERROR CODE FLOW SENSOR %i: %s' % (i, error))
                     newline[self.header[i+4]] = data_sens.value
 
-                newline[self.header[0]] = time.time() - self.starttime
+                newline[self.header[0]] = time.time()
 
                 try:
                     self.buffer_queue.put(newline, False)

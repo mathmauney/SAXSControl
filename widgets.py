@@ -464,7 +464,7 @@ class ElveflowDisplay(tk.Canvas):
                                                            errorlogger=self.errorlogger,
                                                            sensortypes=list(map(lambda x: FileIO.SDK_SENSOR_TYPES[x],
                                                                                 [self.elveflow_config['sensor1_type'], self.elveflow_config['sensor2_type'], self.elveflow_config['sensor3_type'], self.elveflow_config['sensor4_type']])), #TODO: make this not ugly
-                                                           starttime=self.starttime)
+                                                           )
             # self.sourcename_var.set(str(self.elveflow_handler.sourcename, encoding='ascii'))
         else:
             self.elveflow_handler = FileIO.ElveflowHandler()
@@ -492,7 +492,6 @@ class ElveflowDisplay(tk.Canvas):
                     self.data.extend(newData)
                     self.update_plot()
                     if save_flag.is_set():
-                        self.errorlogger.debug("UWAHHHH! saving. Hopefully?")
                         for dict in newData:
                             self.saveFileWriter.writerow([str(dict[key]) for key in self.elveflow_handler.header])
                     time.sleep(ElveflowDisplay.POLLING_PERIOD)
@@ -586,9 +585,15 @@ class ElveflowDisplay(tk.Canvas):
         self.ax1.set_ylabel(dataY1Label_var, fontsize=14, color=ElveflowDisplay.COLOR_Y1)
         self.ax2.set_ylabel(dataY2Label_var, fontsize=14, color=ElveflowDisplay.COLOR_Y2)
         try:
-            dataX = [elt[dataXLabel_var] for elt in self.data]# if not np.isnan(elt[dataXLabel_var]) and not np.isnan(elt[dataY1Label_var])]
-            dataY1 = [elt[dataY1Label_var] for elt in self.data]# if not np.isnan(elt[dataXLabel_var]) and not np.isnan(elt[dataY1Label_var])]
-            dataY2 = [elt[dataY2Label_var] for elt in self.data]# if not np.isnan(elt[dataXLabel_var]) and not np.isnan(elt[dataY1Label_var])]
+            dataX = np.array([elt[dataXLabel_var] for elt in self.data])
+            dataY1 = np.array([elt[dataY1Label_var] for elt in self.data])
+            dataY2 = np.array([elt[dataY2Label_var] for elt in self.data])
+            if dataXLabel_var == self.elveflow_handler.header[0]:
+                dataX -= self.starttime
+            if dataY1Label_var == self.elveflow_handler.header[0]:
+                dataY1 -= self.starttime
+            if dataY2Label_var == self.elveflow_handler.header[0]:
+                dataY2 -= self.starttime
             extremes = [np.nanmin(dataX), np.nanmax(dataX), np.nanmin(dataY1), np.nanmax(dataY1), np.nanmin(dataY2), np.nanmax(dataY2)]
             if len(dataX) > 0:
                 self.the_line1.set_data(dataX, dataY1)
