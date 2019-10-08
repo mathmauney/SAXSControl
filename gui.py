@@ -452,6 +452,8 @@ class Main:
             dataY2 = np.array([elt[dataY2Label_var] for elt in self.elveflow_display.data])
 
             dataX_viable = (dataX >= self.graph_start_time) & (dataX < self.graph_end_time)
+            self.python_logger.debug("%s"% np.sum(dataX_viable))
+            self.python_logger.debug("%s"% (dataX_viable).shape)
             dataX = dataX[dataX_viable]
             dataY1 = dataY1[dataX_viable]
             dataY2 = dataY2[dataX_viable]
@@ -471,7 +473,7 @@ class Main:
             extremes = [*self.main_tab_ax1.get_xlim(), *self.main_tab_ax1.get_ylim(), *self.main_tab_ax2.get_ylim()]
         limits = [item if item is not None else extremes[i]
                   for (i, item) in enumerate(self.elveflow_display.axisLimits_numbers)] # todo: set the axis limits differently
-        self.main_tab_ax1.set_xlim(*limits[0:2])
+        self.main_tab_ax1.set_xlim(*extremes[0:2]) #don't use the given limits for the x-axis. We assume this is the time axis
         self.main_tab_ax1.set_ylim(*limits[2:4])
         self.main_tab_ax2.set_ylim(*limits[4:6])
 
@@ -508,6 +510,8 @@ class Main:
         self.the_line2 = self.main_tab_ax2.plot([], [], color=ElveflowDisplay.COLOR_Y2)[0]
         self.flowpath.set_unlock_state(False)
         self.graph_start_time = int(time.time())
+        self.graph_end_time = np.inf
+        self.python_logger.info("start time: %s" % self.graph_start_time)
 
         self.queue.put((self.python_logger.info, "starting to run buffer-sample-buffer"))
         self.queue.put(self.elveflow_display.start_saving)
