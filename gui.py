@@ -26,6 +26,7 @@ import warnings
 import matplotlib
 from matplotlib import pyplot as plt
 matplotlib.use('TkAgg')
+matplotlib.rcParams.update({'figure.autolayout': True})
 warnings.filterwarnings("ignore", message="Attempting to set identical bottom==top")
 
 
@@ -216,6 +217,7 @@ class Main:
         # self.listen_thread.start()
         self.load_config(filename='config.ini')
         self.connect_to_spec()
+        self.elveflow_display.start()
 
     def draw_static(self):
         """Define the geometry of the frames and objects."""
@@ -428,7 +430,6 @@ class Main:
     def update_graph(self):
         """look into self's ElveflowDisplay and reproduce it on self.main_tab_fig"""
 
-        self.python_logger.debug("UPDATE GRAPH STARTING")
         self.main_tab_ax1.set_title("Elveflow readout for most recent scan", fontsize=16)
         dataXLabel_var = self.elveflow_display.dataXLabel_var.get()
         dataY1Label_var = self.elveflow_display.dataY1Label_var.get()
@@ -466,7 +467,6 @@ class Main:
         self.main_tab_ax2.set_ylim(*limits[4:6])
 
         self.canvas.draw() # may need the stupid hack from widgets.py
-        self.python_logger.debug("UPDATE GRAPH FINISHING")
 
     def pump_refill_command(self):
         """Do nothing. It's a dummy command."""
@@ -488,31 +488,30 @@ class Main:
 
     def buffer_sample_buffer_command(self):
         """Run a buffer-sample-buffer cycle."""
-        if self.elveflow_display is None:
+        if self.elveflow_display is None or self.elveflow_display.elveflow_handler is None:
             self.python_logger.error("Elveflow connection not initialized! Please start the connection on the Elveflow tab.")
             return
 
         # before scheduling anything, clear the graph
-        self.python_logger.debug("starting to queue stuff")
         self.main_tab_ax1.clear()
         self.main_tab_ax2.clear()
         self.the_line1 = self.main_tab_ax1.plot([], [], color=ElveflowDisplay.COLOR_Y1)[0]
         self.the_line2 = self.main_tab_ax2.plot([], [], color=ElveflowDisplay.COLOR_Y2)[0]
         self.flowpath.set_unlock_state(False)
         self.graph_start_time = int(time.time())
-        self.python_logger.debug("HELLO THERE!")
+
+        self.queue.put((self.python_logger.info, "starting to run buffer-sample-buffer"))
         self.queue.put(self.elveflow_display.start_saving)
         self.queue.put(self.update_graph)
 
         self.queue.put((time.sleep, 3)) #TODO
 
         self.queue.put(self.elveflow_display.stop_saving)
-        self.python_logger.debug("GENERAL KENOBI!")
         self.queue.put(self.update_graph)
         def update_end_time():
             self.graph_end_time = int(time.time())
         self.queue.put(update_end_time)
-        self.python_logger.debug("done with queuing stuff")
+        self.queue.put((self.python_logger.info, "done with running buffer-sample-buffer"))
 
     def toggle_buttons(self):
         """Toggle certain buttons on and off when they should not be allowed to add to queue."""

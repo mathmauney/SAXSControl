@@ -550,7 +550,7 @@ class ElveflowDisplay(tk.Canvas):
             self.saveFile = open(os.path.join(ElveflowDisplay.OUTPUT_FOLDER, self.saveFileName_var.get() + self.saveFileNameSuffix_var.get()), 'a', encoding="utf-8", newline='')
             self.saveFileWriter = csv.writer(self.saveFile)
             self.saveFileWriter.writerow(self.elveflow_handler.header)
-            self.errorlogger.info('started saving')
+            self.errorlogger.info('started saving to %s' % self.saveFile.name)
         else:
             self.errorlogger.error('cannot start saving (header is unknown). Try again in a moment')
 
