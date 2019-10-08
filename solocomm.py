@@ -333,8 +333,8 @@ class ControlThread(threading.Thread):
         while self.MainGUI.listen_run_flag.is_set():
             if controlQueue.empty():
                 if self.MainGUI.queue_busy:
+                    self.MainGUI.queue_busy = False
                     self.MainGUI.toggle_buttons()
-                self.MainGUI.queue_busy = False
                 time.sleep(.1)
             else:
                 queue_item = controlQueue.get()
