@@ -281,10 +281,10 @@ class Main:
         self.elveflow_sourcename_box.grid(row=8, column=1)
         self.elveflow_sensortypes_label.grid(row=9, column=0)
         for i in range(4):
-            self.elveflow_sensortypes_optionmenu[i].grid(row=8, column=i+1)
-        self.tseries_label.grid(row=9, column=0)
-        self.tseries_time_box.grid(row=9, column=1)
-        self.tseries_frames_box.grid(row=9, column=2)
+            self.elveflow_sensortypes_optionmenu[i].grid(row=9, column=i+1)
+        self.tseries_label.grid(row=10, column=0)
+        self.tseries_time_box.grid(row=10, column=1)
+        self.tseries_frames_box.grid(row=10, column=2)
 
         # Setup page
         self.refresh_com_ports.grid(row=0, column=0)
