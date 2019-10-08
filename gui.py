@@ -521,6 +521,20 @@ class Main:
         self.queue.put((self.pump.infuse_volume, self.first_buffer_volume.get()/1000, self.sample_flowrate.get()))
         self.queue.put((self.pump.wait_until_stopped, 2*self.first_buffer_volume.get()/self.sample_flowrate.get()*60))
 
+        self.queue.put(self.update_graph)
+        self.queue.put((self.flowpath.valve2.set_manual_position, "Run"))
+        self.queue.put((self.flowpath.valve3.set_manual_position, "Sample"))
+        self.queue.put((self.flowpath.valve4.set_manual_position, "Run"))
+        self.queue.put((self.pump.infuse_volume, self.sample_volume.get()/1000, self.sample_flowrate.get()))
+        self.queue.put((self.pump.wait_until_stopped, 2*self.sample_volume.get()/self.sample_flowrate.get()*60))
+
+        self.queue.put(self.update_graph)
+        self.queue.put((self.flowpath.valve2.set_manual_position, "Run"))
+        self.queue.put((self.flowpath.valve3.set_manual_position, "Buffer"))
+        self.queue.put((self.flowpath.valve4.set_manual_position, "Run"))
+        self.queue.put((self.pump.infuse_volume, self.last_buffer_volume.get()/1000, self.sample_flowrate.get()))
+        self.queue.put((self.pump.wait_until_stopped, 2*self.last_buffer_volume.get()/self.sample_flowrate.get()*60))
+
         self.queue.put(self.elveflow_display.stop_saving)
         self.queue.put(self.update_graph)
 
@@ -529,7 +543,10 @@ class Main:
         self.queue.put(update_end_time)
         self.queue.put((self.python_logger.info, "done with running buffer-sample-buffer"))
 
-
+    def clean_and_refill_command(self):
+        self.flowpath.set_unlock_state(False)
+        self.queue.put((self.elveflow_display.elveflow_handler.start_pressure, 4, 100))  # Pressurize Oil with Elveflow
+        # self.queue.put((refill))
     def toggle_buttons(self):
         """Toggle certain buttons on and off when they should not be allowed to add to queue."""
         buttons = (self.pump_inject_button, self.pump_inject_button)
