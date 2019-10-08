@@ -153,10 +153,23 @@ class Main:
         self.tseries_label = tk.Label(self.config_page, text='tseries parameters:')
         for i in range(6):
             self.oil_valve_names.append(tk.StringVar(value=''))
-            self.oil_valve_name_boxes.append(tk.Entry(self.config_page, textvariable=self.oil_valve_names[i]))
+            self.oil_valve_name_boxes.append(tk.OptionMenu(self.config_page, self.oil_valve_names[i], ""))
             self.loading_valve_names.append(tk.StringVar(value=''))
-            self.loading_valve_name_boxes.append(tk.Entry(self.config_page, textvariable=self.loading_valve_names[i]))
+            self.loading_valve_name_boxes.append(tk.OptionMenu(self.config_page, self.loading_valve_names[i], ""))
         self.elveflow_sourcename = tk.StringVar()
+        self.low_soap_time_label = tk.Label(self.config_page, text="Low soap time:")
+        self.low_soap_time = tk.IntVar(value=0)
+        self.low_soap_time_box = tk.Spinbox(self.config_page, from_=0, to=1000, textvariable=self.low_soap_time)
+        self.high_soap_time_label = tk.Label(self.config_page, text="High soap time:")
+        self.high_soap_time = tk.IntVar(value=0)
+        self.high_soap_time_box = tk.Spinbox(self.config_page, from_=0, to=1000, textvariable=self.high_soap_time)
+        self.water_time_label = tk.Label(self.config_page, text="Water time:")
+        self.water_time = tk.IntVar(value=0)
+        self.water_time_box = tk.Spinbox(self.config_page, from_=0, to=1000, textvariable=self.water_time)
+        self.air_time_label = tk.Label(self.config_page, text="Air time:")
+        self.air_time = tk.IntVar(value=0)
+        self.air_time_box = tk.Spinbox(self.config_page, from_=0, to=1000, textvariable=self.air_time)
+
         def _set_elveflow_sourcename(*args):
             self.config['Elveflow']['elveflow_sourcename'] = self.elveflow_sourcename.get()
         self.elveflow_sourcename.trace('w', _set_elveflow_sourcename)
@@ -213,6 +226,8 @@ class Main:
         time.sleep(0.6)   # I have no idea why we need this but everything crashes and burns if we don't include it
         # It acts as though there's a race condition, but aren't we still single-threaded at this point?
         # I suspect something might be going wrong with the libraries, then, especially tkinter and matplotlib
+        self.RefreshDropdown(self.oil_valve_name_boxes, self.flowpath.valve2.gui_names, self.oil_valve_names)
+        self.RefreshDropdown(self.loading_valve_name_boxes, self.flowpath.valve4.gui_names, self.loading_valve_names)
         self.draw_static()
         self.elveflow_display = ElveflowDisplay(self.elveflow_page, core_height, core_width, self.config['Elveflow'], self.python_logger)
         self.elveflow_display.grid(row=0, column=0)
@@ -285,7 +300,14 @@ class Main:
         self.tseries_label.grid(row=10, column=0)
         self.tseries_time_box.grid(row=10, column=1)
         self.tseries_frames_box.grid(row=10, column=2)
-
+        self.low_soap_time_label.grid(row=11, column=0)
+        self.low_soap_time_box.grid(row=11, column=1)
+        self.high_soap_time_label.grid(row=11, column=2)
+        self.high_soap_time_box.grid(row=11, column=3)
+        self.water_time_label.grid(row=11, column=4)
+        self.water_time_box.grid(row=11, column=5)
+        self.air_time_label.grid(row=11, column=6)
+        self.air_time_box.grid(row=11, column=7)
         # Setup page
         self.refresh_com_ports.grid(row=0, column=0)
         self.AddPump.grid(row=0, column=2)
@@ -355,10 +377,10 @@ class Main:
             self.tseries_frames_box.insert(0, main_config.get('tseries_frames', '10'))
             for i in range(0, 6):
                 field = 'name'+str(i+1)
-                self.oil_valve_name_boxes[i].delete(0, 'end')
-                self.oil_valve_name_boxes[i].insert(0, oil_config.get(field, ''))
-                self.loading_valve_name_boxes[i].delete(0, 'end')
-                self.loading_valve_name_boxes[i].insert(0, loading_config.get(field, ''))
+                # self.oil_valve_name_boxes[i].delete(0, 'end')
+                # self.oil_valve_name_boxes[i].insert(0, oil_config.get(field, ''))
+                # self.loading_valve_name_boxes[i].delete(0, 'end')
+                # self.loading_valve_name_boxes[i].insert(0, loading_config.get(field, ''))
             self.elveflow_sourcename.set(elveflow_config['elveflow_sourcename'])
             self.elveflow_sensortypes[0].set(elveflow_config['sensor1_type'])
             self.elveflow_sensortypes[1].set(elveflow_config['sensor2_type'])
@@ -546,7 +568,52 @@ class Main:
     def clean_and_refill_command(self):
         self.flowpath.set_unlock_state(False)
         self.queue.put((self.elveflow_display.elveflow_handler.start_pressure, 4, 100))  # Pressurize Oil with Elveflow
-        # self.queue.put((refill))
+        self.queue.put((self.pump.refill_volume, (self.sample_volume.get()+self.first_buffer_volume.get()+self.last_buffer_volume.get())/1000, self.oil_refill_flowrate.get()))
+
+        self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
+        self.queue.put((self.flowpath.valve3.set_auto_position, "A"))
+        self.queue.put((self.flowpath.valve4.set_auto_position, "Low Flow Soap"))
+        self.queue.put((time.sleep, self.low_soap_time.get()))
+
+        self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
+        self.queue.put((self.flowpath.valve3.set_auto_position, "A"))
+        self.queue.put((self.flowpath.valve4.set_auto_position, "High Flow Soap"))
+        self.queue.put((time.sleep, self.high_soap_time.get()))
+
+        self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
+        self.queue.put((self.flowpath.valve3.set_auto_position, "A"))
+        self.queue.put((self.flowpath.valve4.set_auto_position, "Water"))
+        self.queue.put((time.sleep, self.water_time.get()))
+
+        self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
+        self.queue.put((self.flowpath.valve3.set_auto_position, "A"))
+        self.queue.put((self.flowpath.valve4.set_auto_position, "Air"))
+        self.queue.put((time.sleep, self.air_time.get()))
+
+        self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
+        self.queue.put((self.flowpath.valve3.set_auto_position, "B"))
+        self.queue.put((self.flowpath.valve4.set_auto_position, "Low Flow Soap"))
+        self.queue.put((time.sleep, self.low_soap_time.get()))
+
+        self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
+        self.queue.put((self.flowpath.valve3.set_auto_position, "B"))
+        self.queue.put((self.flowpath.valve4.set_auto_position, "High Flow Soap"))
+        self.queue.put((time.sleep, self.high_soap_time.get()))
+
+        self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
+        self.queue.put((self.flowpath.valve3.set_auto_position, "B"))
+        self.queue.put((self.flowpath.valve4.set_auto_position, "Water"))
+        self.queue.put((time.sleep, self.water_time.get()))
+
+        self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
+        self.queue.put((self.flowpath.valve3.set_auto_position, "B"))
+        self.queue.put((self.flowpath.valve4.set_auto_position, "Air"))
+        self.queue.put((time.sleep, self.air_time.get()))
+
+        self.queue.put((self.pump.wait_until_stopped, 120))
+        self.queue.put(self.pump.infuse)
+        self.queue.put((self.elveflow_display.elveflow_handler.start_pressure, 4, 0))
+
     def toggle_buttons(self):
         """Toggle certain buttons on and off when they should not be allowed to add to queue."""
         buttons = (self.pump_inject_button, self.pump_inject_button)
@@ -607,13 +674,15 @@ class Main:
         self.RefreshCOMList()
         self.AddPumpControlButtons()
 
-    def RefreshDropdown(self, OptionMenulist):
+    def RefreshDropdown(self, OptionMenulist, OptionstoPut, VariableLocation):
         # Update Values in Config Selector
         for i in range(6):
             m = OptionMenulist[i].children['menu']
             m.delete(0, tk.END)
-            for instrument in self.Instruments:
-                m.add_command(label=instrument.name, command=lambda var=OptionMenulist[i], val=instrument.name: var.set(val))
+            m.add_command(label="", command=lambda var=VariableLocation[i], val="": var.set(val))  # Add option to leave empty
+            for name in OptionstoPut:
+                if not name == "":
+                    m.add_command(label=name, command=lambda var=VariableLocation[i], val=name: var.set(val))
 
     def InstrumentChangeValues(self, InstrumentIndex, isvalve=False):
         self.Instruments[InstrumentIndex].change_values(int((self.setup_page_variables[InstrumentIndex][0]).get()), (self.setup_page_variables[InstrumentIndex][1]).get())
