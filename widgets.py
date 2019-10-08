@@ -788,7 +788,7 @@ class FlowPath(tk.Canvas):
             if self.hardware is None:
                 self.assign_to_hardware()
             elif self.canvas.is_unlocked and position is not '':
-                hardware_pos = self.hardware_names.index(position)
+                hardware_pos = self.hardware_names.index(position)+1
                 self.hardware.switchvalve(hardware_pos)
                 self.position = position
 
@@ -797,7 +797,7 @@ class FlowPath(tk.Canvas):
             if self.hardware is None:
                 raise ValueError
             elif position is not '':
-                hardware_pos = self.hardware_names.index(position)
+                hardware_pos = self.hardware_names.index(position)+1
                 self.hardware.switchvalve(hardware_pos)
                 self.position = position
 
