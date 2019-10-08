@@ -866,10 +866,12 @@ class VICI:
                 position = 'A'
             if position == 1:
                 position = 'B'
+            else:
+                self.logger.append("Value not accepted "+position)
+                raise ValueError
         if not self.enabled:
             self.logger.append(self.name+" not set up, switching ignored")
             return
-
         if not self.serialobject.is_open:
             self.serialobject.open()
         commandtosend = self.ControllerKey+"GO"+position+"\r"
