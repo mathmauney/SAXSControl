@@ -792,6 +792,15 @@ class FlowPath(tk.Canvas):
                 self.hardware.switchvalve(hardware_pos)
                 self.position = position
 
+        def set_auto_position(self, position):    # TODO: Add in actual valve switching
+            """Change the valve position after being clicked both visually and physically."""
+            if self.hardware is None:
+                raise ValueError
+            elif position is not '':
+                hardware_pos = self.hardware_names.index(position)
+                self.hardware.switchvalve(hardware_pos)
+                self.position = position
+
         def name_position(self, position, name):
             """Define the name for a hardware port position."""
             if position > 6 or position < 0:
@@ -865,6 +874,14 @@ class FlowPath(tk.Canvas):
             if self.hardware is None:
                 self.assign_to_hardware()
             elif self.canvas.is_unlocked:
+                self.hardware.switchvalve(position)
+                self.set_position(position)
+
+        def set_auto_position(self, position):    # TODO: Add in actual valve switching
+            """Change the valve position after being clicked both visually and physically."""
+            if self.hardware is None:
+                raise ValueError
+            else:
                 self.hardware.switchvalve(position)
                 self.set_position(position)
 
