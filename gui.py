@@ -375,12 +375,12 @@ class Main:
             self.tseries_time_box.insert(0, main_config.get('tseries_time', '10'))
             self.tseries_frames_box.delete(0, 'end')
             self.tseries_frames_box.insert(0, main_config.get('tseries_frames', '10'))
+            oil_vars = []
+            loading_vars = []
             for i in range(0, 6):
                 field = 'name'+str(i+1)
-                # self.oil_valve_name_boxes[i].delete(0, 'end')
-                # self.oil_valve_name_boxes[i].insert(0, oil_config.get(field, ''))
-                # self.loading_valve_name_boxes[i].delete(0, 'end')
-                # self.loading_valve_name_boxes[i].insert(0, loading_config.get(field, ''))
+                self.oil_valve_names[i].set(oil_config.get(field, ''))
+                self.loading_valve_names[i].set(loading_config.get(field, ''))
             self.elveflow_sourcename.set(elveflow_config['elveflow_sourcename'])
             self.elveflow_sensortypes[0].set(elveflow_config['sensor1_type'])
             self.elveflow_sensortypes[1].set(elveflow_config['sensor2_type'])
