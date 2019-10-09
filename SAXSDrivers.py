@@ -425,7 +425,7 @@ class HPump:
             if not self.controller.is_open:
                 self.controller.open()
             while self.controller.in_waiting > 0:   # Clear Buffer
-                self.logger.append(resource.read().decode())
+                self.logger.append(self.controller.read().decode())
             self.controller.write(("-"+self.address+"\n\r").encode())
             time.sleep(0.2)
             while self.controller.in_waiting > 0:
@@ -864,7 +864,7 @@ class VICI:
         if isinstance(position, int):
             if position == 0:
                 position = 'A'
-            if position == 1:
+            elif position == 1:
                 position = 'B'
             else:
                 self.logger.append("Value not accepted "+position)

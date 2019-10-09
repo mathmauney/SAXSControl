@@ -20,6 +20,7 @@ from matplotlib import pyplot as plt
 
 matplotlib.use('TkAgg')
 warnings.filterwarnings("ignore", message="Attempting to set identical bottom==top")
+warnings.filterwarnings("ignore", message="Attempting to set identical left==right")
 
 logger = logging.getLogger('python')
 
@@ -656,7 +657,7 @@ class ElveflowDisplay(tk.Canvas):
                 pressureValue.set(str(flowrate_to_set))
                 self.elveflow_handler.set_volume_loop(channel, flowrate_to_set, interruptEvent=self.setPressureStop_flag[i], pid_constants=(kp, ki, kd))
         except ValueError:
-            self.errorlogger.error("unknown value for channel %i" % channel)
+            self.errorlogger.error("unknown value for channel %i (pressure value is %r)" % (channel, pressureValue.get()))
             pressureValue.set("")
             self.pressureSettingActive_var[i].set(False)
 

@@ -350,18 +350,22 @@ class ElveflowHandler_SDK:
                     return
 
                 curr_pressure = get_pressure.value
+                # self.errorlogger.info("CHANNEL %s: GWAAAAAAAAAAAAAAAAAAAAAAAAAAAA %s THREAD %s." % (channel_number, target, threading.current_thread()))
+                # self.errorlogger.info("CHANNEL %s: run flag %s THREAD %s." % (channel_number, self.run_flag.is_set(), threading.current_thread()))
+                # self.errorlogger.info("CHANNEL %s: interrupt flag %s THREAD %s." % (channel_number, interrupt_event.is_set(), threading.current_thread()))
+
 
                 while self.run_flag.is_set() and not interrupt_event.is_set():
                     # if we have an error reading, don't try to set anything
-                    # self.errorlogger.debug('max slope is %s' % ElveflowHandlerSDK.PRESSURE_MAXSLOPE)
-                    self.errorlogger.debug('requested slope is %s, and max slope is %s' % (abs(target - curr_pressure)))
-                    if abs(target - curr_pressure) <= ElveflowHandlerSDK.PRESSURE_MAXSLOPE:
+                    # self.errorlogger.debug('max slope is %s' % ElveflowHandler_SDK.PRESSURE_MAXSLOPE)
+                    # self.errorlogger.debug('requested slope is %s, and max slope is %s' % (abs(target - curr_pressure)))
+                    if abs(target - curr_pressure) <= ElveflowHandler_SDK.PRESSURE_MAXSLOPE:
                         # if we're close, just set it and hope for the best
                         curr_pressure = target
                         interrupt_event.set()
                     else:
                         # otherwise, just make one PRESSURE_MAXSLOPE-sized step in the correct direction
-                        curr_pressure = curr_pressure + math.copysign(ElveflowHandlerSDK.PRESSURE_MAXSLOPE, target - curr_pressure)
+                        curr_pressure = curr_pressure + math.copysign(ElveflowHandler_SDK.PRESSURE_MAXSLOPE, target - curr_pressure)
 
                     self.errorlogger.info("setting pressure to %s", curr_pressure)
                     error = Elveflow_SDK.OB1_Set_Press(self.instr_ID.value, channel_number, curr_pressure, byref(self.calib), 1000)
@@ -369,7 +373,7 @@ class ElveflowHandler_SDK:
                         self.errorlogger.warning('ERROR CODE SETTING PRESSURE %i: %s' % (channel_number, error))
                     # self.errorlogger.debug("setting pressure to %s", curr_pressure)
 
-                    time.sleep(ElveflowHandlerSDK.PRESSURELOOP_SLEEPTIME)
+                    time.sleep(ElveflowHandler_SDK.SLEEPTIME)
 
                 self.errorlogger.info("CHANNEL %s: finished setting pressure THREAD %s." % (channel_number, threading.current_thread()))
 

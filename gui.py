@@ -104,7 +104,8 @@ class Main:
         self.spec_fileno_label = tk.Label(self.auto_page, text='File #:')
         self.spec_fileno = tk.IntVar(value=0)
         self.spec_fileno_box = tk.Entry(self.auto_page, textvariable=self.spec_fileno)
-        self.pump_inject_button = tk.Button(self.auto_page, text='Run Buffer/Sample/Buffer', command=self.buffer_sample_buffer_command)
+        self.buffer_sample_buffer_button = tk.Button(self.auto_page, text='Run Buffer/Sample/Buffer', command=self.buffer_sample_buffer_command)
+        self.clean_button = tk.Button(self.auto_page, text='Clean/Refill', command=self.clean_and_refill_command)
 
         self.fig_dpi = 96  # this shouldn't matter too much (because we normalize against it) except in how font sizes are handled in the plot
         self.main_tab_fig = plt.Figure(figsize=(core_width*2/3/self.fig_dpi, core_height*3/4/self.fig_dpi), dpi=self.fig_dpi)
@@ -188,6 +189,11 @@ class Main:
                     self.elveflow_sensortypes[i].set(item)
                     self.config['Elveflow']['sensor%d_type' % (i+1)] = item
                 self.elveflow_sensortypes_optionmenu[i]['menu'].add_command(label=item, command=_set_elveflow_sensor)
+        self.elveflow_oil_channel_pressure_label = tk.Label(self.config_page, text='Elveflow oil channel, pressure [mbar]')
+        self.elveflow_oil_channel = tk.StringVar()
+        self.elveflow_oil_pressure = tk.StringVar()
+        self.elveflow_oil_channel_box = tk.Entry(self.config_page, textvariable=self.elveflow_oil_channel)
+        self.elveflow_oil_pressure_box = tk.Entry(self.config_page, textvariable=self.elveflow_oil_pressure)
 
         # Make Instrument
         self.AvailablePorts = SAXSDrivers.list_available_ports()
@@ -268,46 +274,64 @@ class Main:
         self.spec_filename_box.grid(row=3, column=0)
         self.spec_fileno_label.grid(row=2, column=1)
         self.spec_fileno_box.grid(row=3, column=1)
-        self.pump_inject_button.grid(row=5, column=0, pady=25)
+        self.buffer_sample_buffer_button.grid(row=5, column=0, pady=25)
+        self.clean_button.grid(row=5, column=1)
         self.canvas.get_tk_widget().grid(row=0, column=2, rowspan=6, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
         # Manual page
         # Config page
-        self.save_config_button.grid(row=0, column=0)
-        self.load_config_button.grid(row=0, column=1)
-        self.config_spec_address_label.grid(row=2, column=0)
-        self.config_spec_address.grid(row=2, column=1)
-        self.spec_connect_button.grid(row=2, column=2)
-        self.volumes_label.grid(row=4, column=0)
-        self.first_buffer_volume_box.grid(row=4, column=1)
-        self.sample_volume_box.grid(row=4, column=2)
-        self.last_buffer_volume_box.grid(row=4, column=3)
-        self.sample_flowrate_label.grid(row=5, column=0)
-        self.sample_flowrate_box.grid(row=5, column=1)
-        self.oil_refill_flowrate_label.grid(row=5, column=2)
-        self.oil_refill_flowrate_box.grid(row=5, column=3)
-        self.oil_valve_names_label.grid(row=6, column=0)
-        self.set_oil_valve_names_button.grid(row=6, column=7)
-        self.loading_valve_names_label.grid(row=7, column=0)
-        self.set_loading_valve_names_button.grid(row=7, column=7)
+        rowcounter = 0
+        self.save_config_button.grid(row=rowcounter, column=0)
+        self.load_config_button.grid(row=rowcounter, column=1)
+        rowcounter += 1
+        rowcounter += 1 # not sure why we do this twice, but we do
+        self.config_spec_address_label.grid(row=rowcounter, column=0)
+        self.config_spec_address.grid(row=rowcounter, column=1)
+        self.spec_connect_button.grid(row=rowcounter, column=2)
+        rowcounter += 1
+        rowcounter += 1 # not sure why we do this twice, but we do
+        self.volumes_label.grid(row=rowcounter, column=0)
+        self.first_buffer_volume_box.grid(row=rowcounter, column=1)
+        self.sample_volume_box.grid(row=rowcounter, column=2)
+        self.last_buffer_volume_box.grid(row=rowcounter, column=3)
+        rowcounter += 1
+        self.sample_flowrate_label.grid(row=rowcounter, column=0)
+        self.sample_flowrate_box.grid(row=rowcounter, column=1)
+        self.oil_refill_flowrate_label.grid(row=rowcounter, column=2)
+        self.oil_refill_flowrate_box.grid(row=rowcounter, column=3)
+        rowcounter += 1
+        self.oil_valve_names_label.grid(row=rowcounter, column=0)
+        self.set_oil_valve_names_button.grid(row=rowcounter, column=7)
         for i in range(6):
-            self.oil_valve_name_boxes[i].grid(row=6, column=i+1)
-            self.loading_valve_name_boxes[i].grid(row=7, column=i+1)
-        self.elveflow_sourcename_label.grid(row=8, column=0)
-        self.elveflow_sourcename_box.grid(row=8, column=1)
-        self.elveflow_sensortypes_label.grid(row=9, column=0)
+            self.oil_valve_name_boxes[i].grid(row=rowcounter, column=i+1)
+        rowcounter += 1
+        self.loading_valve_names_label.grid(row=rowcounter, column=0)
+        self.set_loading_valve_names_button.grid(row=rowcounter, column=7)
+        for i in range(6):
+            self.loading_valve_name_boxes[i].grid(row=rowcounter, column=i+1)
+        rowcounter += 2
+        self.elveflow_sourcename_label.grid(row=rowcounter, column=0)
+        self.elveflow_sourcename_box.grid(row=rowcounter, column=1)
+        rowcounter += 1
+        self.elveflow_sensortypes_label.grid(row=rowcounter, column=0)
         for i in range(4):
-            self.elveflow_sensortypes_optionmenu[i].grid(row=9, column=i+1)
-        self.tseries_label.grid(row=10, column=0)
-        self.tseries_time_box.grid(row=10, column=1)
-        self.tseries_frames_box.grid(row=10, column=2)
-        self.low_soap_time_label.grid(row=11, column=0)
-        self.low_soap_time_box.grid(row=11, column=1)
-        self.high_soap_time_label.grid(row=11, column=2)
-        self.high_soap_time_box.grid(row=11, column=3)
-        self.water_time_label.grid(row=11, column=4)
-        self.water_time_box.grid(row=11, column=5)
-        self.air_time_label.grid(row=11, column=6)
-        self.air_time_box.grid(row=11, column=7)
+            self.elveflow_sensortypes_optionmenu[i].grid(row=rowcounter, column=i+1)
+        rowcounter += 1
+        self.elveflow_oil_channel_pressure_label.grid(row=rowcounter, column=0)
+        self.elveflow_oil_channel_box.grid(row=rowcounter, column=1)
+        self.elveflow_oil_pressure_box.grid(row=rowcounter, column=2)
+        rowcounter += 1
+        self.tseries_label.grid(row=rowcounter, column=0)
+        self.tseries_time_box.grid(row=rowcounter, column=1)
+        self.tseries_frames_box.grid(row=rowcounter, column=2)
+        rowcounter += 1
+        self.low_soap_time_label.grid(row=rowcounter, column=0)
+        self.low_soap_time_box.grid(row=rowcounter, column=1)
+        self.high_soap_time_label.grid(row=rowcounter, column=2)
+        self.high_soap_time_box.grid(row=rowcounter, column=3)
+        self.water_time_label.grid(row=rowcounter, column=4)
+        self.water_time_box.grid(row=rowcounter, column=5)
+        self.air_time_label.grid(row=rowcounter, column=6)
+        self.air_time_box.grid(row=rowcounter, column=7)
         # Setup page
         self.refresh_com_ports.grid(row=0, column=0)
         self.AddPump.grid(row=0, column=2)
@@ -386,6 +410,8 @@ class Main:
             self.elveflow_sensortypes[1].set(elveflow_config['sensor2_type'])
             self.elveflow_sensortypes[2].set(elveflow_config['sensor3_type'])
             self.elveflow_sensortypes[3].set(elveflow_config['sensor4_type'])
+            self.elveflow_oil_channel.set(elveflow_config['elveflow_oil_channel'])
+            self.elveflow_oil_pressure.set(elveflow_config['elveflow_oil_pressure'])
         if not preload:
             self.set_oil_valve_names()
             self.set_loading_valve_names()
@@ -410,8 +436,8 @@ class Main:
 
             elveflow_config['elveflow_sourcename'] = self.elveflow_sourcename.get()
 
-            spec_config['tseries_time'] = self.tseries_time.get()
-            spec_config['tseries_frames'] = self.tseries_frames.get()
+            spec_config['tseries_time'] = str(self.tseries_time.get())
+            spec_config['tseries_frames'] = str(self.tseries_frames.get())
 
             self.config.write(open(filename, 'w', encoding='utf-8'))
 
@@ -501,6 +527,9 @@ class Main:
 
         self.canvas.draw() # may need the stupid hack from widgets.py
 
+    def graph_vline(self):
+        self.main_tab_ax1.axvline(int(time.time() - self.elveflow_display.starttime), color='k', linewidth=5)
+
     def pump_refill_command(self):
         """Do nothing. It's a dummy command."""
         self.flowpath.set_unlock_state(False)
@@ -533,26 +562,31 @@ class Main:
         self.flowpath.set_unlock_state(False)
         self.graph_start_time = int(time.time())
 
+        # self.main_tab_ax1.axvline(self.graph_start_time - self.elveflow_display.starttime + 0.5, color='k')
+        self.update_graph()
+
         self.queue.put((self.python_logger.info, "starting to run buffer-sample-buffer"))
-        self.queue.put(self.elveflow_display.start_saving)
         self.queue.put(self.update_graph)
+        self.queue.put(self.elveflow_display.start_saving)
 
         self.queue.put((self.flowpath.valve2.set_auto_position, "Run"))
-        self.queue.put((self.flowpath.valve3.set_auto_position, "A"))
+        self.queue.put((self.flowpath.valve3.set_auto_position, 0))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Run"))
         self.queue.put((self.pump.infuse_volume, self.first_buffer_volume.get()/1000, self.sample_flowrate.get()))
         self.queue.put((self.pump.wait_until_stopped, 2*self.first_buffer_volume.get()/self.sample_flowrate.get()*60))
 
+        self.queue.put(self.graph_vline)
         self.queue.put(self.update_graph)
         self.queue.put((self.flowpath.valve2.set_auto_position, "Run"))
-        self.queue.put((self.flowpath.valve3.set_auto_position, "B"))
+        self.queue.put((self.flowpath.valve3.set_auto_position, 1))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Run"))
         self.queue.put((self.pump.infuse_volume, self.sample_volume.get()/1000, self.sample_flowrate.get()))
         self.queue.put((self.pump.wait_until_stopped, 2*self.sample_volume.get()/self.sample_flowrate.get()*60))
 
+        self.queue.put(self.graph_vline)
         self.queue.put(self.update_graph)
         self.queue.put((self.flowpath.valve2.set_auto_position, "Run"))
-        self.queue.put((self.flowpath.valve3.set_auto_position, "A"))
+        self.queue.put((self.flowpath.valve3.set_auto_position, 0))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Run"))
         self.queue.put((self.pump.infuse_volume, self.last_buffer_volume.get()/1000, self.sample_flowrate.get()))
         self.queue.put((self.pump.wait_until_stopped, 2*self.last_buffer_volume.get()/self.sample_flowrate.get()*60))
@@ -566,57 +600,64 @@ class Main:
         self.queue.put((self.python_logger.info, "done with running buffer-sample-buffer"))
 
     def clean_and_refill_command(self):
+        elveflow_oil_channel = int(self.elveflow_oil_channel.get()) #throws an error if the conversion doesn't work
+        elveflow_oil_pressure = self.elveflow_oil_pressure.get()
+
         self.flowpath.set_unlock_state(False)
-        self.queue.put((self.elveflow_display.elveflow_handler.start_pressure, 4, 100))  # Pressurize Oil with Elveflow
+        self.queue.put((self.elveflow_display.pressureValue_var[elveflow_oil_channel - 1].set, elveflow_oil_pressure))  # Set oil pressure
+        self.queue.put((self.elveflow_display.start_pressure, elveflow_oil_channel))
         self.queue.put((self.pump.refill_volume, (self.sample_volume.get()+self.first_buffer_volume.get()+self.last_buffer_volume.get())/1000, self.oil_refill_flowrate.get()))
 
         self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
-        self.queue.put((self.flowpath.valve3.set_auto_position, "A"))
+        self.queue.put((self.flowpath.valve3.set_auto_position, 0))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Low Flow Soap"))
         self.queue.put((time.sleep, self.low_soap_time.get()))
 
         self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
-        self.queue.put((self.flowpath.valve3.set_auto_position, "A"))
+        self.queue.put((self.flowpath.valve3.set_auto_position, 0))
         self.queue.put((self.flowpath.valve4.set_auto_position, "High Flow Soap"))
         self.queue.put((time.sleep, self.high_soap_time.get()))
 
         self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
-        self.queue.put((self.flowpath.valve3.set_auto_position, "A"))
+        self.queue.put((self.flowpath.valve3.set_auto_position, 0))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Water"))
         self.queue.put((time.sleep, self.water_time.get()))
 
         self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
-        self.queue.put((self.flowpath.valve3.set_auto_position, "A"))
+        self.queue.put((self.flowpath.valve3.set_auto_position, 0))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Air"))
         self.queue.put((time.sleep, self.air_time.get()))
 
         self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
-        self.queue.put((self.flowpath.valve3.set_auto_position, "B"))
+        self.queue.put((self.flowpath.valve3.set_auto_position, 1))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Low Flow Soap"))
         self.queue.put((time.sleep, self.low_soap_time.get()))
 
         self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
-        self.queue.put((self.flowpath.valve3.set_auto_position, "B"))
+        self.queue.put((self.flowpath.valve3.set_auto_position, 1))
         self.queue.put((self.flowpath.valve4.set_auto_position, "High Flow Soap"))
         self.queue.put((time.sleep, self.high_soap_time.get()))
 
         self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
-        self.queue.put((self.flowpath.valve3.set_auto_position, "B"))
+        self.queue.put((self.flowpath.valve3.set_auto_position, 1))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Water"))
         self.queue.put((time.sleep, self.water_time.get()))
 
         self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
-        self.queue.put((self.flowpath.valve3.set_auto_position, "B"))
+        self.queue.put((self.flowpath.valve3.set_auto_position, 1))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Air"))
         self.queue.put((time.sleep, self.air_time.get()))
-
+        self.queue.put((self.flowpath.valve4.set_auto_position, "Load"))
         self.queue.put((self.pump.wait_until_stopped, 120))
         self.queue.put(self.pump.infuse)
-        self.queue.put((self.elveflow_display.elveflow_handler.start_pressure, 4, 0))
+        self.queue.put((self.elveflow_display.pressureValue_var[elveflow_oil_channel - 1].set, "0"))  # Set oil pressure to 0
+        self.queue.put((self.elveflow_display.start_pressure, elveflow_oil_channel))
+
+        self.queue.put((self.python_logger.info, 'cleaning done'))
 
     def toggle_buttons(self):
         """Toggle certain buttons on and off when they should not be allowed to add to queue."""
-        buttons = (self.pump_inject_button, self.pump_inject_button)
+        buttons = (self.buffer_sample_buffer_button, self.clean_button)
         if self.queue_busy:
             for button in buttons:
                 button['state'] = 'disabled'
