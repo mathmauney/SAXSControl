@@ -170,7 +170,7 @@ class SpecConnectionDispatcher(asyncore.dispatcher):
               except socket.error as err:
                  pass #exception could be 'host not found' for example, we ignore it
               if self.scanport:
-                self.port += 1 
+                self.port += 1
               else:
                 break
 
@@ -303,11 +303,11 @@ class SpecConnectionDispatcher(asyncore.dispatcher):
         Messages are built from the read calls on the socket.
         """
         self.receivedStrings.append(self.recv(32768)) #read at most all the input buffer
-        s = ''.join(self.receivedStrings)
-        sbuffer = buffer(s)
+        s = b''.join(self.receivedStrings)
+        # sbuffer = buffer(s)
+        sbuffer = s
         consumedBytes = 0
         offset = 0
-
         while offset < len(sbuffer):
             if self.message is None:
                 self.message = SpecMessage.message(version = self.serverVersion)
@@ -341,7 +341,7 @@ class SpecConnectionDispatcher(asyncore.dispatcher):
                 elif self.message.cmd == SpecMessage.HELLO_REPLY:
                     if self.checkourversion(self.message.name):
                         self.serverVersion = self.message.vers #header version
-                        #self.state = CONNECTED
+                        self.state = CONNECTED
                         self.specConnected()
                     else:
                         self.serverVersion = None
@@ -400,12 +400,10 @@ class SpecConnectionDispatcher(asyncore.dispatcher):
         while len(self.sendq) > 0:
             self.outputStrings.append(self.sendq.pop().sendingString())
 
-        outputBuffer = ''.join(self.outputStrings)
-
+        outputBuffer = b''.join(self.outputStrings)
         sent = self.send(outputBuffer)
 
-        self.outputStrings = [ outputBuffer[sent:] ]
-
+        self.outputStrings = [outputBuffer[sent:]]
 
     def send_msg_cmd_with_return(self, cmd):
         """Send a command message to the remote Spec server, and return the reply id.
@@ -580,18 +578,3 @@ class SpecConnectionDispatcher(asyncore.dispatcher):
         lost.
         """
         self.sendq.insert(0, message)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
