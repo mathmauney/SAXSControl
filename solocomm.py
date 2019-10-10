@@ -333,8 +333,8 @@ class ControlThread(threading.Thread):
         while self.MainGUI.listen_run_flag.is_set():
             if controlQueue.empty():
                 if self.MainGUI.queue_busy:
+                    self.MainGUI.queue_busy = False
                     self.MainGUI.toggle_buttons()
-                self.MainGUI.queue_busy = False
                 time.sleep(.1)
             else:
                 queue_item = controlQueue.get()
@@ -359,7 +359,7 @@ class ControlThread(threading.Thread):
                         queue_item()
                     except:
                         logger.exception("Caught exception in tuple queue item:")
-                else:
+                elif isinstance(queue_item, list):
                     commandList = queue_item
                     for command in commandList:
                         # print 'Processing command: ', command
@@ -378,6 +378,8 @@ class ControlThread(threading.Thread):
                         except (CommException, queue.Empty):
                             self.abort()
                             break
+                else:
+                    logger.debug("Bad task: " + repr(queue_item))
 
                 controlQueue.task_done()
 

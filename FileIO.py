@@ -23,6 +23,17 @@ SDK_SENSOR_TYPES = {
     # "Press_16_bar": 11,
     # "Level": 12
 }
+ELVEFLOW_DATA_COLUMNS = {
+    'time [s]': 0,
+    'Pressure 1 [mbar]': 1,
+    'Pressure 2 [mbar]': 2,
+    'Pressure 3 [mbar]': 3,
+    'Pressure 4 [mbar]': 4,
+    'Volume flow rate 1 [µL/min]': 5,
+    'Volume flow rate 2 [µL/min]': 6,
+    'Volume flow rate 3 [µL/min]': 7,
+    'Volume flow rate 4 [µL/min]': 8,
+} # I guess I'm hard-coding them in here now. Unlike the sensor types, these numbers aren't used outside this program
 
 if USE_SDK:
     from ctypes import c_int32, c_double, byref
@@ -167,7 +178,7 @@ class ElveflowHandler_SDK:
     VOLUME_KI = 50
     VOLUME_KD = 0
 
-    def __init__(self, sourcename=None, errorlogger=None, sensortypes=[], starttime=0):
+    def __init__(self, sourcename=None, errorlogger=None, sensortypes=[]):
         if sourcename is None or sourcename == '':
             self.sourcename = b'Have you loaded the config file?'
         else:
@@ -186,7 +197,6 @@ class ElveflowHandler_SDK:
         else:
             self.errorlogger = errorlogger
         self.errorlogger.info("Initializing Elveflow at %s" % sourcename)
-        self.starttime = starttime
 
         self.instr_ID = c_int32()
         self.calib = (c_double*1000)()  # always define array that way, calibration should have 1000 elements
@@ -236,7 +246,7 @@ class ElveflowHandler_SDK:
                         self.errorlogger.warning('ERROR CODE FLOW SENSOR %i: %s' % (i, error))
                     newline[self.header[i+4]] = data_sens.value
 
-                newline[self.header[0]] = time.time() - self.starttime
+                newline[self.header[0]] = time.time()
 
                 try:
                     self.buffer_queue.put(newline, False)
@@ -314,7 +324,7 @@ class ElveflowHandler_SDK:
         if error != 0:
             self.errorlogger.warning('ERROR CODE SET PRESSURE CHANNEL %i: %s' % (channel_number, error))
 
-    def setPressureLoop(self, channel_number, value, interruptEvent=None, onFinish=None):
+    def set_pressure_loop(self, channel_number, value, interruptEvent=None, on_finish=None):
         """starts a thread that raises the Elveflow pressure without a big spike
         TODO: make it stop when it reaches the target"""
         if interruptEvent is None:
@@ -373,7 +383,7 @@ class ElveflowHandler_SDK:
         self.reading_thread.start()
         return self.reading_thread
 
-    def setVolumeLoop(self, channel_number, value, interruptEvent=None, pid_constants=None):
+    def set_volume_loop(self, channel_number, value, interruptEvent=None, pid_constants=None):
         """starts a thread that sets the Elveflow flow rate"""
         if interruptEvent is None:
             # if there isn't one already, create a dummy one
@@ -414,7 +424,7 @@ class ElveflowHandler_SDK:
 
             try:
                 self.errorlogger.info("DONE WITH FLOW RATE LOOP CHANNEL %s THREAD %s; setting pressure to zero." % (channel_number, threading.current_thread()))
-                a = self.setPressureLoop(channel_number, 0)
+                a = self.set_pressure_loop(channel_number, 0)
                 a.join()
                 self.errorlogger.info("ENDING FLOW RATE LOOP CHANNEL %s THREAD %s." % (channel_number, threading.current_thread()))
             except RuntimeError:
