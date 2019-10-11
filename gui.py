@@ -769,9 +769,9 @@ class Main:
          tk.Button(self.manual_page, text="Set", command=lambda: self.queue.put((self.Instruments[InstrumentIndex].set_target_vol, self.manual_page_variables[InstrumentIndex][3].get())))
          ]
         # Bind Enter to Spinboxes
-        newbuttons[4].bind('<Return>', lambda: self.queue.put((self.Instruments[InstrumentIndex].set_infuse_rate, self.manual_page_variables[InstrumentIndex][1].get())))
-        newbuttons[7].bind('<Return>', lambda: self.queue.put((self.Instruments[InstrumentIndex].set_refill_rate, self.manual_page_variables[InstrumentIndex][2].get())))
-        newbuttons[16].bind('<Return>', lambda: self.queue.put((self.Instruments[InstrumentIndex].set_target_vol, self.manual_page_variables[InstrumentIndex][3].get())))
+        newbuttons[4].bind('<Return>', lambda event: self.queue.put((self.Instruments[InstrumentIndex].set_infuse_rate, self.manual_page_variables[InstrumentIndex][1].get())))
+        newbuttons[7].bind('<Return>', lambda event: self.queue.put((self.Instruments[InstrumentIndex].set_refill_rate, self.manual_page_variables[InstrumentIndex][2].get())))
+        newbuttons[16].bind('<Return>', lambda event: self.queue.put((self.Instruments[InstrumentIndex].set_target_vol, self.manual_page_variables[InstrumentIndex][3].get())))
         self.manual_page_buttons.append(newbuttons)
         # Build Pump
         for i in range(len(self.manual_page_buttons)):
@@ -824,7 +824,7 @@ class Main:
          tk.Spinbox(self.manual_page, from_=1, to=self.setup_page_variables[InstrumentIndex][2].get(), textvariable=self.manual_page_variables[InstrumentIndex][1]),
          tk.Button(self.manual_page, text="Change", command=lambda: self.queue.put((self.Instruments[InstrumentIndex].switchvalve, self.manual_page_variables[InstrumentIndex][1].get()))),
          ]
-        newbuttons[2].bind('<Return>', lambda: self.queue.put((self.Instruments[InstrumentIndex].switchvalve, self.manual_page_variables[InstrumentIndex][1].get())))
+        newbuttons[2].bind('<Return>', lambda event: self.queue.put((self.Instruments[InstrumentIndex].switchvalve, self.manual_page_variables[InstrumentIndex][1].get())))
         self.manual_page_buttons.append(newbuttons)
         # Place buttons
         for i in range(len(self.manual_page_buttons)):
@@ -867,7 +867,7 @@ class Main:
          tk.Spinbox(self.manual_page, values=("A", "B"), textvariable=self.manual_page_variables[InstrumentIndex][1]),
          tk.Button(self.manual_page, text="Change", command=lambda: self.queue.put((self.Instruments[InstrumentIndex].switchvalve, self.manual_page_variables[InstrumentIndex][1].get()))),
          ]
-        newbuttons[2].bind('<Return>', lambda: self.queue.put((self.Instruments[InstrumentIndex].switchvalve, self.manual_page_variables[InstrumentIndex][1].get())))
+        newbuttons[2].bind('<Return>', lambda event: self.queue.put((self.Instruments[InstrumentIndex].switchvalve, self.manual_page_variables[InstrumentIndex][1].get())))
         self.manual_page_buttons.append(newbuttons)
         # Place buttons
         for i in range(len(self.manual_page_buttons)):
