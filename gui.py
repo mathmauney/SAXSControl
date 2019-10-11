@@ -40,7 +40,10 @@ class Main:
         """Set up the window and button variables."""
         print("initializing GUI...")
         if not os.path.exists(LOG_FOLDER):
-            raise FileNotFoundError("%s folder not found" % LOG_FOLDER)
+            print('Double checking log folder')
+            time.sleep(1)
+            if not os.path.exists(LOG_FOLDER):
+                raise FileNotFoundError("%s folder not found" % LOG_FOLDER)
         elif not os.path.isdir(LOG_FOLDER):
             raise NotADirectoryError("%s is not a folder" % LOG_FOLDER)
         if not os.path.exists(ElveflowDisplay.OUTPUT_FOLDER):
