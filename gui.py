@@ -40,7 +40,10 @@ class Main:
         """Set up the window and button variables."""
         print("initializing GUI...")
         if not os.path.exists(LOG_FOLDER):
-            raise FileNotFoundError("%s folder not found" % LOG_FOLDER)
+            print('Double checking log folder')
+            time.sleep(1)
+            if not os.path.exists(LOG_FOLDER):
+                raise FileNotFoundError("%s folder not found" % LOG_FOLDER)
         elif not os.path.isdir(LOG_FOLDER):
             raise NotADirectoryError("%s is not a folder" % LOG_FOLDER)
         if not os.path.exists(ElveflowDisplay.OUTPUT_FOLDER):
@@ -106,6 +109,10 @@ class Main:
         self.spec_fileno_box = tk.Entry(self.auto_page, textvariable=self.spec_fileno)
         self.buffer_sample_buffer_button = tk.Button(self.auto_page, text='Run Buffer/Sample/Buffer', command=self.buffer_sample_buffer_command)
         self.clean_button = tk.Button(self.auto_page, text='Clean/Refill', command=self.clean_and_refill_command)
+        self.load_button = tk.Button(self.auto_page, text='Load Position', command=self.load_command)
+        self.clean_only_button = tk.Button(self.auto_page, text='Clean Only', command=self.clean_only_command)
+        #self.clean_only_button = tk.Button(self.auto_page, text='Clean Only', commmand=self.clean_only_command)
+        self.refill_only_button = tk.Button(self.auto_page, text='Refill Only', command=self.refill_only_command)
 
         self.fig_dpi = 96  # this shouldn't matter too much (because we normalize against it) except in how font sizes are handled in the plot
         self.main_tab_fig = plt.Figure(figsize=(core_width*2/3/self.fig_dpi, core_height*3/4/self.fig_dpi), dpi=self.fig_dpi)
@@ -269,14 +276,17 @@ class Main:
         self.spec_base_directory_box.grid(row=1, column=0)
         self.spec_sub_directory_label.grid(row=0, column=1)
         self.spec_sub_directory_box.grid(row=1, column=1)
-        self.spec_directory_button.grid(row=1, column=2)
+        self.spec_directory_button.grid(row=4, column=1)
         self.spec_filename_label.grid(row=2, column=0)
         self.spec_filename_box.grid(row=3, column=0)
         self.spec_fileno_label.grid(row=2, column=1)
         self.spec_fileno_box.grid(row=3, column=1)
-        self.buffer_sample_buffer_button.grid(row=5, column=0, pady=25)
-        self.clean_button.grid(row=5, column=1)
-        self.canvas.get_tk_widget().grid(row=0, column=2, rowspan=6, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+        self.buffer_sample_buffer_button.grid(row=5, column=0)
+        self.load_button.grid(row=5, column=1)
+        self.clean_button.grid(row=6, column=0)
+        self.clean_only_button.grid(row=6, column=1)
+        self.refill_only_button.grid(row=6, column=2)
+        self.canvas.get_tk_widget().grid(row=0, column=2, rowspan=6, columnspan=8, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
         # Manual page
         # Config page
         rowcounter = 0
@@ -443,11 +453,13 @@ class Main:
 
     def set_oil_valve_names(self):
         """Send selection valve names to the control gui."""
+        self.python_logger.info("Oil valve names set.")
         for i in range(0, 6):
             self.flowpath.valve2.name_position(i, self.oil_valve_names[i].get())
 
     def set_loading_valve_names(self):
         """Send selection valve names to the control gui."""
+        self.python_logger.info("Loading valve names set.")
         for i in range(0, 6):
             self.flowpath.valve4.name_position(i, self.loading_valve_names[i].get())
 
@@ -663,6 +675,15 @@ class Main:
 
         self.queue.put((self.python_logger.info, 'cleaning done'))
 
+    def clean_only_command(self):
+        pass
+
+    def refill_only_command(self):
+        pass
+
+    def load_command(self):
+        pass
+
     def toggle_buttons(self):
         """Toggle certain buttons on and off when they should not be allowed to add to queue."""
         buttons = (self.buffer_sample_buffer_button, self.clean_button)
@@ -767,9 +788,9 @@ class Main:
          tk.Button(self.manual_page, text="Set", command=lambda: self.queue.put((self.Instruments[InstrumentIndex].set_target_vol, self.manual_page_variables[InstrumentIndex][3].get())))
          ]
         # Bind Enter to Spinboxes
-        newbuttons[4].bind('<Return>', lambda: self.queue.put((self.Instruments[InstrumentIndex].set_infuse_rate, self.manual_page_variables[InstrumentIndex][1].get())))
-        newbuttons[7].bind('<Return>', lambda: self.queue.put((self.Instruments[InstrumentIndex].set_refill_rate, self.manual_page_variables[InstrumentIndex][2].get())))
-        newbuttons[16].bind('<Return>', lambda: self.queue.put((self.Instruments[InstrumentIndex].set_target_vol, self.manual_page_variables[InstrumentIndex][3].get())))
+        newbuttons[4].bind('<Return>', lambda event: self.queue.put((self.Instruments[InstrumentIndex].set_infuse_rate, self.manual_page_variables[InstrumentIndex][1].get())))
+        newbuttons[7].bind('<Return>', lambda event: self.queue.put((self.Instruments[InstrumentIndex].set_refill_rate, self.manual_page_variables[InstrumentIndex][2].get())))
+        newbuttons[16].bind('<Return>', lambda event: self.queue.put((self.Instruments[InstrumentIndex].set_target_vol, self.manual_page_variables[InstrumentIndex][3].get())))
         self.manual_page_buttons.append(newbuttons)
         # Build Pump
         for i in range(len(self.manual_page_buttons)):
@@ -822,7 +843,7 @@ class Main:
          tk.Spinbox(self.manual_page, from_=1, to=self.setup_page_variables[InstrumentIndex][2].get(), textvariable=self.manual_page_variables[InstrumentIndex][1]),
          tk.Button(self.manual_page, text="Change", command=lambda: self.queue.put((self.Instruments[InstrumentIndex].switchvalve, self.manual_page_variables[InstrumentIndex][1].get()))),
          ]
-        newbuttons[2].bind('<Return>', lambda: self.queue.put((self.Instruments[InstrumentIndex].switchvalve, self.manual_page_variables[InstrumentIndex][1].get())))
+        newbuttons[2].bind('<Return>', lambda event: self.queue.put((self.Instruments[InstrumentIndex].switchvalve, self.manual_page_variables[InstrumentIndex][1].get())))
         self.manual_page_buttons.append(newbuttons)
         # Place buttons
         for i in range(len(self.manual_page_buttons)):
@@ -865,7 +886,7 @@ class Main:
          tk.Spinbox(self.manual_page, values=("A", "B"), textvariable=self.manual_page_variables[InstrumentIndex][1]),
          tk.Button(self.manual_page, text="Change", command=lambda: self.queue.put((self.Instruments[InstrumentIndex].switchvalve, self.manual_page_variables[InstrumentIndex][1].get()))),
          ]
-        newbuttons[2].bind('<Return>', lambda: self.queue.put((self.Instruments[InstrumentIndex].switchvalve, self.manual_page_variables[InstrumentIndex][1].get())))
+        newbuttons[2].bind('<Return>', lambda event: self.queue.put((self.Instruments[InstrumentIndex].switchvalve, self.manual_page_variables[InstrumentIndex][1].get())))
         self.manual_page_buttons.append(newbuttons)
         # Place buttons
         for i in range(len(self.manual_page_buttons)):
@@ -1012,7 +1033,6 @@ class Main:
 
             self.spec_fileno.delete(0, 'end')
             self.spec_fileno.insert(0, FileNumber+1)
-
 
 
 if __name__ == "__main__":
