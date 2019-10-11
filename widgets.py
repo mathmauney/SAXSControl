@@ -20,6 +20,7 @@ from matplotlib import pyplot as plt
 
 matplotlib.use('TkAgg')
 warnings.filterwarnings("ignore", message="Attempting to set identical bottom==top")
+warnings.filterwarnings("ignore", message="Attempting to set identical left==right")
 
 logger = logging.getLogger('python')
 
@@ -656,7 +657,7 @@ class ElveflowDisplay(tk.Canvas):
                 pressureValue.set(str(flowrate_to_set))
                 self.elveflow_handler.set_volume_loop(channel, flowrate_to_set, interruptEvent=self.setPressureStop_flag[i], pid_constants=(kp, ki, kd))
         except ValueError:
-            self.errorlogger.error("unknown value for channel %i" % channel)
+            self.errorlogger.error("unknown value for channel %i (pressure value is %r)" % (channel, pressureValue.get()))
             pressureValue.set("")
             self.pressureSettingActive_var[i].set(False)
 
@@ -788,7 +789,16 @@ class FlowPath(tk.Canvas):
             if self.hardware is None:
                 self.assign_to_hardware()
             elif self.canvas.is_unlocked and position is not '':
-                hardware_pos = self.hardware_names.index(position)
+                hardware_pos = self.hardware_names.index(position)+1
+                self.hardware.switchvalve(hardware_pos)
+                self.position = position
+
+        def set_auto_position(self, position):    # TODO: Add in actual valve switching
+            """Change the valve position after being clicked both visually and physically."""
+            if self.hardware is None:
+                raise ValueError
+            elif position is not '':
+                hardware_pos = self.hardware_names.index(position)+1
                 self.hardware.switchvalve(hardware_pos)
                 self.position = position
 
@@ -865,6 +875,14 @@ class FlowPath(tk.Canvas):
             if self.hardware is None:
                 self.assign_to_hardware()
             elif self.canvas.is_unlocked:
+                self.hardware.switchvalve(position)
+                self.set_position(position)
+
+        def set_auto_position(self, position):    # TODO: Add in actual valve switching
+            """Change the valve position after being clicked both visually and physically."""
+            if self.hardware is None:
+                raise ValueError
+            else:
                 self.hardware.switchvalve(position)
                 self.set_position(position)
 

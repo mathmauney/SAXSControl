@@ -354,11 +354,15 @@ class ControlThread(threading.Thread):
                         queue_item[0](*queue_item[1:])
                     except:
                         logger.exception("Caught exception in tuple queue item:")
+                        self.abort()
+                        pass
                 elif callable(queue_item):
                     try:
                         queue_item()
                     except:
                         logger.exception("Caught exception in tuple queue item:")
+                        self.abort()
+                        pass
                 elif isinstance(queue_item, list):
                     commandList = queue_item
                     for command in commandList:
@@ -367,7 +371,7 @@ class ControlThread(threading.Thread):
                         cmd = command[1]
 
                         if self.abortProcess:
-                            break
+                            pass
 
                         try:
                             # ADX
@@ -377,7 +381,7 @@ class ControlThread(threading.Thread):
 
                         except (CommException, queue.Empty):
                             self.abort()
-                            break
+                            pass
                 else:
                     logger.debug("Bad task: " + repr(queue_item))
 
@@ -402,7 +406,7 @@ class ControlThread(threading.Thread):
         while controlQueueEmpty is False:
             try:
                 tst = controlQueue.get(timeout=3)
-                print('Cleaned', tst)
+                logger.debug('Queue cleaned ' + repr(tst))
                 controlQueue.task_done()
                 controlQueueEmpty = controlQueue.empty()
             except queue.Empty:
@@ -500,7 +504,7 @@ class ControlThread(threading.Thread):
 
     def abort(self):
         logger.warning("Queue Aborted")
-        if self.busy:
+        if self.MainGUI.queue_busy:
             self.abortProcess = True
 
         else:
