@@ -268,131 +268,6 @@ class SpecMessage:
         return ''
 
 
-class message2(SpecMessage):
-    """Version 2 message class"""
-    def __init__(self, *args, **kwargs):
-        """Constructor
-
-        If called without arguments, message is supposed to be read from stream.
-        Otherwise, the 'init' method is called with the specified arguments, for
-        creating a message from arguments.
-        """
-        SpecMessage.__init__(self, '<IiiiIIiiIII80s')
-
-        if len(args) > 0:
-            self.init(*args, **kwargs)
-
-
-    def init(self, ser, cmd, name, data, datatype = None, rows = 0, cols = 0):
-        """ Create a message from the arguments"""
-        self.vers = 2 #header version
-        self.size = self.headerLength
-        self.magic = MAGIC_NUMBER
-        self.rows = rows
-        self.cols = cols
-        self.data = data
-        self.type = datatype or self.dataType(self.data)
-        self.time = time.time()
-        self.sec = int(self.time)
-        self.usec = int((self.time-self.sec)*1E6)
-        self.sn, self.cmd, self.name = ser, cmd, str(name)
-
-
-    def readHeader(self, rawstring):
-        self.magic, self.vers, self.size, self.sn, \
-                    self.sec, self.usec, self.cmd, \
-                    datatype, self.rows, self.cols, \
-                    datalen, name  = struct.unpack(self.packedHeaderDataFormat, rawstring)
-        if self.magic != MAGIC_NUMBER:
-            self.packedHeaderDataFormat=">"+self.packedHeaderDataFormat[1:]
-            self.magic, self.vers, self.size, self.sn, \
-                    self.sec, self.usec, self.cmd, \
-                    datatype, self.rows, self.cols, \
-                    datalen, name  = struct.unpack(self.packedHeaderDataFormat, rawstring)
-        #rint 'READ header', self.magic, 'vers=', self.vers, 'size=', self.size, 'cmd=', self.cmd, 'type=', datatype, 'datalen=', datalen, 'err=', self.err, 'name=', str(self.name)
-        self.time = self.sec + float(self.usec) / 1E6
-        # self.name = name.replace(NULL, '') #remove padding null bytes
-        self.name = name
-        return (datatype, datalen)
-
-
-    def sendingString(self):
-        if self.type is None:
-            # invalid message
-            return ''
-
-        data = self.sendingDataString(self.data, self.type)
-        datalen = len(data)
-
-        header = struct.pack(self.packedHeaderDataFormat, self.magic, self.vers, self.size,
-                             self.sn, self.sec, self.usec, self.cmd, self.type,
-                             self.rows, self.cols, datalen, str(self.name))
-        #print 'WRITE header', self.magic, 'vers=', self.vers, 'size=', self.size, 'cmd=', self.cmd, 'type=', self.type, 'datalen=', datalen, 'err=', self.err, 'name=', str(self.name)
-
-        return header + data
-
-
-class message3(SpecMessage):
-    def __init__(self, *args, **kwargs):
-        SpecMessage.__init__(self, '<IiiiIIiiIIIi80s')
-
-        if len(args) > 0:
-            self.init(*args, **kwargs)
-
-
-    def init(self, ser, cmd, name, data, datatype = None, rows = 0, cols = 0):
-        """ Create a message from the arguments """
-        self.vers = 3 #header version
-        self.size = self.headerLength
-        self.magic = MAGIC_NUMBER
-        self.rows = rows
-        self.cols = cols
-        self.data = data
-        self.type = datatype or self.dataType(self.data)
-        self.time = time.time()
-        self.sec = int(self.time)
-        self.usec = int((self.time-self.sec)*1E6)
-        self.sn, self.cmd, self.name = ser, cmd, str(name)
-
-
-    def readHeader(self, rawstring):
-        self.magic, self.vers, self.size, self.sn, \
-                    self.sec, self.usec, self.cmd, \
-                    datatype, self.rows, self.cols, \
-                    datalen, self.err, name  = struct.unpack(self.packedHeaderDataFormat, rawstring)
-        if self.magic != MAGIC_NUMBER:
-            self.packedHeaderDataFormat=">"+self.packedHeaderDataFormat[1:]
-            self.magic, self.vers, self.size, self.sn, \
-                    self.sec, self.usec, self.cmd, \
-                    datatype, self.rows, self.cols, \
-                    datalen, self.err, name  = struct.unpack(self.packedHeaderDataFormat, rawstring)
-        #print 'READ header', self.magic, 'vers=', self.vers, 'size=', self.size, 'cmd=', self.cmd, 'type=', datatype, 'datalen=', datalen, 'err=', self.err, 'name=', str(self.name)
-        self.time = self.sec + float(self.usec) / 1E6
-        self.name = name.replace(NULL, '') #remove padding null bytes
-
-        if self.err > 0:
-            datatype = ERROR #change message type to 'ERROR' for further processing
-
-        return (datatype, datalen)
-
-
-    def sendingString(self):
-        if self.type is None:
-            # invalid message
-            return ''
-
-        data = self.sendingDataString(self.data, self.type)
-        datalen = len(data)
-
-        header = struct.pack(self.packedHeaderDataFormat, self.magic, self.vers, self.size,
-                             self.sn, self.sec, self.usec, self.cmd, self.type,
-                             self.rows, self.cols, datalen, self.err, str(self.name))
-
-        #print 'WRITE header', self.magic, 'vers=', self.vers, 'size=', self.size, 'cmd=', self.cmd, 'type=', self.type, 'datalen=', datalen, 'err=', self.err, 'name=', str(self.name)
-        #print 'WRITE data', data
-        return header + data
-
-
 class message4(SpecMessage):
     def __init__(self, *args, **kwargs):
         SpecMessage.__init__(self, '<IiIIIIiiIIIii80s')
@@ -433,7 +308,7 @@ class message4(SpecMessage):
         self.name = name
         if self.err > 0:
             datatype = ERROR #change message type to 'ERROR' for further processing
-
+        print('Read header, CMD = ' + str(self.cmd))
         return (datatype, datalen)
 
 

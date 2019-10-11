@@ -124,13 +124,16 @@ class _ThreadedSpecConnectionsManager(threading.Thread):
         Arguments:
         specVersion -- a string in the 'host:port' form
         """
+        print('In get connection')
         gc.collect()
-
+        print('Gc.collect() called')
         try:
             con = self.connections[specVersion]()
+            print('Got gonnection in getConnection()')
         except KeyError:
+            print('KeyError in gotConnection')
             con = SpecConnection.SpecConnection(specVersion)
-
+            print('Made new SpecConnection')
             def removeConnection(ref, connectionName = specVersion):
                 self.closeConnection(connectionName)
 
@@ -141,11 +144,11 @@ class _ThreadedSpecConnectionsManager(threading.Thread):
                 self.connectionDispatchers[specVersion] = con.dispatcher
             finally:
                 self.lock.release()
-
+        print('Middle of getConnection')
         if not self.__started:
             self.start()
             self.__started = True
-
+        print('Out of getConnectoin')
         return con
 
 
@@ -188,7 +191,7 @@ class _SpecConnectionsManager:
           if connection is not None:
             connection.makeConnection()
 
-        connection_dispatchers = dict([(condis.socket.fileno(), condis) for condis in list(self.connectionDispatchers.values()) if condis.socket is not None]) 
+        connection_dispatchers = dict([(condis.socket.fileno(), condis) for condis in list(self.connectionDispatchers.values()) if condis.socket is not None])
         asyncore.loop(timeout, False, connection_dispatchers, 1)
 
         SpecEventsDispatcher.dispatch()
@@ -233,21 +236,3 @@ class _SpecConnectionsManager:
     def closeConnections(self):
         for connectionName in list(self.connectionDispatchers.keys()):
             self.closeConnection(connectionName)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

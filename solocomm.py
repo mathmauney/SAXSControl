@@ -88,7 +88,6 @@ class SpecCommThread(threading.Thread):
         self.connected = False
 
     def run(self):
-
         ############## CONNECT ON STARTUP ##############
         try:
             self.specCommand = MySpecCommand('', self.host, self)
@@ -98,6 +97,7 @@ class SpecCommThread(threading.Thread):
             self.specCommand = None
             controlQueue.put([('G', 'A LED_ERROR')])
             controlQueue.put([('G', 'A CONNECT_ERROR')])
+            print('Spec Timeout')
             logger.warning("Unable to connect to SPEC")
 
         ###############################################
@@ -301,8 +301,6 @@ def waitFor(state):
 
 def initConnections(MainGui, host='128.84.182.214:6510'):
     ADXComm = SpecCommThread(host)
-
-
     ADXComm.setDaemon(True)
     ADXComm.start()
 

@@ -65,8 +65,12 @@ class SpecChannel:
         self.registered = False
         self.value = None
 
+        print('Spec channel connects')
+        print('Calling SpecEventsDispatcher.connect() with :' + str(connection) + str(self.connected))
         SpecEventsDispatcher.connect(connection, 'connected', self.connected)
+        print('Calling SpecEventsDispatcher.connect() with :' + str(connection) + str(self.disconnected))
         SpecEventsDispatcher.connect(connection, 'disconnected', self.disconnected)
+        print('Spec channel connects done')
 
         if connection.isSpecConnected():
             self.connected()
@@ -125,7 +129,7 @@ class SpecChannel:
                     SpecEventsDispatcher.emit(self, 'valueChanged', (None, self.name, ))
                 else:
                     if self.access2 is None:
-                        if self.value is None or self.value != channelValue[self.access1]: 
+                        if self.value is None or self.value != channelValue[self.access1]:
                             self.value = channelValue[self.access1]
                             SpecEventsDispatcher.emit(self, 'valueChanged', (self.value, self.name, ))
                     else:
@@ -201,7 +205,7 @@ class SpecChannel:
                 w = SpecWaitObject.SpecWaitObject(connection)
                 # make sure spec is connected, we give a short timeout
                 # because it is supposed to be the case already
-                w.waitConnection(timeout=500)                                 
+                w.waitConnection(timeout=500)
                 w.waitReply('send_msg_chan_read', (self.spec_chan_name, ))
 
                 self.update(w.value)
@@ -221,18 +225,3 @@ class SpecChannel:
                     value = { self.access1: { self.access2: value } }
 
             connection.send_msg_chan_send(self.spec_chan_name, value)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

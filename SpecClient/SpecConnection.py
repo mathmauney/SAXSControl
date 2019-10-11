@@ -41,13 +41,14 @@ class SpecConnection:
     """
     def __init__(self, *args):
         """Constructor"""
+        print('Pre Spec Connection Init')
         self.dispatcher = SpecConnectionDispatcher(*args)
-
+        print('Spec Connection init')
         SpecEventsDispatcher.connect(self.dispatcher, 'connected', self.connected)
         SpecEventsDispatcher.connect(self.dispatcher, 'disconnected', self.disconnected)
         #SpecEventsDispatcher.connect(self.dispatcher, 'replyFromSpec', self.replyFromSpec)
         SpecEventsDispatcher.connect(self.dispatcher, 'error', self.error)
-
+        print('Spec Connection init done')
 
     def __str__(self):
         return str(self.dispatcher)
@@ -135,8 +136,10 @@ class SpecConnectionDispatcher(asyncore.dispatcher):
         #
         # register 'service' channels
         #
+        print('Before register channel')
         self.registerChannel('error', self.error, dispatchMode = SpecEventsDispatcher.FIREEVENT)
         self.registerChannel('status/simulate', self.simulationStatusChanged)
+        print('End of SpecConnectionsDispatcher')
 
     def __str__(self):
         return '<connection to Spec, host=%s, port=%s>' % (self.host, self.port or self.scanname)
@@ -168,7 +171,8 @@ class SpecConnectionDispatcher(asyncore.dispatcher):
                    self.handle_connect()
                    break
               except socket.error as err:
-                 pass #exception could be 'host not found' for example, we ignore it
+                  print('Socket error')
+                  pass #exception could be 'host not found' for example, we ignore it
               if self.scanport:
                 self.port += 1
               else:
@@ -199,12 +203,15 @@ class SpecConnectionDispatcher(asyncore.dispatcher):
 
         chanName = str(chanName)
 
-        if not chanName in self.registeredChannels:
+        if chanName not in self.registeredChannels:
+            print('In registerChannel if')
             newChannel = SpecChannel.SpecChannel(self, chanName, registrationFlag)
+            print('After newchannel')
             self.registeredChannels[chanName] = newChannel
 
+        print('Register channel before connect')
         SpecEventsDispatcher.connect(self.registeredChannels[chanName], 'valueChanged', receiverSlot, dispatchMode)
-
+        print('Register channel after connect')
         channelValue = self.registeredChannels[chanName].value
         if channelValue is not None:
             # we received a value, so emit an update signal
@@ -259,6 +266,7 @@ class SpecConnectionDispatcher(asyncore.dispatcher):
 
     def specConnected(self):
         """Emit the 'connected' signal when the remote Spec version is connected."""
+        print('Sending connected signal')
         old_state = self.state
         self.state = CONNECTED
         if old_state != CONNECTED:
@@ -320,6 +328,7 @@ class SpecConnectionDispatcher(asyncore.dispatcher):
             offset += consumedBytes
 
             if self.message.isComplete():
+                print('Message complete')
                 # dispatch incoming message
                 if self.message.cmd == SpecMessage.REPLY:
                     replyID = self.message.sn
@@ -339,9 +348,10 @@ class SpecConnectionDispatcher(asyncore.dispatcher):
                     for name in SpecChannel.SpecChannel.channel_aliases[self.message.name]:
                         self.registeredChannels[name].update(self.message.data, deleted=self.message.flags == SpecMessage.DELETED)
                 elif self.message.cmd == SpecMessage.HELLO_REPLY:
+                    print('Hello reply recognized')
                     if self.checkourversion(self.message.name):
                         self.serverVersion = self.message.vers #header version
-                        self.state = CONNECTED
+                        #self.state = CONNECTED
                         self.specConnected()
                     else:
                         self.serverVersion = None

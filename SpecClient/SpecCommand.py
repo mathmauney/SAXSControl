@@ -152,15 +152,16 @@ class SpecCommandA(BaseSpecCommand):
         BaseSpecCommand.__init__(self, *args, **kwargs)
 
 
-    def connectToSpec(self, specVersion, timeout=1000):
+    def connectToSpec(self, specVersion, timeout=5000):
+        print('Connect to Spec started')
         if self.connection is not None:
             SpecEventsDispatcher.disconnect(self.connection, 'connected', self.connected)
             SpecEventsDispatcher.disconnect(self.connection, 'disconnected', self.disconnected)
 
         self.connection = SpecConnectionsManager.SpecConnectionsManager().getConnection(specVersion)
         self.specVersion = specVersion
-
         SpecEventsDispatcher.connect(self.connection, 'connected', self.connected)
+        print('first connecToSpec call')
         cb = self.__callbacks.get("connected")
         if cb is not None:
           cb = cb()
@@ -240,16 +241,3 @@ class SpecCommandA(BaseSpecCommand):
             return
 
         self.connection.abort()
-
-
-
-
-
-
-
-
-
-
-
-
-

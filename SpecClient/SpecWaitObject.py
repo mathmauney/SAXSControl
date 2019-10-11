@@ -41,13 +41,16 @@ class SpecWaitObject:
         Arguments:
         connection -- a SpecConnection object
         """
+        print('Initializing spec wait')
         self.connection = weakref.ref(connection)
         self.isdisconnected = True
         self.channelWasUnregistered = False
         self.value = None
 
+        print('Wait object Dispatcher Connect')
         SpecEventsDispatcher.connect(connection, 'connected', self.connected)
         SpecEventsDispatcher.connect(connection, 'disconnected', self.disconnected)
+        print('Wait object Dispatcher Connect Done')
 
         if connection.isSpecConnected():
             self.connected()
@@ -55,6 +58,7 @@ class SpecWaitObject:
 
     def connected(self):
         """Callback triggered by a 'connected' event."""
+        print('Wait object told connected')
         self.isdisconnected = False
 
 
@@ -254,18 +258,3 @@ def waitReply(connection, command, argsTuple, timeout = None):
     w.waitReply(command, argsTuple, timeout=timeout)
 
     return w.value
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
