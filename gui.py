@@ -501,7 +501,8 @@ class Main:
             dataY1 = np.array([elt[dataY1Label_var] for elt in self.elveflow_display.data])
             dataY2 = np.array([elt[dataY2Label_var] for elt in self.elveflow_display.data])
 
-            dataX_viable = (dataX >= self.graph_start_time) & (dataX < self.graph_end_time)
+            # self.python_logger.info("Current time %s, end time %s" % (int(time.time() - self.elveflow_display.starttime), self.graph_end_time))
+            dataX_viable = (dataX >= self.graph_start_time) # & (dataX < self.graph_end_time)
             dataX = dataX[dataX_viable]
             dataY1 = dataY1[dataX_viable]
             dataY2 = dataY2[dataX_viable]
@@ -520,8 +521,8 @@ class Main:
         except (ValueError, KeyError):
             extremes = [*self.main_tab_ax1.get_xlim(), *self.main_tab_ax1.get_ylim(), *self.main_tab_ax2.get_ylim()]
         limits = [item if item is not None else extremes[i]
-                  for (i, item) in enumerate(self.elveflow_display.axisLimits_numbers)] # todo: set the axis limits differently
-        self.main_tab_ax1.set_xlim(*limits[0:2])
+                  for (i, item) in enumerate(self.elveflow_display.axisLimits_numbers)]
+        self.main_tab_ax1.set_xlim(*extremes[0:2])
         self.main_tab_ax1.set_ylim(*limits[2:4])
         self.main_tab_ax2.set_ylim(*limits[4:6])
 
@@ -559,16 +560,16 @@ class Main:
         self.main_tab_ax2.clear()
         self.the_line1 = self.main_tab_ax1.plot([], [], color=ElveflowDisplay.COLOR_Y1)[0]
         self.the_line2 = self.main_tab_ax2.plot([], [], color=ElveflowDisplay.COLOR_Y2)[0]
-        self.flowpath.set_unlock_state(False)
         self.graph_start_time = int(time.time())
+        self.flowpath.set_unlock_state(False)
 
-        # self.main_tab_ax1.axvline(self.graph_start_time - self.elveflow_display.starttime + 0.5, color='k')
         self.update_graph()
 
-        self.queue.put((self.python_logger.info, "starting to run buffer-sample-buffer"))
+        self.queue.put((self.python_logger.info, "Starting to run buffer-sample-buffer"))
         self.queue.put(self.update_graph)
         self.queue.put(self.elveflow_display.start_saving)
 
+        self.queue.put((self.python_logger.info, "Starting to run pre-buffer"))
         self.queue.put((self.flowpath.valve2.set_auto_position, "Run"))
         self.queue.put((self.flowpath.valve3.set_auto_position, 0))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Run"))
@@ -577,6 +578,7 @@ class Main:
 
         self.queue.put(self.graph_vline)
         self.queue.put(self.update_graph)
+        self.queue.put((self.python_logger.info, "Starting to run sample"))
         self.queue.put((self.flowpath.valve2.set_auto_position, "Run"))
         self.queue.put((self.flowpath.valve3.set_auto_position, 1))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Run"))
@@ -585,6 +587,7 @@ class Main:
 
         self.queue.put(self.graph_vline)
         self.queue.put(self.update_graph)
+        self.queue.put((self.python_logger.info, "Starting to run post-buffer"))
         self.queue.put((self.flowpath.valve2.set_auto_position, "Run"))
         self.queue.put((self.flowpath.valve3.set_auto_position, 0))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Run"))
@@ -597,17 +600,19 @@ class Main:
         def update_end_time():
             self.graph_end_time = int(time.time())
         self.queue.put(update_end_time)
-        self.queue.put((self.python_logger.info, "done with running buffer-sample-buffer"))
+        self.queue.put((self.python_logger.info, "Done with running buffer-sample-buffer"))
 
     def clean_and_refill_command(self):
         elveflow_oil_channel = int(self.elveflow_oil_channel.get()) #throws an error if the conversion doesn't work
         elveflow_oil_pressure = self.elveflow_oil_pressure.get()
 
+        self.queue.put((self.python_logger.info, "Starting to run clean/refill command"))
         self.flowpath.set_unlock_state(False)
         self.queue.put((self.elveflow_display.pressureValue_var[elveflow_oil_channel - 1].set, elveflow_oil_pressure))  # Set oil pressure
         self.queue.put((self.elveflow_display.start_pressure, elveflow_oil_channel))
         self.queue.put((self.pump.refill_volume, (self.sample_volume.get()+self.first_buffer_volume.get()+self.last_buffer_volume.get())/1000, self.oil_refill_flowrate.get()))
 
+        self.queue.put((self.python_logger.info, "Starting to clean buffer"))
         self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
         self.queue.put((self.flowpath.valve3.set_auto_position, 0))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Low Flow Soap"))
@@ -628,8 +633,10 @@ class Main:
         self.queue.put((self.flowpath.valve4.set_auto_position, "Air"))
         self.queue.put((time.sleep, self.air_time.get()))
 
+        self.queue.put((self.python_logger.info, "Starting to clean sample"))
         self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
         self.queue.put((self.flowpath.valve3.set_auto_position, 1))
+        self.queue.put((self.flowpath.valve4.set_auto_position,"Water"))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Low Flow Soap"))
         self.queue.put((time.sleep, self.low_soap_time.get()))
 
@@ -648,6 +655,7 @@ class Main:
         self.queue.put((self.flowpath.valve4.set_auto_position, "Air"))
         self.queue.put((time.sleep, self.air_time.get()))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Load"))
+        self.queue.put((self.flowpath.valve3.set_auto_position,0))
         self.queue.put((self.pump.wait_until_stopped, 120))
         self.queue.put(self.pump.infuse)
         self.queue.put((self.elveflow_display.pressureValue_var[elveflow_oil_channel - 1].set, "0"))  # Set oil pressure to 0

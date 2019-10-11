@@ -727,6 +727,7 @@ class Rheodyne:
 
         elif self.address_I2C == -1:
             self.logger.append(self.name+"I2C Address not set")
+            raise ValueError
             return -1
         else:
             if not self.controller.is_open:
@@ -770,6 +771,7 @@ class Rheodyne:
             # TODO: add error handlers
         elif self.address_I2C == -1:
             self.logger.append("Error: I2C Address not set for "+self.name)
+            raise ValueError
             return
         else:
             if not self.controller.is_open:

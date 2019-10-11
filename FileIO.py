@@ -363,11 +363,11 @@ class ElveflowHandler_SDK:
                         # if we're close, just set it and hope for the best
                         curr_pressure = target
                         interrupt_event.set()
+                        self.errorlogger.info("pressure now set to %s", curr_pressure)
                     else:
                         # otherwise, just make one PRESSURE_MAXSLOPE-sized step in the correct direction
                         curr_pressure = curr_pressure + math.copysign(ElveflowHandler_SDK.PRESSURE_MAXSLOPE, target - curr_pressure)
 
-                    self.errorlogger.info("setting pressure to %s", curr_pressure)
                     error = Elveflow_SDK.OB1_Set_Press(self.instr_ID.value, channel_number, curr_pressure, byref(self.calib), 1000)
                     if error != 0:
                         self.errorlogger.warning('ERROR CODE SETTING PRESSURE %i: %s' % (channel_number, error))
