@@ -443,11 +443,13 @@ class Main:
 
     def set_oil_valve_names(self):
         """Send selection valve names to the control gui."""
+        self.python_logger.info("Oil valve names set.")
         for i in range(0, 6):
             self.flowpath.valve2.name_position(i, self.oil_valve_names[i].get())
 
     def set_loading_valve_names(self):
         """Send selection valve names to the control gui."""
+        self.python_logger.info("Loading valve names set.")
         for i in range(0, 6):
             self.flowpath.valve4.name_position(i, self.loading_valve_names[i].get())
 
