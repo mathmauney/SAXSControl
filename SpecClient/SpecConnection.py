@@ -168,7 +168,7 @@ class SpecConnectionDispatcher(asyncore.dispatcher):
                    self.handle_connect()
                    break
               except socket.error as err:
-                 pass #exception could be 'host not found' for example, we ignore it
+                  pass #exception could be 'host not found' for example, we ignore it
               if self.scanport:
                 self.port += 1
               else:
@@ -341,7 +341,6 @@ class SpecConnectionDispatcher(asyncore.dispatcher):
                 elif self.message.cmd == SpecMessage.HELLO_REPLY:
                     if self.checkourversion(self.message.name):
                         self.serverVersion = self.message.vers #header version
-                        self.state = CONNECTED
                         self.specConnected()
                     else:
                         self.serverVersion = None
