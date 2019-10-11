@@ -106,6 +106,10 @@ class Main:
         self.spec_fileno_box = tk.Entry(self.auto_page, textvariable=self.spec_fileno)
         self.buffer_sample_buffer_button = tk.Button(self.auto_page, text='Run Buffer/Sample/Buffer', command=self.buffer_sample_buffer_command)
         self.clean_button = tk.Button(self.auto_page, text='Clean/Refill', command=self.clean_and_refill_command)
+        self.load_button = tk.Button(self.auto_page, text='Load Position', command=self.load_command)
+        self.clean_only_button = tk.Button(self.auto_page, text='Clean Only', command=self.clean_only_command)
+        #self.clean_only_button = tk.Button(self.auto_page, text='Clean Only', commmand=self.clean_only_command)
+        self.refill_only_button = tk.Button(self.auto_page, text='Refill Only', command=self.refill_only_command)
 
         self.fig_dpi = 96  # this shouldn't matter too much (because we normalize against it) except in how font sizes are handled in the plot
         self.main_tab_fig = plt.Figure(figsize=(core_width*2/3/self.fig_dpi, core_height*3/4/self.fig_dpi), dpi=self.fig_dpi)
@@ -269,13 +273,16 @@ class Main:
         self.spec_base_directory_box.grid(row=1, column=0)
         self.spec_sub_directory_label.grid(row=0, column=1)
         self.spec_sub_directory_box.grid(row=1, column=1)
-        self.spec_directory_button.grid(row=1, column=2)
+        self.spec_directory_button.grid(row=4, column=1)
         self.spec_filename_label.grid(row=2, column=0)
         self.spec_filename_box.grid(row=3, column=0)
         self.spec_fileno_label.grid(row=2, column=1)
         self.spec_fileno_box.grid(row=3, column=1)
-        self.buffer_sample_buffer_button.grid(row=5, column=0, pady=25)
-        self.clean_button.grid(row=5, column=1)
+        self.buffer_sample_buffer_button.grid(row=5, column=0)
+        self.load_button.grid(row=5, column=1)
+        self.clean_button.grid(row=6, column=0)
+        self.clean_only_button.grid(row=6, column=1)
+        self.refill_only_button.grid(row=6, column=2)
         self.canvas.get_tk_widget().grid(row=0, column=2, rowspan=6, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
         # Manual page
         # Config page
@@ -664,6 +671,15 @@ class Main:
         self.queue.put((self.elveflow_display.start_pressure, elveflow_oil_channel))
 
         self.queue.put((self.python_logger.info, 'cleaning done'))
+
+    def clean_only_command(self):
+        pass
+
+    def refill_only_command(self):
+        pass
+
+    def load_command(self):
+        pass
 
     def toggle_buttons(self):
         """Toggle certain buttons on and off when they should not be allowed to add to queue."""
