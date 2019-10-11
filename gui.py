@@ -283,7 +283,7 @@ class Main:
         self.clean_button.grid(row=6, column=0)
         self.clean_only_button.grid(row=6, column=1)
         self.refill_only_button.grid(row=6, column=2)
-        self.canvas.get_tk_widget().grid(row=0, column=2, rowspan=6, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+        self.canvas.get_tk_widget().grid(row=0, column=2, rowspan=6, columnspan=8, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
         # Manual page
         # Config page
         rowcounter = 0
