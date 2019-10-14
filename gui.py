@@ -391,30 +391,15 @@ class Main:
             with open(filename, encoding='utf-8') as f:
                 # why does it only sometimes find the file?
                 self.config.read_file(f)
-            oil_config = self.config['Oil Valve']
-            loading_config = self.config['Loading Valve']
             main_config = self.config['Main']
             elveflow_config = self.config['Elveflow']
             spec_config = self.config['SPEC']
-            self.spec_sub_directory_box.delete(0, 'end')
-            self.spec_sub_directory_box.insert(0, spec_config.get('sub_dir', self.OldSubDirectory))
-            self.OldSubDirectory = self.spec_sub_directory.get()
-            self.spec_base_directory_box.delete(0, 'end')
-            self.spec_base_directory_box.insert(0, spec_config.get('base_dir', self.OldBaseDirectory))
-            self.OldBaseDirectory = self.spec_base_directory.get()
+            run_config = self.config['Run Params']
+            oil_config = self.config['Oil Valve']
+            loading_config = self.config['Loading Valve']
+            # Main Config
             self.sucrose = main_config.getboolean('Sucrose', False)
-            self.config_spec_address.delete(0, 'end')
-            self.config_spec_address.insert(0, main_config.get('spec_host', ''))
-            self.tseries_time_box.delete(0, 'end')
-            self.tseries_time_box.insert(0, main_config.get('tseries_time', '10'))
-            self.tseries_frames_box.delete(0, 'end')
-            self.tseries_frames_box.insert(0, main_config.get('tseries_frames', '10'))
-            oil_vars = []
-            loading_vars = []
-            for i in range(0, 6):
-                field = 'name'+str(i+1)
-                self.oil_valve_names[i].set(oil_config.get(field, ''))
-                self.loading_valve_names[i].set(loading_config.get(field, ''))
+            # Elveflow Config
             self.elveflow_sourcename.set(elveflow_config['elveflow_sourcename'])
             self.elveflow_sensortypes[0].set(elveflow_config['sensor1_type'])
             self.elveflow_sensortypes[1].set(elveflow_config['sensor2_type'])
@@ -422,6 +407,32 @@ class Main:
             self.elveflow_sensortypes[3].set(elveflow_config['sensor4_type'])
             self.elveflow_oil_channel.set(elveflow_config['elveflow_oil_channel'])
             self.elveflow_oil_pressure.set(elveflow_config['elveflow_oil_pressure'])
+            # SPEC Config
+            self.spec_address.set(spec_config.get('spec_host', ''))
+            self.tseries_time.set(spec_config.get('tseries_time', '10'))
+            self.tseries_frames.set(spec_config.get('tseries_frames', '10'))
+            self.spec_sub_directory.set(spec_config.get('sub_dir', self.OldSubDirectory))
+            self.OldSubDirectory = self.spec_sub_directory.get()
+            self.spec_base_directory.set(spec_config.get('base_dir', self.OldBaseDirectory))
+            self.OldBaseDirectory = self.spec_base_directory.get()
+            # Run Config
+            self.sample_flowrate.set(run_config.get('sample_rate', 10))
+            self.oil_refill_flowrate.set(run_config.get('oil_rate', 10))
+            self.first_buffer_volume.set(run_config.get('buffer1_vol', 25))
+            self.sample_volume.set(run_config.get('sample_vol', 25))
+            self.last_buffer_volume.set(run_config.get('buffer2_vol', 25))
+            self.low_soap_time.set(run_config.get('low_soap_time', 0))
+            self.high_soap_time.set(run_config.get('high_soap_time', 0))
+            self.water_time.set(run_config.get('water_time', 0))
+            self.air_time.set(run_config.get('air_time', 0))
+            # Valve Config
+            oil_vars = []
+            loading_vars = []
+            for i in range(0, 6):
+                field = 'name'+str(i+1)
+                self.oil_valve_names[i].set(oil_config.get(field, ''))
+                self.loading_valve_names[i].set(loading_config.get(field, ''))
+
         if not preload:
             self.set_oil_valve_names()
             self.set_loading_valve_names()
@@ -430,11 +441,39 @@ class Main:
         """Save a config.ini file."""
         filename = filedialog.asksaveasfilename(initialdir=".", title="Select file", filetypes=(("config files", "*.ini"), ("all files", "*.*")))
         if filename != '':
-            oil_config = self.config['Oil Valve']
-            loading_config = self.config['Loading Valve']
+            main_config = self.config['Main']
             elveflow_config = self.config['Elveflow']
             spec_config = self.config['SPEC']
-
+            run_config = self.config['Run Params']
+            oil_config = self.config['Oil Valve']
+            loading_config = self.config['Loading Valve']
+            # Main Config
+            main_config['Sucrose'] = str(self.sucrose)
+            # Elveflow Config
+            elveflow_config['elveflow_sourcename'] = self.elveflow_sourcename.get()
+            elveflow_config['sensor1_type'] = self.elveflow_sensortypes[0].get()
+            elveflow_config['sensor2_type'] = self.elveflow_sensortypes[1].get()
+            elveflow_config['sensor3_type'] = self.elveflow_sensortypes[2].get()
+            elveflow_config['sensor4_type'] = self.elveflow_sensortypes[3].get()
+            elveflow_config['elveflow_oil_channel'] = self.elveflow_oil_channel.get()
+            elveflow_config['elveflow_oil_pressure'] = self.elveflow_oil_pressure.get()
+            # SPEC Config
+            spec_config['spec_host'] = self.spec_address.get()
+            spec_config['tseries_time'] = str(self.tseries_time.get())
+            spec_config['tseries_frames'] = str(self.tseries_frames.get())
+            spec_config['sub_dir'] = self.spec_sub_directory.get()
+            spec_config['base_dir'] = self.spec_base_directory.get()
+            # Run Config
+            run_config['sample_rate'] = str(self.sample_flowrate.get())
+            run_config['oil_rate'] = str(self.oil_refill_flowrate.get())
+            run_config['buffer1_vol'] = str(self.first_buffer_volume.get())
+            run_config['sample_vol'] = str(self.sample_volume.get())
+            run_config['buffer2_vol'] = str(self.last_buffer_volume.get())
+            run_config['low_soap_time'] = str(self.low_soap_time.get())
+            run_config['high_soap_time'] = str(self.high_soap_time.get())
+            run_config['water_time'] = str(self.water_time.get())
+            run_config['air_time'] = str(self.air_time.get())
+            # Valve Configs
             for i in range(0, 6):
                 field = 'name'+str(i+1)
                 oil_name = self.oil_valve_names[i].get()
