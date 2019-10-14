@@ -889,7 +889,6 @@ class FlowPath(tk.Canvas):
             for i in range(0, 6):
                 self.canvas.tag_raise(self.circles[i])
             if self.position != prev_position:
-                print(str(self.propagation))
                 if self.propagation[0] is True:
                     self.propagate_fluid(0, self.right_color)
                 if self.propagation[3] is True:
