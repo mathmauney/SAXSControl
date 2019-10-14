@@ -685,10 +685,11 @@ class ElveflowDisplay(tk.Canvas):
 
 class FlowPath(tk.Canvas):
     class Valve:
-        def __init__(self, canvas, x, y, name):
+        def __init__(self, canvas, x, y, name, angle_off=0):
             self.x = x
             self.y = y
             self.name = name
+            self.angle_off = math.radians(angle_off)
             self.big_radius = 100 * canvas.valve_scale
             self.small_radius = 20 * canvas.valve_scale
             self.offset = 60 * canvas.valve_scale
@@ -700,18 +701,25 @@ class FlowPath(tk.Canvas):
             self.center_circle = canvas.create_circle(x, y, self.small_radius, fill='dimgray', outline='dimgray', tag=self.name)
             self.circles = []
             self.fluid_lines = []
+            self.connected_valves = []
+            self.propagation = [False, False, False, False, False, False]
             self.hardware = None
             for i in range(0, 6):
-                circle = canvas.create_circle(x+self.offset*math.cos(i*self.rads), y+self.offset*math.sin(i*self.rads), self.small_radius, fill='white', outline='white', tag=self.name)
+                circle = canvas.create_circle(x+self.offset*math.cos(i*self.rads+self.angle_off), y+self.offset*math.sin(i*self.rads+self.angle_off), self.small_radius, fill='white', outline='white', tag=self.name)
                 self.circles.append(circle)
                 self.fluid_lines.append([])
+                self.connected_valves.append([])
             self.fluid_lines.append([])  # for center circle
+            self.connected_valves.append([])
 
-        def connect(self, object, position):
-            """Link a line to an in or out port of the valve"""
+        def connect(self, object_, position):
+            """Link a line to an in or out port of the valve."""
             if position == 'center':
                 position = 6
-            self.fluid_lines[position].append(object)   # TODO: Add way to associate real valve to diagram
+            if isinstance(object_, tuple):
+                self.connected_valves[position].append(object_)
+            else:
+                self.fluid_lines[position].append(object_)   # TODO: Add way to associate real valve to diagram
 
         def assign_to_hardware(self):
             """Spawn a popup that allows the valve graphic to be associated with a hardware valve."""
@@ -737,14 +745,18 @@ class FlowPath(tk.Canvas):
             cancel_button = tk.Button(win, text="Cancel", command=win.destroy)
             cancel_button.grid(row=2, column=1)
 
+        def propagate_fluid(self, port, fluid_color):
+            pass
+
     class SelectionValve(Valve):
-        def __init__(self, canvas, x, y, name):
-            super().__init__(canvas, x, y, name)
+        def __init__(self, canvas, x, y, name, angle_off=0):
+            super().__init__(canvas, x, y, name, angle_off)
             self.canvas.itemconfig(self.center_circle, fill='white', outline='white', tag=self.name)
             self.color = 'black'
             self.colors = [None, None, None, None, None, None]
             self.gui_names = ['', '', '', '', '', '']   # 0 is rightmost, goes clockwise
             self.hardware_names = ['', '', '', '', '', '']
+            self.propagation.append(False)
             for i in range(0, 6):
                 self.canvas.itemconfig(self.circles[i], tag=self.name+str(i))
                 self.canvas.tag_bind(self.name+str(i), '<Button-1>', lambda event, num=i: self.set_manual_position(self.gui_names[num]))
@@ -752,41 +764,43 @@ class FlowPath(tk.Canvas):
         def set_position(self, position_in, color=None):
             """Set the valve position to one of the 6 outputs on the gui."""
             if type(position_in) is str:
+                if position_in == '':
+                    return
                 position = self.gui_names.index(position_in)
             elif position_in in range(0, 6):
                 position = position_in
+            else:
+                raise ValueError('Invalid Position, ' + str(position_in))
             if color is not None:
                 self.color = color
-                self.colors[position] = color
             elif self.colors[position] is not None:
                 self.color = self.colors[position]
-            if type(position_in) is str:
-                position = self.names.index(position_in)
-            else:
-                position = position_in - 1  # Matches the hardware indexing
-            for line in self.fluid_lines[position]:
-                self.canvas.itemconfig(line, fill=self.color, outline=self.color)
             self.canvas.itemconfig(self.circles[self.position], fill='white', outline='white')
             self.canvas.itemconfig(self.center_circle, fill=self.color, outline=self.color)
-            for line in self.fluid_lines[6]:
-                self.canvas.itemconfig(line, fill=self.color, outline=self.color)
-            self.position = position
+            self.canvas.itemconfig(self.circles[position], fill=self.color, outline=self.color)
             try:
                 self.canvas.delete(self.channel)
             except AttributeError:
                 pass
-            self.canvas.itemconfig(self.circles[position], fill=self.color, outline=self.color)
-            self.channel = self.canvas.create_polygon([self.x+self.small_radius*math.sin(position*self.rads), self.y-self.small_radius*math.cos(position*self.rads),
-                                                       self.x+self.offset*math.cos(position*self.rads)+self.small_radius*math.sin(position*self.rads), self.y+self.offset*math.sin(position*self.rads)-self.small_radius*math.cos(position*self.rads),
-                                                       self.x+self.offset*math.cos(position*self.rads)-self.small_radius*math.sin(position*self.rads), self.y+self.offset*math.sin(position*self.rads)+self.small_radius*math.cos(position*self.rads),
-                                                       self.x-self.small_radius*math.sin(position*self.rads), self.y+self.small_radius*math.cos(position*self.rads)],
+            self.channel = self.canvas.create_polygon([self.x+self.small_radius*math.sin(position*self.rads+self.angle_off), self.y-self.small_radius*math.cos(position*self.rads+self.angle_off),
+                                                       self.x+self.offset*math.cos(position*self.rads+self.angle_off)+self.small_radius*math.sin(position*self.rads+self.angle_off), self.y+self.offset*math.sin(position*self.rads+self.angle_off)-self.small_radius*math.cos(position*self.rads+self.angle_off),
+                                                       self.x+self.offset*math.cos(position*self.rads+self.angle_off)-self.small_radius*math.sin(position*self.rads+self.angle_off), self.y+self.offset*math.sin(position*self.rads+self.angle_off)+self.small_radius*math.cos(position*self.rads+self.angle_off),
+                                                       self.x-self.small_radius*math.sin(position*self.rads+self.angle_off), self.y+self.small_radius*math.cos(position*self.rads+self.angle_off)],
                                                       fill=self.color, outline=self.color)
-            for i in range(0, 6):
-                self.canvas.tag_raise(self.circles[i])
+            if position != self.position:
+                self.position = position
+                for i in range(0, 6):
+                    self.canvas.tag_raise(self.circles[i])
+                if self.propagation[position] is True:
+                    self.propagate_fluid(position, self.color)
+                if self.propagation[6] is True:
+                    self.propagate_fluid(6, self.color)
 
         def set_manual_position(self, position):    # TODO: Add in actual valve switching
             """Change the valve position after being clicked both visually and physically."""
-            if self.hardware is None:
+            if self.canvas.window.instruments is None:
+                self.set_position(position)
+            elif self.hardware is None:
                 self.assign_to_hardware()
             elif self.canvas.is_unlocked and position is not '':
                 hardware_pos = self.hardware_names.index(position)+1
@@ -814,17 +828,36 @@ class FlowPath(tk.Canvas):
                 raise ValueError(str(name) + ' not in known valve names: ' + str(self.gui_names))
             self.hardware_names[position] = name
 
+        def propagate_fluid(self, port, fluid_color):
+            if port == 'center':
+                port = 6
+            if self.position == port:
+                self.set_position(port, fluid_color)
+                if self.propagation[self.position] is True:
+                    for line in self.fluid_lines[6]:
+                        self.canvas.itemconfig(line, fill=self.color, outline=self.color)
+                    for (valve, port2) in self.connected_valves[6]:
+                        valve.propagate_fluid(port2, fluid_color)
+            elif port == 6:
+                self.set_position(self.position, fluid_color)
+                if self.propagation[6] is True:
+                    for line in self.fluid_lines[self.position]:
+                        self.canvas.itemconfig(line, fill=self.color, outline=self.color)
+                    for (valve, port2) in self.connected_valves[self.position]:
+                        valve.propagate_fluid(port2, fluid_color)
+
     class SampleValve(Valve):
-        def __init__(self, canvas, x, y, name):
-            super().__init__(canvas, x, y, name)
+        def __init__(self, canvas, x, y, name, angle_off=0):
+            super().__init__(canvas, x, y, name, angle_off)
             self.inner_circle = self.canvas.create_circle(x, y, self.offset-self.small_radius, fill='dimgray', outline='dimgray', tag=self.name)
-            self.right_color = 'red'
-            self.left_color = 'black'
+            self.right_color = 'grey30'
+            self.left_color = 'grey30'
             self.canvas.tag_bind(name, '<Button-1>', lambda event: self.set_manual_position(self.position+1))
 
         def set_position(self, position, **kwargs):
             self.left_color = kwargs.pop('left_color', self.left_color)
             self.right_color = kwargs.pop('right_color', self.right_color)
+            prev_position = self.position
             self.position = position % 2
             try:
                 self.canvas.delete(self.arc1)
@@ -832,11 +865,7 @@ class FlowPath(tk.Canvas):
             except AttributeError:
                 pass
             self.canvas.itemconfig(self.circles[0], fill=self.right_color, outline=self.right_color)
-            for line in self.fluid_lines[0]:
-                self.canvas.itemconfig(line, fill=self.right_color, outline=self.right_color)
             self.canvas.itemconfig(self.circles[3], fill=self.left_color, outline=self.left_color)
-            for line in self.fluid_lines[3]:
-                self.canvas.itemconfig(line, fill=self.left_color, outline=self.left_color)
             if self.position == 1:
                 self.arc1 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=120, extent=60, fill=self.left_color, outline=self.left_color)
                 self.arc2 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=0, extent=60, fill=self.right_color, outline=self.right_color)
@@ -847,11 +876,7 @@ class FlowPath(tk.Canvas):
                 self.canvas.itemconfig(self.circles[2], fill='white', outline='white')
                 self.canvas.itemconfig(self.circles[4], fill=self.left_color, outline=self.left_color)
                 self.canvas.itemconfig(self.circles[5], fill=self.right_color, outline=self.right_color)
-                for line in self.fluid_lines[5]:
-                    self.canvas.itemconfig(line, fill=self.right_color, outline=self.right_color)
                 self.canvas.itemconfig(self.circles[3], fill=self.left_color, outline=self.left_color)
-                for line in self.fluid_lines[4]:
-                    self.canvas.itemconfig(line, fill=self.left_color, outline=self.left_color)
             elif self.position == 0:
                 self.arc1 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=180, extent=60, fill=self.left_color, outline=self.left_color)
                 self.arc2 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=300, extent=60, fill=self.right_color, outline=self.right_color)
@@ -862,17 +887,21 @@ class FlowPath(tk.Canvas):
                 self.canvas.itemconfig(self.circles[5], fill='white', outline='white')
                 self.canvas.itemconfig(self.circles[2], fill=self.left_color, outline=self.left_color)
                 self.canvas.itemconfig(self.circles[1], fill=self.right_color, outline=self.right_color)
-                for line in self.fluid_lines[1]:
-                    self.canvas.itemconfig(line, fill=self.right_color, outline=self.right_color)
                 self.canvas.itemconfig(self.circles[3], fill=self.left_color, outline=self.left_color)
-                for line in self.fluid_lines[2]:
-                    self.canvas.itemconfig(line, fill=self.left_color, outline=self.left_color)
             for i in range(0, 6):
                 self.canvas.tag_raise(self.circles[i])
+            if self.position != prev_position:
+                print(str(self.propagation))
+                if self.propagation[0] is True:
+                    self.propagate_fluid(0, self.right_color)
+                if self.propagation[3] is True:
+                    self.propagate_fluid(3, self.left_color)
 
         def set_manual_position(self, position):    # TODO: Add in actual valve switching
             """Change the valve position after being clicked both visually and physically."""
-            if self.hardware is None:
+            if self.canvas.window.instruments is None:
+                self.set_position(position)
+            elif self.hardware is None:
                 self.assign_to_hardware()
             elif self.canvas.is_unlocked:
                 self.hardware.switchvalve(position)
@@ -886,10 +915,33 @@ class FlowPath(tk.Canvas):
                 self.hardware.switchvalve(position)
                 self.set_position(position)
 
+        def propagate_fluid(self, port, fluid_color):
+            if port == 0 or port == 3:
+                self.propagation = [False, False, False, False, False, False]
+                self.propagation[port] = True
+            if self.position == 1:
+                pairs = [5, None, None, 4, 3, 0]
+            elif self.position == 0:
+                pairs = [1, 0, 3, 2, None, None]
+            else:
+                return
+            pair = pairs[port]
+            if pair is None:
+                return  # Do nothing if port isn't connected
+            if pair == 0 or port == 0:  # Propagate on the right side
+                self.right_color = fluid_color
+            elif pair == 3 or port == 3:  # Propagate on the left side
+                self.left_color = fluid_color
+            self.set_position(self.position)
+            for line in self.fluid_lines[pair]:
+                self.canvas.itemconfig(line, fill=fluid_color, outline=fluid_color)
+            for (valve, port2) in self.connected_valves[pair]:
+                valve.propagate_fluid(port2, fluid_color)
+
     class InjectionValve(Valve):
-        def __init__(self, canvas, x, y, name):
+        def __init__(self, canvas, x, y, name, angle_off=0):
             """Initialize the injection valve and draw its unique parts."""
-            super().__init__(canvas, x, y, name)
+            super().__init__(canvas, x, y, name, angle_off)
             self.color1 = 'white'
             self.color2 = 'white'
             self.color3 = 'white'
@@ -902,6 +954,7 @@ class FlowPath(tk.Canvas):
             self.color1 = kwargs.pop('color1', self.color1)
             self.color2 = kwargs.pop('color2', self.color2)
             self.color3 = kwargs.pop('color3', self.color3)
+            prev_position = self.position
             self.position = position % 2
             try:
                 self.canvas.delete(self.arc1)
@@ -910,9 +963,9 @@ class FlowPath(tk.Canvas):
             except AttributeError:
                 pass
             if self.position == 1:
-                self.arc1 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=300, extent=60, fill=self.color2, outline=self.color2)
-                self.arc2 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=180, extent=60, fill=self.color1, outline=self.color1)
-                self.arc3 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=60, extent=60, fill=self.color3, outline=self.color3)
+                self.arc1 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=300+self.angle_off, extent=60, fill=self.color2, outline=self.color2)
+                self.arc2 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=180+self.angle_off, extent=60, fill=self.color1, outline=self.color1)
+                self.arc3 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=60+self.angle_off, extent=60, fill=self.color3, outline=self.color3)
                 self.canvas.tag_lower(self.arc1)
                 self.canvas.tag_lower(self.arc2)
                 self.canvas.tag_lower(self.arc3)
@@ -923,24 +976,6 @@ class FlowPath(tk.Canvas):
                 self.canvas.itemconfig(self.circles[3], fill=self.color1, outline=self.color1)
                 self.canvas.itemconfig(self.circles[4], fill=self.color3, outline=self.color3)
                 self.canvas.itemconfig(self.circles[5], fill=self.color3, outline=self.color3)
-                for line in self.fluid_lines[0]:
-                    if self.color2 != 'white':
-                        self.canvas.itemconfig(line, fill=self.color2, outline=self.color2)
-                for line in self.fluid_lines[1]:
-                    if self.color2 != 'white':
-                        self.canvas.itemconfig(line, fill=self.color2, outline=self.color2)
-                for line in self.fluid_lines[2]:
-                    if self.color1 != 'white':
-                        self.canvas.itemconfig(line, fill=self.color1, outline=self.color1)
-                for line in self.fluid_lines[3]:
-                    if self.color1 != 'white':
-                        self.canvas.itemconfig(line, fill=self.color1, outline=self.color1)
-                for line in self.fluid_lines[4]:
-                    if self.color3 != 'white':
-                        self.canvas.itemconfig(line, fill=self.color3, outline=self.color3)
-                for line in self.fluid_lines[5]:
-                    if self.color3 != 'white':
-                        self.canvas.itemconfig(line, fill=self.color3, outline=self.color3)
             elif self.position == 0:
                 self.arc1 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=0, extent=60, fill=self.color3, outline=self.color3)
                 self.arc2 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=240, extent=60, fill=self.color2, outline=self.color2)
@@ -955,24 +990,6 @@ class FlowPath(tk.Canvas):
                 self.canvas.itemconfig(self.circles[3], fill=self.color1, outline=self.color1)
                 self.canvas.itemconfig(self.circles[4], fill=self.color1, outline=self.color1)
                 self.canvas.itemconfig(self.circles[5], fill=self.color3, outline=self.color3)
-                for line in self.fluid_lines[1]:
-                    if self.color2 != 'white':
-                        self.canvas.itemconfig(line, fill=self.color2, outline=self.color2)
-                for line in self.fluid_lines[2]:
-                    if self.color2 != 'white':
-                        self.canvas.itemconfig(line, fill=self.color2, outline=self.color2)
-                for line in self.fluid_lines[3]:
-                    if self.color1 != 'white':
-                        self.canvas.itemconfig(line, fill=self.color1, outline=self.color1)
-                for line in self.fluid_lines[4]:
-                    if self.color1 != 'white':
-                        self.canvas.itemconfig(line, fill=self.color1, outline=self.color1)
-                for line in self.fluid_lines[5]:
-                    if self.color3 != 'white':
-                        self.canvas.itemconfig(line, fill=self.color3, outline=self.color3)
-                for line in self.fluid_lines[0]:
-                    if self.color3 != 'white':
-                        self.canvas.itemconfig(line, fill=self.color3, outline=self.color3)
             self.canvas.tag_raise(self.arc1)
             self.canvas.tag_raise(self.arc2)
             self.canvas.tag_raise(self.arc3)
@@ -980,9 +997,26 @@ class FlowPath(tk.Canvas):
             for i in range(0, 6):
                 self.canvas.tag_raise(self.circles[i])
 
+        def propagate_fluid(self, port, fluid_color):
+            if self.position == 1:
+                pairs = [1, 0, 3, 2, 5, 4]
+                colors = [self.color2, self.color2, self.color1, self.color1, self.color3, self.color3]
+            elif self.position == 0:
+                pairs = [5, 2, 1, 4, 3, 0]
+                colors = [self.color3, self.color2, self.color2, self.color1, self.color1, self.color3]
+            colors[port] = fluid_color
+            self.set_position(self.position)
+            pair = pairs[port]
+            if propagation[port] is True:
+                for line in self.fluid_lines[pair]:
+                    self.canvas.itemconfig(line, fill=colors[port], outline=colors[port])
+
+
         def set_manual_position(self, position):    # TODO: Add in actual valve switching
             """Change the valve position after being clicked both visually and physically."""
-            if self.hardware is None:
+            if self.canvas.window.instruments is None:
+                self.set_position(position)
+            elif self.hardware is None:
                 self.assign_to_hardware()
             elif self.canvas.is_unlocked:
                 self.hardware.switchvalve(position)
@@ -998,6 +1032,9 @@ class FlowPath(tk.Canvas):
             self.orientation = kwargs.pop('orientation', 'left')
             self.name = kwargs.pop('name', '')
             self.canvas = canvas
+            self.connected_valves = {'left': [], 'right': []}
+            self.fluid_lines = {'left': [], 'right': []}
+            self.opposite = {'left': 'right', 'right': 'left'}
             border = kwargs.pop('border', 10)
             # Use pop to remove kwargs that aren't a part of Canvas
             width = kwargs.get('width', 150)
@@ -1010,6 +1047,7 @@ class FlowPath(tk.Canvas):
             """Update the fluid level to s given value."""
             percent = min(percent, 100)
             percent = max(percent, 0)
+
             x0, y0, x1, y1 = self.canvas.coords(self.max)
             if self.orientation == 'left':
                 x1 = round((x1-x0)*percent/100) + x0
@@ -1018,9 +1056,31 @@ class FlowPath(tk.Canvas):
             self.canvas.coords(self.level, x0, y0, x1, y1)
             self.percent = percent
             if x1 == x0:
-                self.canvas.itemconfig(self.level, fill='white', outline='white')
+                self.canvas.itemconfig(self.level, fill=self.background, outline=self.background)
             else:
                 self.canvas.itemconfig(self.level, fill=self.color, outline=self.color)
+            if percent == 100:
+                self.propagate_fluid(self.opposite[self.orientation], self.color)
+
+        def connect(self, object_, position):
+            if isinstance(object_, tuple):
+                self.connected_valves[position].append(object_)
+            else:
+                self.fluid_lines[position].append(object_)   # TODO: Add way to associate real valve to diagram
+
+        def propagate_fluid(self, side, fluid_color):
+            exit_ = self.opposite[side]
+            if side == self.orientation:    # if fluid is coming from exit of loop
+                self.background = fluid_color
+                self.canvas.itemconfig(self.max, fill=self.background, outline=self.background)
+                for line in self.fluid_lines[exit_]:
+                    self.canvas.itemconfig(line, fill=fluid_color, outline=fluid_color)
+                for (valve, port2) in self.connected_valves[exit_]:
+                    valve.propagate_fluid(port2, fluid_color)
+            else:
+                self.color = fluid_color
+            self.update(0)
+
 
     class Lock():
         """Lock GUI item with onclick toggle."""
@@ -1071,11 +1131,18 @@ class FlowPath(tk.Canvas):
         self.window = main_window
         self.lock = self.Lock(self, 10, 10)
         self.tag_bind('lock', '<Button-1>', lambda event: self.lock_popup())
+        # Set colors
+        self.water_color = 'SteelBlue1'
+        self.air_color = 'CadetBlue1'
+        self.soap_color = 'OliveDrab1'
+        self.sample_color = 'red'
+        self.buffer_color = 'cyan'
+        self.empty_color = 'grey30'
         # Add Elements
         self.draw_pumps()
         self.draw_valves()
         self.draw_loops()
-        # self.draw_fluid_lines()
+        self.draw_fluid_lines()
         self.initialize()
         # Scale for computers smaller than 1800 log_width
         scale = self.frame.winfo_screenwidth()/1920
@@ -1084,7 +1151,8 @@ class FlowPath(tk.Canvas):
 
     def draw_pumps(self):
         """Draw the pumps."""
-        self.pump1 = self.FluidLevel(self, 0, 125, height=50, color='black', orientation='right', name='pump')
+        self.pump1 = self.FluidLevel(self, 0, 75, height=50, color='black', orientation='right', name='pump1')
+        self.pump1 = self.FluidLevel(self, 0, 275, height=50, color='black', orientation='right', name='pump2')
 
     def draw_valves(self):
         """Draw the valves."""
@@ -1092,54 +1160,168 @@ class FlowPath(tk.Canvas):
         row2_y = 300
         self.valve1 = self.InjectionValve(self, 300, row1_y, 'valve1')
         self.valve2 = self.SelectionValve(self, 700, row1_y, 'valve2')
-        self.valve2.gui_names[2] = 'Waste'
+        self.valve2.gui_names[5] = 'Waste'
         self.valve2.gui_names[4] = 'Run'
+        self.valve2.propagation[4] = True
+        self.valve2.colors[4] = 'black'
         self.valve3 = self.SampleValve(self, 1100, row1_y, 'valve3')
-        self.valve4 = self.SelectionValve(self, 1500, row1_y, 'valve4')
-        self.valve4.gui_names[0] = 'Run'
-        self.valve4.gui_names[1] = 'Load'
-        self.valve4.gui_names[2] = 'Low Flow Soap'
-        self.valve4.gui_names[3] = 'High Flow Soap'
-        self.valve4.gui_names[4] = 'Water'
-        self.valve4.gui_names[5] = 'Air'
+        self.valve3.right_color = self.empty_color
+        self.valve3.left_color = self.empty_color
+        self.valve4 = self.SelectionValve(self, 1500, row1_y, 'valve4', angle_off=30)
+        self.valve4.gui_names[5] = 'Run'
+        self.valve4.gui_names[0] = 'Load'
+        self.valve4.colors[0] = self.buffer_color
+        self.valve4.gui_names[1] = 'Low Flow Soap'
+        self.valve4.colors[1] = self.soap_color
+        self.valve4.gui_names[2] = 'High Flow Soap'
+        self.valve4.colors[2] = self.soap_color
+        self.valve4.gui_names[3] = 'Water'
+        self.valve4.colors[3] = self.water_color
+        self.valve4.gui_names[4] = 'Air'
+        self.valve4.colors[4] = self.air_color
+        self.valve4.propagation = [True, True, True, True, True, False, True]
         self.valve5 = self.SelectionValve(self, 700, row2_y, 'valve5')
         self.valve6 = self.SampleValve(self, 1100, row2_y, 'valve6')
         self.valve7 = self.SelectionValve(self, 1500, row2_y, 'valve7')
 
     def draw_loops(self):
         """Draw the sample and buffer loops."""
-        self.sample_level = self.FluidLevel(self, 1025, 0, height=30, color='red', background='black', orientation='right', border=0)
-        self.buffer_level = self.FluidLevel(self, 1025, 200, height=30, color='cyan', background='black', orientation='right', border=0)
+        self.sample_loop = self.FluidLevel(self, 1025, 0, height=30, color=self.empty_color, background='black', orientation='right', border=0)
+        self.buffer_loop = self.FluidLevel(self, 1025, 170, height=30, color=self.empty_color, background='black', orientation='right', border=0)
 
     def draw_fluid_lines(self):
         """Draw the fluid lines and set associate them with the correct valves."""
         # Line from syringe to valve 1
-        self.syringe_line = self.create_fluid_line('x', 150, 150, 100)
+        self.syringe_line = self.create_fluid_line('x', 150, 100, 110, color='black')
         self.tag_lower(self.syringe_line)
         self.valve1.connect(self.syringe_line, 3)
         # From Valve 1 to Valve 2
         x0, y0, x1, y1 = self.coords(self.valve1.circles[4])
         x_avg = math.floor((x0 + x1) / 2)
-        self.oil_line1 = self.create_fluid_line('y', x_avg, y0, -50)
-        self.oil_line2 = self.create_fluid_line('x', x_avg, y0-50, 400)
-        self.oil_line3 = self.create_fluid_line('y', x_avg+400, y0-50, 50)
+        self.oil_line1 = self.create_fluid_line('y', x_avg, y0, -30, color='black')
+        self.oil_line2 = self.create_fluid_line('x', x_avg, y0-30, 400, color='black')
+        self.oil_line3 = self.create_fluid_line('y', x_avg+400, y0-30, 30, color='black')
         self.valve1.connect(self.oil_line1, 4)
         self.valve1.connect(self.oil_line2, 4)
         self.valve1.connect(self.oil_line3, 4)
         # From Valve 1 to Refill Oil
         x0, y0, x1, y1 = self.coords(self.valve1.circles[2])
         x_avg = math.floor((x0 + x1) / 2)
-        self.oil_line3 = self.create_fluid_line('y', x_avg, y1, 50)
+        self.oil_refill_line = self.create_fluid_line('y', x_avg, y1, 50, color='black')
+        self.valve1.connect(self.oil_refill_line, 2)
+        self.oil_text = self.create_text(x_avg+10, y1+55, anchor='sw', text='Refill', fill='white', angle=90, font=("Helvetica", 12))
+        self.tag_raise(self.oil_text)
+        # From Valve 2 to Waste
+        x0, y0, x1, y1 = self.coords(self.valve2.circles[5])
+        x_avg = math.floor((x0 + x1) / 2)
+        self.waste_line = self.create_fluid_line('y', x_avg, y0, -50, color='grey30')
+        self.valve2.connect(self.waste_line, 5)
+        self.waste_text = self.create_text(x_avg+10, 10, anchor='se', text='Waste', fill='white', angle=90, font=("Helvetica", 12))
+        self.tag_raise(self.waste_text)
+        # From Valve 2 to Valve 3
+        x0, y0, x1, y1 = self.coords(self.valve3.circles[3])
+        y_avg = math.floor((y0 + y1) / 2)
+        self.line_2to3 = self.create_fluid_line('x', x0, y_avg, -300)
+        self.valve2.connect(self.line_2to3, 'center')
+        self.valve2.connect((self.valve3, 3), 'center')
+        self.valve3.connect(self.line_2to3, 3)
+        self.valve3.connect((self.valve2, 'center'), 3)
+        # From Valve 3 to sample loop
+        x0, y0, x1, y1 = self.coords(self.valve3.circles[4])
+        y_avg = math.floor((y0 + y1) / 2)
+        self.sample_line_1 = self.create_fluid_line('x', x0, y_avg, -40)
+        self.sample_line_2 = self.create_fluid_line('y', x0-40, y_avg, -40)
+        self.valve3.connect(self.sample_line_1, 4)
+        self.valve3.connect(self.sample_line_2, 4)
+        self.valve3.connect((self.sample_loop, 'left'), 4)
+        self.sample_loop.connect(self.sample_line_1, 'left')
+        self.sample_loop.connect(self.sample_line_2, 'left')
+        self.sample_loop.connect((self.valve3, 4), 'left')
+        x0, y0, x1, y1 = self.coords(self.valve3.circles[5])
+        y_avg = math.floor((y0 + y1) / 2)
+        self.sample_line_4 = self.create_fluid_line('x', x1, y_avg, 40)
+        self.sample_line_3 = self.create_fluid_line('y', x1+40, y_avg, -40)
+        self.valve3.connect(self.sample_line_3, 5)
+        self.valve3.connect(self.sample_line_4, 5)
+        self.valve3.connect((self.sample_loop, 'right'), 5)
+        self.sample_loop.connect(self.sample_line_3, 'right')
+        self.sample_loop.connect(self.sample_line_4, 'right')
+        self.sample_loop.connect((self.valve3, 5), 'right')
+        self.tag_lower(self.sample_line_2)
+        self.tag_lower(self.sample_line_3)
+        # From Valve 3 to buffer loop
+        x0, y0, x1, y1 = self.coords(self.valve3.circles[2])
+        y_avg = math.floor((y0 + y1) / 2)
+        self.buffer_line_1 = self.create_fluid_line('x', x0, y_avg, -40)
+        self.buffer_line_2 = self.create_fluid_line('y', x0-40, y_avg, 40)
+        self.valve3.connect(self.buffer_line_1, 2)
+        self.valve3.connect(self.buffer_line_2, 2)
+        self.valve3.connect((self.buffer_loop, 'left'), 2)
+        self.buffer_loop.connect(self.buffer_line_1, 'left')
+        self.buffer_loop.connect(self.buffer_line_2, 'left')
+        self.buffer_loop.connect((self.valve3, 2), 'left')
+        x0, y0, x1, y1 = self.coords(self.valve3.circles[1])
+        y_avg = math.floor((y0 + y1) / 2)
+        self.buffer_line_4 = self.create_fluid_line('x', x1, y_avg, 40)
+        self.buffer_line_3 = self.create_fluid_line('y', x1+40, y_avg, 40)
+        self.valve3.connect(self.buffer_line_3, 1)
+        self.valve3.connect(self.buffer_line_4, 1)
+        self.valve3.connect((self.buffer_loop, 'right'), 1)
+        self.buffer_loop.connect(self.buffer_line_3, 'right')
+        self.buffer_loop.connect(self.buffer_line_4, 'right')
+        self.buffer_loop.connect((self.valve3, 1), 'right')
+        self.tag_lower(self.buffer_line_2)
+        self.tag_lower(self.buffer_line_3)
+        # From Valve 3 to Valve 4
+        x0, y0, x1, y1 = self.coords(self.valve3.circles[0])
+        y_avg = math.floor((y0 + y1) / 2)
+        self.line_3to4 = self.create_fluid_line('x', x1, y_avg, 300)
+        self.valve3.connect(self.line_3to4, 0)
+        self.valve4.connect(self.line_3to4, 'center')
+        self.valve4.connect((self.valve3, 0), 'center')
+        # From Valve 4 to Cell
+        x0, y0, x1, y1 = self.coords(self.valve4.circles[5])
+        y_avg = math.floor((y0 + y1) / 2)
+        self.cell_line = self.create_fluid_line('x', x1, y_avg, 100)
+        self.valve4.connect(self.cell_line, 5)
+        self.cell_text = self.create_text(x1+100, y_avg+10, anchor='se', text='To Cell', fill='white', font=("Helvetica", 12))
+        # From Valve 4 to Load
+        x0, y0, x1, y1 = self.coords(self.valve4.circles[0])
+        y_avg = math.floor((y0 + y1) / 2)
+        self.load_line = self.create_fluid_line('x', x1, y_avg, 100, color=self.buffer_color)
+        self.valve4.connect(self.load_line, 0)
+        self.load_text = self.create_text(x1+100, y_avg+10, anchor='se', text='From Load', fill='white', font=("Helvetica", 12))
+        # From Valve 4 to cleaning
+        x0, y0, x1, y1 = self.coords(self.valve4.circles[4])
+        x_avg = math.floor((x0 + x1) / 2)
+        self.air_line = self.create_fluid_line('y', x_avg, y0, -50, color=self.air_color)
+        self.air_text = self.create_text(x_avg+10, 10, anchor='se', text='Air', fill='black', angle=90, font=("Helvetica", 12))
+        self.tag_raise(self.air_text)
+        x0, y0, x1, y1 = self.coords(self.valve4.circles[3])
+        x_avg = math.floor((x0 + x1) / 2)
+        self.water_line = self.create_fluid_line('y', x_avg, y0, -100, color=self.water_color)
+        self.water_text = self.create_text(x_avg+10, 10, anchor='se', text='Water', fill='black', angle=90, font=("Helvetica", 12))
+        self.tag_raise(self.water_text)
+        x0, y0, x1, y1 = self.coords(self.valve4.circles[1])
+        x_avg = math.floor((x0 + x1) / 2)
+        self.low_soap_line = self.create_fluid_line('y', x_avg, y1, 50, color=self.soap_color)
+        self.low_soap_text = self.create_text(x_avg+10, y1+60, anchor='sw', text='Low Soap', fill='black', angle=90, font=("Helvetica", 10))
+        self.tag_raise(self.low_soap_text)
+        x0, y0, x1, y1 = self.coords(self.valve4.circles[2])
+        x_avg = math.floor((x0 + x1) / 2)
+        self.high_soap_line = self.create_fluid_line('y', x_avg, y1, 65, color=self.soap_color)
+        self.high_soap_text = self.create_text(x_avg+10, y1+75, anchor='sw', text='High Soap', fill='black', angle=90, font=("Helvetica", 10))
+        self.tag_raise(self.high_soap_text)
 
     def initialize(self):
         """Set initial levels, colors, and valve positions."""
         self.pump1.update(25)
-        self.sample_level.update(25)
-        self.buffer_level.update(25)
+        self.sample_loop.update(100)
+        self.buffer_loop.update(100)
         self.valve1.set_position(0, color1='black')
-        self.valve2.set_position(4, color='black')
+        self.valve2.set_position(5)
         self.valve3.set_position(1)
-        self.valve4.set_position(0, color='red')
+        self.valve4.set_position(1)
 
     def create_circle(self, x, y, r, **kwargs):
         """Draw a circle by center and radius."""
@@ -1148,7 +1330,7 @@ class FlowPath(tk.Canvas):
     def create_fluid_line(self, direction, x, y, length, **kwargs):
         """Draw a fluid line from a location by length and direction."""
         width = kwargs.pop('width', self.fluid_line_width)
-        color = kwargs.pop('color', 'black')
+        color = kwargs.pop('color', 'grey30')
         r = width/2
         if direction == 'x':
             if length > 0:
@@ -1201,3 +1383,11 @@ class FlowPath(tk.Canvas):
             ok_button.grid(row=1, column=0)
             cancel_button = tk.Button(win, text="Cancel", command=win.destroy)
             cancel_button.grid(row=1, column=1)
+
+
+if __name__ == "__main__":
+    window = tk.Tk()
+    window.instruments = None
+    window.flowpath = FlowPath(window, window)
+    window.flowpath.grid(row=0, column=0)
+    window.mainloop()
