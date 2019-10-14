@@ -833,18 +833,16 @@ class FlowPath(tk.Canvas):
                 port = 6
             if self.position == port:
                 self.set_position(port, fluid_color)
-                if self.propagation[self.position] is True:
-                    for line in self.fluid_lines[6]:
-                        self.canvas.itemconfig(line, fill=self.color, outline=self.color)
-                    for (valve, port2) in self.connected_valves[6]:
-                        valve.propagate_fluid(port2, fluid_color)
+                for line in self.fluid_lines[6]:
+                    self.canvas.itemconfig(line, fill=self.color, outline=self.color)
+                for (valve, port2) in self.connected_valves[6]:
+                    valve.propagate_fluid(port2, fluid_color)
             elif port == 6:
                 self.set_position(self.position, fluid_color)
-                if self.propagation[6] is True:
-                    for line in self.fluid_lines[self.position]:
-                        self.canvas.itemconfig(line, fill=self.color, outline=self.color)
-                    for (valve, port2) in self.connected_valves[self.position]:
-                        valve.propagate_fluid(port2, fluid_color)
+                for line in self.fluid_lines[self.position]:
+                    self.canvas.itemconfig(line, fill=self.color, outline=self.color)
+                for (valve, port2) in self.connected_valves[self.position]:
+                    valve.propagate_fluid(port2, fluid_color)
 
     class SampleValve(Valve):
         def __init__(self, canvas, x, y, name, angle_off=0):
