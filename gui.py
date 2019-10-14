@@ -653,8 +653,10 @@ class Main:
         self.queue.put(update_end_time)
         self.queue.put((self.python_logger.info, "Done with running buffer-sample-buffer"))
 
+        self.clean_and_refill_command()  # Run a clean and refill after finishing
+
     def clean_and_refill_command(self):
-        elveflow_oil_channel = int(self.elveflow_oil_channel.get()) #throws an error if the conversion doesn't work
+        elveflow_oil_channel = int(self.elveflow_oil_channel.get()) # throws an error if the conversion doesn't work
         elveflow_oil_pressure = self.elveflow_oil_pressure.get()
 
         self.queue.put((self.python_logger.info, "Starting to run clean/refill command"))
@@ -663,6 +665,16 @@ class Main:
         self.queue.put((self.elveflow_display.start_pressure, elveflow_oil_channel))
         self.queue.put((self.pump.refill_volume, (self.sample_volume.get()+self.first_buffer_volume.get()+self.last_buffer_volume.get())/1000, self.oil_refill_flowrate.get()))
 
+        self.clean_only_command()
+
+        self.queue.put((self.pump.wait_until_stopped, 120))
+        self.queue.put(self.pump.infuse)
+        self.queue.put((self.elveflow_display.pressureValue_var[elveflow_oil_channel - 1].set, "0"))  # Set oil pressure to 0
+        self.queue.put((self.elveflow_display.start_pressure, elveflow_oil_channel))
+
+        self.queue.put((self.python_logger.info, 'Clean and refill done'))
+
+    def clean_only_command(self):
         self.queue.put((self.python_logger.info, "Starting to clean buffer"))
         self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
         self.queue.put((self.flowpath.valve3.set_auto_position, 0))
@@ -683,11 +695,12 @@ class Main:
         self.queue.put((self.flowpath.valve3.set_auto_position, 0))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Air"))
         self.queue.put((time.sleep, self.air_time.get()))
+        self.queue.put((self.python.logger.info, "Finished cleaning buffer"))
 
         self.queue.put((self.python_logger.info, "Starting to clean sample"))
         self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
         self.queue.put((self.flowpath.valve3.set_auto_position, 1))
-        self.queue.put((self.flowpath.valve4.set_auto_position,"Water"))
+        self.queue.put((self.flowpath.valve4.set_auto_position, "Water"))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Low Flow Soap"))
         self.queue.put((time.sleep, self.low_soap_time.get()))
 
@@ -706,19 +719,22 @@ class Main:
         self.queue.put((self.flowpath.valve4.set_auto_position, "Air"))
         self.queue.put((time.sleep, self.air_time.get()))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Load"))
-        self.queue.put((self.flowpath.valve3.set_auto_position,0))
+        self.queue.put((self.flowpath.valve3.set_auto_position, 0))
+        self.queue.put((self.python_logger.info, "Finished cleaning sample"))
+
+    def refill_only_command(self):
+        elveflow_oil_channel = int(self.elveflow_oil_channel.get())  # throws an error if the conversion doesn't work
+        elveflow_oil_pressure = self.elveflow_oil_pressure.get()
+
+        self.queue.put((self.elveflow_display.pressureValue_var[elveflow_oil_channel - 1].set, elveflow_oil_pressure))  # Set oil pressure
+        self.queue.put((self.elveflow_display.start_pressure, elveflow_oil_channel))
+        self.queue.put((self.pump.refill_volume, (self.sample_volume.get()+self.first_buffer_volume.get()+self.last_buffer_volume.get())/1000, self.oil_refill_flowrate.get()))
+
         self.queue.put((self.pump.wait_until_stopped, 120))
         self.queue.put(self.pump.infuse)
         self.queue.put((self.elveflow_display.pressureValue_var[elveflow_oil_channel - 1].set, "0"))  # Set oil pressure to 0
         self.queue.put((self.elveflow_display.start_pressure, elveflow_oil_channel))
-
-        self.queue.put((self.python_logger.info, 'cleaning done'))
-
-    def clean_only_command(self):
-        pass
-
-    def refill_only_command(self):
-        pass
+        self.queue.put((self.python_logger.info, "Finished refilling syringe"))
 
     def load_command(self):
         pass
