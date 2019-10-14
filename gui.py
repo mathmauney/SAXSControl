@@ -513,7 +513,6 @@ class Main:
             dataY1 = np.array([elt[dataY1Label_var] for elt in self.elveflow_display.data])
             dataY2 = np.array([elt[dataY2Label_var] for elt in self.elveflow_display.data])
 
-            # self.python_logger.info("Current time %s, end time %s" % (int(time.time() - self.elveflow_display.starttime), self.graph_end_time))
             dataX_viable = (dataX >= self.graph_start_time) # & (dataX < self.graph_end_time)
             dataX = dataX[dataX_viable]
             dataY1 = dataY1[dataX_viable]
@@ -573,12 +572,9 @@ class Main:
         self.the_line1 = self.main_tab_ax1.plot([], [], color=ElveflowDisplay.COLOR_Y1)[0]
         self.the_line2 = self.main_tab_ax2.plot([], [], color=ElveflowDisplay.COLOR_Y2)[0]
         self.graph_start_time = int(time.time())
-<<<<<<< HEAD
         self.graph_end_time = np.inf
-        self.python_logger.info("start time: %s" % self.graph_start_time)
-=======
+        self.python_logger.info("graph start time: %s" % self.graph_start_time)
         self.flowpath.set_unlock_state(False)
->>>>>>> master
 
         self.update_graph()
 

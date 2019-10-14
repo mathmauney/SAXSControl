@@ -579,6 +579,17 @@ class ElveflowDisplay(tk.Canvas):
         print("graph CLEARED!")
 
     def update_plot(self):
+        if not self.run_flag.is_set():
+            return
+            # This is something that shouldn't ever need to be used, but dataXLabel_var.get()
+            # fails when quitting the whole GUI - not even throwing an error, but just hanging.
+            # So double-check here and abandon the rest of this function if we are quitting
+            #
+            # Technically, there's still the race condition that we check this flag, and then before we make it
+            # to the next line, the flag gets cleared by another thread. But you know what? Failing to exit is not
+            # the worst of our worries when making this GUI. This extra check makes it much less likely that such
+            # a race condition happens, even if it's still possible
+
         dataXLabel_var = self.dataXLabel_var.get()
         dataY1Label_var = self.dataY1Label_var.get()
         dataY2Label_var = self.dataY2Label_var.get()

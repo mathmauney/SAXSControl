@@ -260,7 +260,7 @@ class ElveflowHandler_SDK:
                     if i == 4:
                         def on_finish():
                             print("Closing Elveflow connection")
-                            print("Error code: %s" % Elveflow_SDK.OB1_Destructor(self.instr_ID.value))
+                            print("Elveflow closing error code (zero means good): %s" % Elveflow_SDK.OB1_Destructor(self.instr_ID.value))
                     else:
                         def on_finish():
                             closing_function(i+1)
