@@ -425,7 +425,7 @@ class HPump:
             if not self.controller.is_open:
                 self.controller.open()
             while self.controller.in_waiting > 0:   # Clear Buffer
-                self.logger.append(resource.read().decode())
+                self.logger.append(self.controller.read().decode())
             self.controller.write(("-"+self.address+"\n\r").encode())
             time.sleep(0.2)
             while self.controller.in_waiting > 0:
@@ -727,6 +727,7 @@ class Rheodyne:
 
         elif self.address_I2C == -1:
             self.logger.append(self.name+"I2C Address not set")
+            raise ValueError
             return -1
         else:
             if not self.controller.is_open:
@@ -770,6 +771,7 @@ class Rheodyne:
             # TODO: add error handlers
         elif self.address_I2C == -1:
             self.logger.append("Error: I2C Address not set for "+self.name)
+            raise ValueError
             return
         else:
             if not self.controller.is_open:
@@ -864,12 +866,14 @@ class VICI:
         if isinstance(position, int):
             if position == 0:
                 position = 'A'
-            if position == 1:
+            elif position == 1:
                 position = 'B'
+            else:
+                self.logger.append("Value not accepted "+position)
+                raise ValueError
         if not self.enabled:
             self.logger.append(self.name+" not set up, switching ignored")
             return
-
         if not self.serialobject.is_open:
             self.serialobject.open()
         commandtosend = self.ControllerKey+"GO"+position+"\r"

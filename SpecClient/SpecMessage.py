@@ -208,7 +208,12 @@ class SpecMessage:
                 try:
                     data = float(data)
                 except:
-                    pass
+                    try:
+                        data = str(data)
+                    except:
+                        print('Error in message read')
+                        print(str(data))
+                        pass
 
             return data
         elif datatype == ASSOC:
@@ -228,7 +233,7 @@ class SpecMessage:
           - it is a hard job guessing ARRAY_* types, we ignore this case (user has to provide a suitable datatype)
           - we cannot make a difference between ERROR type and STRING type
         """
-        if type(data) == bytes:
+        if type(data) == bytes or type(data) == str:
             return STRING
         elif type(data) == dict:
             return ASSOC
@@ -306,8 +311,8 @@ class message2(SpecMessage):
                     datalen, name  = struct.unpack(self.packedHeaderDataFormat, rawstring)
         #rint 'READ header', self.magic, 'vers=', self.vers, 'size=', self.size, 'cmd=', self.cmd, 'type=', datatype, 'datalen=', datalen, 'err=', self.err, 'name=', str(self.name)
         self.time = self.sec + float(self.usec) / 1E6
-        self.name = name.replace(NULL, '') #remove padding null bytes
-
+        # self.name = name.replace(NULL, '') #remove padding null bytes
+        self.name = name
         return (datatype, datalen)
 
 
@@ -323,7 +328,7 @@ class message2(SpecMessage):
                              self.sn, self.sec, self.usec, self.cmd, self.type,
                              self.rows, self.cols, datalen, str(self.name))
         #print 'WRITE header', self.magic, 'vers=', self.vers, 'size=', self.size, 'cmd=', self.cmd, 'type=', self.type, 'datalen=', datalen, 'err=', self.err, 'name=', str(self.name)
-        #print 'WRITE data', data
+
         return header + data
 
 
@@ -408,7 +413,7 @@ class message4(SpecMessage):
         self.time = time.time()
         self.sec = int(self.time)
         self.usec = int((self.time-self.sec)*1E6)
-        self.sn, self.cmd, self.name = ser, cmd, str(name)
+        self.sn, self.cmd, self.name = ser, cmd, str(name).encode('ascii')
 
 
     def readHeader(self, rawstring):
@@ -424,8 +429,8 @@ class message4(SpecMessage):
                     datalen, self.err, self.flags, name  = struct.unpack(self.packedHeaderDataFormat, rawstring)
         #print 'READ header', self.magic, 'vers=', self.vers, 'size=', self.size, 'cmd=', self.cmd, 'type=', datatype, 'datalen=', datalen, 'err=', self.err, 'flags=', self.flags, 'name=', str(self.name)
         self.time = self.sec + float(self.usec) / 1E6
-        self.name = name.replace(NULL, '') #remove padding null bytes
-
+        # self.name = name.replace(NULL, '') #remove padding null bytes
+        self.name = name
         if self.err > 0:
             datatype = ERROR #change message type to 'ERROR' for further processing
 
@@ -434,19 +439,20 @@ class message4(SpecMessage):
 
     def sendingString(self):
         if self.type is None:
-            # invalid message
+            print('invalid message')
             return ''
 
         data = self.sendingDataString(self.data, self.type)
-        datalen = len(data)
+        datalen = len(data.encode('ascii'))
 
         #print 'WRITE header', self.magic, 'vers=', self.vers, 'size=', self.size, 'cmd=', self.cmd, 'type=', self.type, 'datalen=', datalen, 'err=', self.err, 'flags=', self.flags, 'name=', str(self.name)
         #print 'WRITE data', data
         header = struct.pack(self.packedHeaderDataFormat, self.magic, self.vers, self.size,
                              self.sn, self.sec, self.usec, self.cmd, self.type,
-                             self.rows, self.cols, datalen, self.err, self.flags, str(self.name))
-
-        return header + data
+                             self.rows, self.cols, datalen, self.err, self.flags, str(self.name).encode('ascii'))
+        # print('Header: ' + str(header))
+        # print('Data: ' + str(data))
+        return header + data.encode('ascii')
 
 
 class anymessage(SpecMessage):
