@@ -752,7 +752,12 @@ class Main:
 
     def toggle_buttons(self):
         """Toggle certain buttons on and off when they should not be allowed to add to queue."""
-        buttons = (self.buffer_sample_buffer_button, self.clean_button)
+        buttons = (self.buffer_sample_buffer_button,
+                   self.clean_button,
+                   self.load_buffer_button,
+                   self.load_sample_button,
+                   self.refill_only_button,
+                   self.clean_only_button)
         if self.queue_busy:
             for button in buttons:
                 button['state'] = 'disabled'
