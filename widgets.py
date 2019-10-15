@@ -198,7 +198,7 @@ class MiscLogger(ScrolledText):
 
 class Toggle(tk.Label):
     # https://www.reddit.com/r/learnpython/comments/7sx953/how_to_add_a_toggle_switch_in_tkinter/
-    def __init__(self, master=None, variable=None, onFile='clicked_button.png', offFile='unclicked_button.png', onToggleOn=None, onToggleOff=None, defaultValue=None, **kwargs):
+    def __init__(self, master=None, variable=None, onFile='img/clicked_button.png', offFile='img/unclicked_button.png', onToggleOn=None, onToggleOff=None, defaultValue=None, **kwargs):
         tk.Label.__init__(self, master, **kwargs)
 
         self.ON = onFile
@@ -238,8 +238,8 @@ class Toggle(tk.Label):
 
 
 class PressureVolumeToggle(Toggle):
-    ON = 'Pressure_button.png'
-    OFF = 'Volume_button.png'
+    ON = 'img/Pressure_button.png'
+    OFF = 'img/Volume_button.png'
 
     def __init__(self, master=None, variable=None, **kwargs):
         Toggle.__init__(self, master, variable, self.ON, self.OFF, **kwargs)
