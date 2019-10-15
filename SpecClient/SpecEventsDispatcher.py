@@ -251,7 +251,7 @@ eventsToDispatch = EventsQueue()
 
 def callableObjectRef(object):
     """Return a safe weak reference to a callable object"""
-    if hasattr(object, 'im_self'):
+    if hasattr(object, '__self__'):
         if object.__self__ is not None:
             # turn a bound method into a BoundMethodWeakReference instance
             return BoundMethodWeakRef(object, _removeReceiver)

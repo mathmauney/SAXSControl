@@ -171,7 +171,6 @@ class SpecConnectionDispatcher(asyncore.dispatcher):
                    self.handle_connect()
                    break
               except socket.error as err:
-                  print('Socket error')
                   pass #exception could be 'host not found' for example, we ignore it
               if self.scanport:
                 self.port += 1
