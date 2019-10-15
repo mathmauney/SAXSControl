@@ -7,7 +7,7 @@ from queue import Queue, Empty as Queue_Empty, Full as Queue_Full
 from tkinter import filedialog
 from simple_pid import PID
 
-USE_SDK = True
+USE_SDK = False
 SDK_SENSOR_TYPES = {
     "none": 0,
     "1.5 µL/min": 1,
@@ -260,7 +260,7 @@ class ElveflowHandler_SDK:
                     if i == 4:
                         def on_finish():
                             print("Closing Elveflow connection")
-                            print("Error code: %s" % Elveflow_SDK.OB1_Destructor(self.instr_ID.value))
+                            print("Elveflow closing error code (zero means good): %s" % Elveflow_SDK.OB1_Destructor(self.instr_ID.value))
                     else:
                         def on_finish():
                             closing_function(i+1)
