@@ -57,6 +57,18 @@ class SAXSController(serial.Serial):
         while self.in_waiting > 0:
             self.logger.append(self.readline().decode())
 
+# To finish for Hardware Configure
+    def get_addresses(self):
+        if not self.enabled:
+            self.logger.append("Microcontroller not set up")
+            return
+        if not self.is_open:
+            self.open()
+        # Check instruments
+        self.write(b'I')
+        while self.in_waiting > 0:
+            self.logger.append(self.readline().decode())
+
 
 class HPump:
     """Class for controlling Harvard Pumps."""
@@ -80,6 +92,8 @@ class HPump:
         self.pc_connect = pc_connect
         self.logger = logger
         self.name = name
+        self.instrument_type = "Pump"
+        self.hardware_configuration = ""
         # add init for syringe dismeter,flowrate, Direction etc
 
     # function to initialize ports
@@ -691,6 +705,8 @@ class Rheodyne:
         # Actual baudrate can change- they just must agree.
         self.serial_object = serial.Serial(baudrate=19200, timeout=0.1)
         # set port throughuh another function.
+        self.instrument_type = "Rheodyne"
+        self.hardware_configuration = ""
 
     def set_port(self, port):  # will keep set port accross different classes
         if self.serial_object.is_open:
@@ -848,6 +864,8 @@ class VICI:
         self.ControllerKey = ""
         self.serialobjectPC = serial.Serial(timeout=0.1, baudrate=9600)
         self.serialobject = self.serialobjectPC
+        self.instrument_type = "VICI"
+        self.hardware_configuration = ""
 
     def set_port(self, port):
         if self.serialobject.is_open:
