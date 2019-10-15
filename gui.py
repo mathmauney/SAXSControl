@@ -40,7 +40,10 @@ class Main:
         """Set up the window and button variables."""
         print("initializing GUI...")
         if not os.path.exists(LOG_FOLDER):
-            raise FileNotFoundError("%s folder not found" % LOG_FOLDER)
+            print('Double checking log folder')
+            time.sleep(1)
+            if not os.path.exists(LOG_FOLDER):
+                raise FileNotFoundError("%s folder not found" % LOG_FOLDER)
         elif not os.path.isdir(LOG_FOLDER):
             raise NotADirectoryError("%s is not a folder" % LOG_FOLDER)
         if not os.path.exists(ElveflowDisplay.OUTPUT_FOLDER):
@@ -106,6 +109,10 @@ class Main:
         self.spec_fileno_box = tk.Entry(self.auto_page, textvariable=self.spec_fileno)
         self.buffer_sample_buffer_button = tk.Button(self.auto_page, text='Run Buffer/Sample/Buffer', command=self.buffer_sample_buffer_command)
         self.clean_button = tk.Button(self.auto_page, text='Clean/Refill', command=self.clean_and_refill_command)
+        self.load_button = tk.Button(self.auto_page, text='Load Position', command=self.load_command)
+        self.clean_only_button = tk.Button(self.auto_page, text='Clean Only', command=self.clean_only_command)
+        #self.clean_only_button = tk.Button(self.auto_page, text='Clean Only', commmand=self.clean_only_command)
+        self.refill_only_button = tk.Button(self.auto_page, text='Refill Only', command=self.refill_only_command)
 
         self.fig_dpi = 96  # this shouldn't matter too much (because we normalize against it) except in how font sizes are handled in the plot
         self.main_tab_fig = plt.Figure(figsize=(core_width*2/3/self.fig_dpi, core_height*3/4/self.fig_dpi), dpi=self.fig_dpi)
@@ -269,14 +276,17 @@ class Main:
         self.spec_base_directory_box.grid(row=1, column=0)
         self.spec_sub_directory_label.grid(row=0, column=1)
         self.spec_sub_directory_box.grid(row=1, column=1)
-        self.spec_directory_button.grid(row=1, column=2)
+        self.spec_directory_button.grid(row=4, column=1)
         self.spec_filename_label.grid(row=2, column=0)
         self.spec_filename_box.grid(row=3, column=0)
         self.spec_fileno_label.grid(row=2, column=1)
         self.spec_fileno_box.grid(row=3, column=1)
-        self.buffer_sample_buffer_button.grid(row=5, column=0, pady=25)
-        self.clean_button.grid(row=5, column=1)
-        self.canvas.get_tk_widget().grid(row=0, column=2, rowspan=6, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+        self.buffer_sample_buffer_button.grid(row=5, column=0)
+        self.load_button.grid(row=5, column=1)
+        self.clean_button.grid(row=6, column=0)
+        self.clean_only_button.grid(row=6, column=1)
+        self.refill_only_button.grid(row=6, column=2)
+        self.canvas.get_tk_widget().grid(row=0, column=2, rowspan=6, columnspan=8, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
         # Manual page
         # Config page
         rowcounter = 0
@@ -381,30 +391,15 @@ class Main:
             with open(filename, encoding='utf-8') as f:
                 # why does it only sometimes find the file?
                 self.config.read_file(f)
-            oil_config = self.config['Oil Valve']
-            loading_config = self.config['Loading Valve']
             main_config = self.config['Main']
             elveflow_config = self.config['Elveflow']
             spec_config = self.config['SPEC']
-            self.spec_sub_directory_box.delete(0, 'end')
-            self.spec_sub_directory_box.insert(0, spec_config.get('sub_dir', self.OldSubDirectory))
-            self.OldSubDirectory = self.spec_sub_directory.get()
-            self.spec_base_directory_box.delete(0, 'end')
-            self.spec_base_directory_box.insert(0, spec_config.get('base_dir', self.OldBaseDirectory))
-            self.OldBaseDirectory = self.spec_base_directory.get()
+            run_config = self.config['Run Params']
+            oil_config = self.config['Oil Valve']
+            loading_config = self.config['Loading Valve']
+            # Main Config
             self.sucrose = main_config.getboolean('Sucrose', False)
-            self.config_spec_address.delete(0, 'end')
-            self.config_spec_address.insert(0, main_config.get('spec_host', ''))
-            self.tseries_time_box.delete(0, 'end')
-            self.tseries_time_box.insert(0, main_config.get('tseries_time', '10'))
-            self.tseries_frames_box.delete(0, 'end')
-            self.tseries_frames_box.insert(0, main_config.get('tseries_frames', '10'))
-            oil_vars = []
-            loading_vars = []
-            for i in range(0, 6):
-                field = 'name'+str(i+1)
-                self.oil_valve_names[i].set(oil_config.get(field, ''))
-                self.loading_valve_names[i].set(loading_config.get(field, ''))
+            # Elveflow Config
             self.elveflow_sourcename.set(elveflow_config['elveflow_sourcename'])
             self.elveflow_sensortypes[0].set(elveflow_config['sensor1_type'])
             self.elveflow_sensortypes[1].set(elveflow_config['sensor2_type'])
@@ -412,6 +407,32 @@ class Main:
             self.elveflow_sensortypes[3].set(elveflow_config['sensor4_type'])
             self.elveflow_oil_channel.set(elveflow_config['elveflow_oil_channel'])
             self.elveflow_oil_pressure.set(elveflow_config['elveflow_oil_pressure'])
+            # SPEC Config
+            self.spec_address.set(spec_config.get('spec_host', ''))
+            self.tseries_time.set(spec_config.get('tseries_time', '10'))
+            self.tseries_frames.set(spec_config.get('tseries_frames', '10'))
+            self.spec_sub_directory.set(spec_config.get('sub_dir', self.OldSubDirectory))
+            self.OldSubDirectory = self.spec_sub_directory.get()
+            self.spec_base_directory.set(spec_config.get('base_dir', self.OldBaseDirectory))
+            self.OldBaseDirectory = self.spec_base_directory.get()
+            # Run Config
+            self.sample_flowrate.set(run_config.get('sample_rate', 10))
+            self.oil_refill_flowrate.set(run_config.get('oil_rate', 10))
+            self.first_buffer_volume.set(run_config.get('buffer1_vol', 25))
+            self.sample_volume.set(run_config.get('sample_vol', 25))
+            self.last_buffer_volume.set(run_config.get('buffer2_vol', 25))
+            self.low_soap_time.set(run_config.get('low_soap_time', 0))
+            self.high_soap_time.set(run_config.get('high_soap_time', 0))
+            self.water_time.set(run_config.get('water_time', 0))
+            self.air_time.set(run_config.get('air_time', 0))
+            # Valve Config
+            oil_vars = []
+            loading_vars = []
+            for i in range(0, 6):
+                field = 'name'+str(i+1)
+                self.oil_valve_names[i].set(oil_config.get(field, ''))
+                self.loading_valve_names[i].set(loading_config.get(field, ''))
+
         if not preload:
             self.set_oil_valve_names()
             self.set_loading_valve_names()
@@ -420,11 +441,39 @@ class Main:
         """Save a config.ini file."""
         filename = filedialog.asksaveasfilename(initialdir=".", title="Select file", filetypes=(("config files", "*.ini"), ("all files", "*.*")))
         if filename != '':
-            oil_config = self.config['Oil Valve']
-            loading_config = self.config['Loading Valve']
+            main_config = self.config['Main']
             elveflow_config = self.config['Elveflow']
             spec_config = self.config['SPEC']
-
+            run_config = self.config['Run Params']
+            oil_config = self.config['Oil Valve']
+            loading_config = self.config['Loading Valve']
+            # Main Config
+            main_config['Sucrose'] = str(self.sucrose)
+            # Elveflow Config
+            elveflow_config['elveflow_sourcename'] = self.elveflow_sourcename.get()
+            elveflow_config['sensor1_type'] = self.elveflow_sensortypes[0].get()
+            elveflow_config['sensor2_type'] = self.elveflow_sensortypes[1].get()
+            elveflow_config['sensor3_type'] = self.elveflow_sensortypes[2].get()
+            elveflow_config['sensor4_type'] = self.elveflow_sensortypes[3].get()
+            elveflow_config['elveflow_oil_channel'] = self.elveflow_oil_channel.get()
+            elveflow_config['elveflow_oil_pressure'] = self.elveflow_oil_pressure.get()
+            # SPEC Config
+            spec_config['spec_host'] = self.spec_address.get()
+            spec_config['tseries_time'] = str(self.tseries_time.get())
+            spec_config['tseries_frames'] = str(self.tseries_frames.get())
+            spec_config['sub_dir'] = self.spec_sub_directory.get()
+            spec_config['base_dir'] = self.spec_base_directory.get()
+            # Run Config
+            run_config['sample_rate'] = str(self.sample_flowrate.get())
+            run_config['oil_rate'] = str(self.oil_refill_flowrate.get())
+            run_config['buffer1_vol'] = str(self.first_buffer_volume.get())
+            run_config['sample_vol'] = str(self.sample_volume.get())
+            run_config['buffer2_vol'] = str(self.last_buffer_volume.get())
+            run_config['low_soap_time'] = str(self.low_soap_time.get())
+            run_config['high_soap_time'] = str(self.high_soap_time.get())
+            run_config['water_time'] = str(self.water_time.get())
+            run_config['air_time'] = str(self.air_time.get())
+            # Valve Configs
             for i in range(0, 6):
                 field = 'name'+str(i+1)
                 oil_name = self.oil_valve_names[i].get()
@@ -443,11 +492,13 @@ class Main:
 
     def set_oil_valve_names(self):
         """Send selection valve names to the control gui."""
+        self.python_logger.info("Oil valve names set.")
         for i in range(0, 6):
             self.flowpath.valve2.name_position(i, self.oil_valve_names[i].get())
 
     def set_loading_valve_names(self):
         """Send selection valve names to the control gui."""
+        self.python_logger.info("Loading valve names set.")
         for i in range(0, 6):
             self.flowpath.valve4.name_position(i, self.loading_valve_names[i].get())
 
@@ -501,7 +552,6 @@ class Main:
             dataY1 = np.array([elt[dataY1Label_var] for elt in self.elveflow_display.data])
             dataY2 = np.array([elt[dataY2Label_var] for elt in self.elveflow_display.data])
 
-            # self.python_logger.info("Current time %s, end time %s" % (int(time.time() - self.elveflow_display.starttime), self.graph_end_time))
             dataX_viable = (dataX >= self.graph_start_time) # & (dataX < self.graph_end_time)
             dataX = dataX[dataX_viable]
             dataY1 = dataY1[dataX_viable]
@@ -561,6 +611,8 @@ class Main:
         self.the_line1 = self.main_tab_ax1.plot([], [], color=ElveflowDisplay.COLOR_Y1)[0]
         self.the_line2 = self.main_tab_ax2.plot([], [], color=ElveflowDisplay.COLOR_Y2)[0]
         self.graph_start_time = int(time.time())
+        self.graph_end_time = np.inf
+        self.python_logger.info("graph start time: %s" % self.graph_start_time)
         self.flowpath.set_unlock_state(False)
 
         self.update_graph()
@@ -664,6 +716,15 @@ class Main:
         self.queue.put((self.elveflow_display.start_pressure, elveflow_oil_channel))
 
         self.queue.put((self.python_logger.info, 'cleaning done  完成！¡Terminó!'))
+
+    def clean_only_command(self):
+        pass
+
+    def refill_only_command(self):
+        pass
+
+    def load_command(self):
+        pass
 
     def toggle_buttons(self):
         """Toggle certain buttons on and off when they should not be allowed to add to queue."""
@@ -769,9 +830,9 @@ class Main:
          tk.Button(self.manual_page, text="Set", command=lambda: self.queue.put((self.Instruments[InstrumentIndex].set_target_vol, self.manual_page_variables[InstrumentIndex][3].get())))
          ]
         # Bind Enter to Spinboxes
-        newbuttons[4].bind('<Return>', lambda: self.queue.put((self.Instruments[InstrumentIndex].set_infuse_rate, self.manual_page_variables[InstrumentIndex][1].get())))
-        newbuttons[7].bind('<Return>', lambda: self.queue.put((self.Instruments[InstrumentIndex].set_refill_rate, self.manual_page_variables[InstrumentIndex][2].get())))
-        newbuttons[16].bind('<Return>', lambda: self.queue.put((self.Instruments[InstrumentIndex].set_target_vol, self.manual_page_variables[InstrumentIndex][3].get())))
+        newbuttons[4].bind('<Return>', lambda event: self.queue.put((self.Instruments[InstrumentIndex].set_infuse_rate, self.manual_page_variables[InstrumentIndex][1].get())))
+        newbuttons[7].bind('<Return>', lambda event: self.queue.put((self.Instruments[InstrumentIndex].set_refill_rate, self.manual_page_variables[InstrumentIndex][2].get())))
+        newbuttons[16].bind('<Return>', lambda event: self.queue.put((self.Instruments[InstrumentIndex].set_target_vol, self.manual_page_variables[InstrumentIndex][3].get())))
         self.manual_page_buttons.append(newbuttons)
         # Build Pump
         for i in range(len(self.manual_page_buttons)):
@@ -825,7 +886,7 @@ class Main:
          tk.Spinbox(self.manual_page, from_=1, to=self.setup_page_variables[InstrumentIndex][2].get(), textvariable=self.manual_page_variables[InstrumentIndex][1]),
          tk.Button(self.manual_page, text="Change", command=lambda: self.queue.put((self.Instruments[InstrumentIndex].switchvalve, self.manual_page_variables[InstrumentIndex][1].get()))),
          ]
-        newbuttons[2].bind('<Return>', lambda: self.queue.put((self.Instruments[InstrumentIndex].switchvalve, self.manual_page_variables[InstrumentIndex][1].get())))
+        newbuttons[2].bind('<Return>', lambda event: self.queue.put((self.Instruments[InstrumentIndex].switchvalve, self.manual_page_variables[InstrumentIndex][1].get())))
         self.manual_page_buttons.append(newbuttons)
         # Place buttons
         for i in range(len(self.manual_page_buttons)):
@@ -869,7 +930,7 @@ class Main:
          tk.Spinbox(self.manual_page, values=("A", "B"), textvariable=self.manual_page_variables[InstrumentIndex][1]),
          tk.Button(self.manual_page, text="Change", command=lambda: self.queue.put((self.Instruments[InstrumentIndex].switchvalve, self.manual_page_variables[InstrumentIndex][1].get()))),
          ]
-        newbuttons[2].bind('<Return>', lambda: self.queue.put((self.Instruments[InstrumentIndex].switchvalve, self.manual_page_variables[InstrumentIndex][1].get())))
+        newbuttons[2].bind('<Return>', lambda event: self.queue.put((self.Instruments[InstrumentIndex].switchvalve, self.manual_page_variables[InstrumentIndex][1].get())))
         self.manual_page_buttons.append(newbuttons)
         # Place buttons
         for i in range(len(self.manual_page_buttons)):
@@ -1016,7 +1077,6 @@ class Main:
 
             self.spec_fileno.delete(0, 'end')
             self.spec_fileno.insert(0, FileNumber+1)
-
 
 
 if __name__ == "__main__":
