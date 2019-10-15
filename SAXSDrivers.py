@@ -35,6 +35,7 @@ class SAXSController(serial.Serial):
         """Initialize class."""
         super().__init__(**kwargs)
         self.logger = logger
+        self.enabled = False
 
     def set_port(self, port):
         """Set the serial port."""
@@ -42,10 +43,14 @@ class SAXSController(serial.Serial):
             self.close()
         self.port = port
         self.open()
+        self.enabled = True
         self.logger.append("Controller set to port "+port)
 
     def scan_i2c(self):
         """Scan I2C line."""
+        if not self.enabled:
+            self.logger.append("Microcontroller not set up")
+            return
         if not self.is_open:
             self.open()
         self.write(b'I')
@@ -95,7 +100,7 @@ class HPump:
         """Set the control to a controller rather than direct."""
         self.pc_connect = False
         self.controller = controller
-        HPump.enabled = True
+        HPump.enabled = controller.enabled
         self.logger.append(self.name+" set to Microntroller")
 
     def change_values(self, address, name):
@@ -339,7 +344,7 @@ class HPump:
 
     def set_mode_vol(self,  resource=pumpserial):
         if not HPump.enabled:
-            self.logger.append(self.name+" not ennabled")
+            self.logger.append(self.name+" not enabled")
             return
         if self.pc_connect:
             if not resource.is_open:
@@ -698,7 +703,7 @@ class Rheodyne:
     def set_to_controller(self, controller):
         self.pc_connect = False
         self.controller = controller
-        self.enabled = True
+        self.enabled = controller.enabled
         self.logger.append(self.name+" set to Microntroller")
 
     def change_values(self, address, name):
@@ -857,7 +862,7 @@ class VICI:
             self.serialobject.close()
         self.PCConnect = False
         self.serialobject = controller
-        self.enabled = True
+        self.enabled = controller.enabled
         self.ControllerKey = "+"
         self.logger.append(self.name+" set to Microntroller")
 

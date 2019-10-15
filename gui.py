@@ -691,7 +691,7 @@ class Main:
         self.Instruments.append(SAXSDrivers.HPump(logger=self.Instrument_logger))
         self.NumberofPumps += 1
         InstrumentIndex = len(self.Instruments)-1
-
+        self.Instrument_logger.append("Added pump")
         newvars = [tk.IntVar(value=0), tk.StringVar(), tk.StringVar()]
         self.setup_page_variables.append(newvars)
 
@@ -787,6 +787,7 @@ class Main:
         InstrumentIndex = len(self.Instruments)-1
         newvars = [tk.IntVar(value=-1), tk.StringVar(), tk.IntVar(value=2), tk.StringVar()]
         self.setup_page_variables.append(newvars)
+        self.Instrument_logger.append("Added Rheodyne")
         newbuttons = [
          COMPortSelector(self.setup_page, exportselection=0, height=4),
          tk.Button(self.setup_page, text="Set Port", command=lambda: self.Instruments[InstrumentIndex].set_port(self.AvailablePorts[int(self.setup_page_buttons[InstrumentIndex][0].curselection()[0])].device)),
@@ -834,6 +835,7 @@ class Main:
         InstrumentIndex = len(self.Instruments)-1
         newvars = [tk.IntVar(value=-1), tk.StringVar(), tk.StringVar()]
         self.setup_page_variables.append(newvars)
+        self.logger.append("Added VICI Valve")
         newbuttons = [
          COMPortSelector(self.setup_page, exportselection=0, height=4),
          tk.Button(self.setup_page, text="Set Port", command=lambda: self.Instruments[InstrumentIndex].set_port(self.AvailablePorts[int(self.setup_page_buttons[InstrumentIndex][0].curselection()[0])].device)),
