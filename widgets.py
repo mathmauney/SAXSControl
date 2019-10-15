@@ -198,7 +198,7 @@ class MiscLogger(ScrolledText):
 
 class Toggle(tk.Label):
     # https://www.reddit.com/r/learnpython/comments/7sx953/how_to_add_a_toggle_switch_in_tkinter/
-    def __init__(self, master=None, variable=None, onFile='clicked_button.png', offFile='unclicked_button.png', onToggleOn=None, onToggleOff=None, defaultValue=None, **kwargs):
+    def __init__(self, master=None, variable=None, onFile='img/clicked_button.png', offFile='img/unclicked_button.png', onToggleOn=None, onToggleOff=None, defaultValue=None, **kwargs):
         tk.Label.__init__(self, master, **kwargs)
 
         self.ON = onFile
@@ -238,8 +238,8 @@ class Toggle(tk.Label):
 
 
 class PressureVolumeToggle(Toggle):
-    ON = 'Pressure_button.png'
-    OFF = 'Volume_button.png'
+    ON = 'img/Pressure_button.png'
+    OFF = 'img/Volume_button.png'
 
     def __init__(self, master=None, variable=None, **kwargs):
         Toggle.__init__(self, master, variable, self.ON, self.OFF, **kwargs)
@@ -579,6 +579,17 @@ class ElveflowDisplay(tk.Canvas):
         print("graph CLEARED!")
 
     def update_plot(self):
+        if not self.run_flag.is_set():
+            return
+            # This is something that shouldn't ever need to be used, but dataXLabel_var.get()
+            # fails when quitting the whole GUI - not even throwing an error, but just hanging.
+            # So double-check here and abandon the rest of this function if we are quitting
+            #
+            # Technically, there's still the race condition that we check this flag, and then before we make it
+            # to the next line, the flag gets cleared by another thread. But you know what? Failing to exit is not
+            # the worst of our worries when making this GUI. This extra check makes it much less likely that such
+            # a race condition happens, even if it's still possible
+
         dataXLabel_var = self.dataXLabel_var.get()
         dataY1Label_var = self.dataY1Label_var.get()
         dataY2Label_var = self.dataY2Label_var.get()

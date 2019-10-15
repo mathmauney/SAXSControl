@@ -554,7 +554,6 @@ class Main:
             dataY1 = np.array([elt[dataY1Label_var] for elt in self.elveflow_display.data])
             dataY2 = np.array([elt[dataY2Label_var] for elt in self.elveflow_display.data])
 
-            # self.python_logger.info("Current time %s, end time %s" % (int(time.time() - self.elveflow_display.starttime), self.graph_end_time))
             dataX_viable = (dataX >= self.graph_start_time) # & (dataX < self.graph_end_time)
             dataX = dataX[dataX_viable]
             dataY1 = dataY1[dataX_viable]
@@ -614,6 +613,8 @@ class Main:
         self.the_line1 = self.main_tab_ax1.plot([], [], color=ElveflowDisplay.COLOR_Y1)[0]
         self.the_line2 = self.main_tab_ax2.plot([], [], color=ElveflowDisplay.COLOR_Y2)[0]
         self.graph_start_time = int(time.time())
+        self.graph_end_time = np.inf
+        self.python_logger.info("graph start time: %s" % self.graph_start_time)
         self.flowpath.set_unlock_state(False)
 
         self.update_graph()
@@ -654,6 +655,8 @@ class Main:
             self.graph_end_time = int(time.time())
         self.queue.put(update_end_time)
         self.queue.put((self.python_logger.info, "Done with running buffer-sample-buffer"))
+
+        self.clean_and_refill_command()  # Auto Clean
 
     def clean_and_refill_command(self):
         elveflow_oil_channel = int(self.elveflow_oil_channel.get()) #throws an error if the conversion doesn't work
@@ -714,7 +717,7 @@ class Main:
         self.queue.put((self.elveflow_display.pressureValue_var[elveflow_oil_channel - 1].set, "0"))  # Set oil pressure to 0
         self.queue.put((self.elveflow_display.start_pressure, elveflow_oil_channel))
 
-        self.queue.put((self.python_logger.info, 'cleaning done'))
+        self.queue.put((self.python_logger.info, 'cleaning done  完成！¡Terminó!'))
 
     def clean_only_command(self):
         pass
