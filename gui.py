@@ -654,6 +654,8 @@ class Main:
         self.queue.put(update_end_time)
         self.queue.put((self.python_logger.info, "Done with running buffer-sample-buffer"))
 
+        self.clean_and_refill_command()  # Auto Clean
+
     def clean_and_refill_command(self):
         elveflow_oil_channel = int(self.elveflow_oil_channel.get()) #throws an error if the conversion doesn't work
         elveflow_oil_pressure = self.elveflow_oil_pressure.get()
@@ -713,7 +715,7 @@ class Main:
         self.queue.put((self.elveflow_display.pressureValue_var[elveflow_oil_channel - 1].set, "0"))  # Set oil pressure to 0
         self.queue.put((self.elveflow_display.start_pressure, elveflow_oil_channel))
 
-        self.queue.put((self.python_logger.info, 'cleaning done'))
+        self.queue.put((self.python_logger.info, 'cleaning done  完成！¡Terminó!'))
 
     def clean_only_command(self):
         pass
