@@ -537,6 +537,10 @@ class Main:
         #    self.SPEC_Connection.stop()
         if self.listen_run_flag.is_set():
             self.listen_run_flag.clear()
+        print("WAITING FOR OTHER THREADS TO SHUT DOWN...")
+        while not self.elveflow_display.done_shutting_down:
+            time.sleep(0.2)
+        print("THANK Y'ALL FOR COMING! À LA PROCHAINE !")
         self.main_window.destroy()
 
     def update_graph(self):

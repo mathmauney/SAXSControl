@@ -169,11 +169,11 @@ class ElveflowHandler_ESI:
 
 class ElveflowHandler_SDK:
     """a class that handles interfacing with the Elveflow directly"""
-    SLEEPTIME = 0.1  # how many seconds between each read of the Elveflow output
+    SLEEPTIME = 0.03  # how many seconds between each read of the Elveflow output
     PID_SLEEPTIME = 0.1  # how many seconds between each command of the PID loop
     QUEUE_MAXLEN = 0  # zero means infinite
 
-    PRESSURE_MAXSLOPE = 1000 * PID_SLEEPTIME     # in mbar per update frame
+    PRESSURE_MAXSLOPE = 200 * PID_SLEEPTIME     # in mbar per update frame; the 400 is in mbar/s
     VOLUME_KP = 0
     VOLUME_KI = 50
     VOLUME_KD = 0

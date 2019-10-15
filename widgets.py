@@ -286,7 +286,8 @@ class ElveflowDisplay(tk.Canvas):
         self.elveflow_config = elveflow_config
         self.saveFile = None
         self.saveFileWriter = None
-        self.shutdown = False
+        self.started_shutting_down = False
+        self.done_shutting_down = False
 
         self.starttime = int(time.time())
         self.errorlogger.info("start time is %d" % self.starttime)
@@ -498,7 +499,10 @@ class ElveflowDisplay(tk.Canvas):
                     time.sleep(ElveflowDisplay.POLLING_PERIOD)
             finally:
                 try:
-                    self.stop()
+                    if self.started_shutting_down:
+                        self.done_shutting_down = True
+                    else:
+                        self.stop()
                     print("DONE WITH THIS THREAD, %s" % threading.current_thread())
                 except RuntimeError:
                     print("Runtime error detected in display thread %s while trying to close. Ignoring." % threading.current_thread())
@@ -515,10 +519,6 @@ class ElveflowDisplay(tk.Canvas):
 
     def stop(self, shutdown=False):
         self.run_flag.clear()
-        if shutdown:
-            self.shutdown = True
-            # shutdown was a flag I was using to try to solve threading problems
-            # I don't think it actually does anything, but at least it's not hurting anything, anyway
 
         if self.elveflow_handler is not None:
             self.elveflow_handler.stop()
@@ -539,7 +539,9 @@ class ElveflowDisplay(tk.Canvas):
                 except AttributeError:
                     pass
         self.stop_saving(shutdown=shutdown)
-        if not shutdown:
+        if shutdown:
+            self.started_shutting_down = True
+        else:
             self._initialize_variables()
 
     def start_saving(self):
@@ -593,6 +595,7 @@ class ElveflowDisplay(tk.Canvas):
         dataXLabel_var = self.dataXLabel_var.get()
         dataY1Label_var = self.dataY1Label_var.get()
         dataY2Label_var = self.dataY2Label_var.get()
+
         self.ax1.set_xlabel(dataXLabel_var, fontsize=14)
         self.ax1.set_ylabel(dataY1Label_var, fontsize=14, color=ElveflowDisplay.COLOR_Y1)
         self.ax2.set_ylabel(dataY2Label_var, fontsize=14, color=ElveflowDisplay.COLOR_Y2)
