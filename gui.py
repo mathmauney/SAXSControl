@@ -698,7 +698,7 @@ class Main:
         self.queue.put((self.flowpath.valve3.set_auto_position, 0))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Air"))
         self.queue.put((time.sleep, self.air_time.get()))
-        self.queue.put((self.python.logger.info, "Finished cleaning buffer"))
+        self.queue.put((self.python_logger.info, "Finished cleaning buffer"))
 
         self.queue.put((self.python_logger.info, "Starting to clean sample"))
         self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
