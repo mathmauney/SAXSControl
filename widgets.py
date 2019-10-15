@@ -786,7 +786,7 @@ class FlowPath(tk.Canvas):
                 self.color = color
             elif self.colors[position] is not None:
                 self.color = self.colors[position]
-            self.canvas.itemconfig(self.circles[self.position], fill='white', outline='white')
+            self.canvas.itemconfig(self.circles[position], fill='white', outline='white')
             self.canvas.itemconfig(self.center_circle, fill=self.color, outline=self.color)
             self.canvas.itemconfig(self.circles[position], fill=self.color, outline=self.color)
             try:
@@ -840,6 +840,10 @@ class FlowPath(tk.Canvas):
             self.hardware_names[position] = name
 
         def propagate_fluid(self, port, fluid_color):
+            if isinstance(self.position, str):
+                position = self.gui_names.index(self.position)
+            else:
+                position = self.position
             if port == 'center':
                 port = 6
             if self.position == port:
@@ -850,9 +854,9 @@ class FlowPath(tk.Canvas):
                     valve.propagate_fluid(port2, fluid_color)
             elif port == 6:
                 self.set_position(self.position, fluid_color)
-                for line in self.fluid_lines[self.position]:
+                for line in self.fluid_lines[position]:
                     self.canvas.itemconfig(line, fill=self.color, outline=self.color)
-                for (valve, port2) in self.connected_valves[self.position]:
+                for (valve, port2) in self.connected_valves[position]:
                     valve.propagate_fluid(port2, fluid_color)
 
     class SampleValve(Valve):
