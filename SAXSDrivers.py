@@ -710,11 +710,14 @@ class Rheodyne:
             self.address_I2C = address
 
     # """Now the function to actually control de valve."""
-    def switchvalve(self, position):  # Lets take int
+    def switchvalve(self, position, attempts=0, max_attemps=3):  # Lets take int
         # this function wont work for positions>10
         # to add that functionality the number must be
         # in hex format => P##  so 10 P0A
         # Need errror handler to check position is integer and less than valve type
+        if attempts > max_attemps:
+            self.logger.append("Error Switching "+self.name)
+            raise RuntimeError  # error valve didnt acknowledge
         if not self.enabled:
             self.logger.append(self.name+" not enabled")
             return
@@ -742,8 +745,8 @@ class Rheodyne:
             self.logger.append(self.name+" switched to "+str(position))
             return 0    # Valve acknowledged commsnd
         else:
-            self.logger.append("Error Switching "+self.name)
-            raise RuntimeError  # error valve didnt acknowledge
+            self.logger.append("Switching valve %s failed; retrying %i" % (self.name, attempts))
+            self.switchvalve(position, attempts+1, max_attemps)
 
     # Todo maybe incorporate status check to confirm valve is in the right position
     def statuscheck(self, iter=0):
