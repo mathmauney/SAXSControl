@@ -35,6 +35,7 @@ class SAXSController(serial.Serial):
         """Initialize class."""
         super().__init__(**kwargs)
         self.logger = logger
+        self.enabled = False
 
     def set_port(self, port):
         """Set the serial port."""
@@ -42,12 +43,28 @@ class SAXSController(serial.Serial):
             self.close()
         self.port = port
         self.open()
+        self.enabled = True
         self.logger.append("Controller set to port "+port)
 
     def scan_i2c(self):
         """Scan I2C line."""
+        if not self.enabled:
+            self.logger.append("Microcontroller not set up")
+            return
         if not self.is_open:
             self.open()
+        self.write(b'I')
+        while self.in_waiting > 0:
+            self.logger.append(self.readline().decode())
+
+# To finish for Hardware Configure
+    def get_addresses(self):
+        if not self.enabled:
+            self.logger.append("Microcontroller not set up")
+            return
+        if not self.is_open:
+            self.open()
+        # Check instruments
         self.write(b'I')
         while self.in_waiting > 0:
             self.logger.append(self.readline().decode())
@@ -67,7 +84,7 @@ class HPump:
     # Variable to keep track if pump has a valid port-> Avoids crashing when not set up
     enabled = False
 
-    def __init__(self, address=0, pc_connect=True, running=False, infusing=True, name="Pump", logger=[]):
+    def __init__(self, address=0, pc_connect=True, running=False, infusing=True, name="Pump", logger=[], hardware_configuration=""):
         """Initialize HPump."""
         self.address = str(address)
         self.running = running
@@ -75,6 +92,8 @@ class HPump:
         self.pc_connect = pc_connect
         self.logger = logger
         self.name = name
+        self.instrument_type = "Pump"
+        self.hardware_configuration = hardware_configuration
         # add init for syringe dismeter,flowrate, Direction etc
 
     # function to initialize ports
@@ -95,7 +114,7 @@ class HPump:
         """Set the control to a controller rather than direct."""
         self.pc_connect = False
         self.controller = controller
-        HPump.enabled = True
+        HPump.enabled = controller.enabled
         self.logger.append(self.name+" set to Microntroller")
 
     def change_values(self, address, name):
@@ -339,7 +358,7 @@ class HPump:
 
     def set_mode_vol(self,  resource=pumpserial):
         if not HPump.enabled:
-            self.logger.append(self.name+" not ennabled")
+            self.logger.append(self.name+" not enabled")
             return
         if self.pc_connect:
             if not resource.is_open:
@@ -673,7 +692,7 @@ class HPump:
 class Rheodyne:
     """Class to control Rheodyne valves."""
 
-    def __init__(self, name="Rheodyne", valvetype=0, position=0, pc_connect=True, address_I2C=-1, enabled=False, logger=[]):
+    def __init__(self, name="Rheodyne", valvetype=0, position=0, pc_connect=True, address_I2C=-1, enabled=False, logger=[], hardware_configuration=""):
         self.name = name                      # valve nickname
         self.valvetype = valvetype            # int to mark max number of valve possions 2 or 6
         self.position = position
@@ -686,6 +705,8 @@ class Rheodyne:
         # Actual baudrate can change- they just must agree.
         self.serial_object = serial.Serial(baudrate=19200, timeout=0.1)
         # set port throughuh another function.
+        self.instrument_type = "Rheodyne"
+        self.hardware_configuration = hardware_configuration
 
     def set_port(self, port):  # will keep set port accross different classes
         if self.serial_object.is_open:
@@ -698,7 +719,7 @@ class Rheodyne:
     def set_to_controller(self, controller):
         self.pc_connect = False
         self.controller = controller
-        self.enabled = True
+        self.enabled = controller.enabled
         self.logger.append(self.name+" set to Microntroller")
 
     def change_values(self, address, name):
@@ -833,7 +854,7 @@ class Rheodyne:
 class VICI:
     """Class to control a VICI valve."""
 
-    def __init__(self, name="VICI", address="", enabled=False, pc_connect=True, position=0, logger=[]):
+    def __init__(self, name="VICI", address="", enabled=False, pc_connect=True, position=0, logger=[], hardware_configuration=""):
         self.name = name
         self.address = address
         self.enabled = enabled
@@ -843,6 +864,8 @@ class VICI:
         self.ControllerKey = ""
         self.serialobjectPC = serial.Serial(timeout=0.1, baudrate=9600)
         self.serialobject = self.serialobjectPC
+        self.instrument_type = "VICI"
+        self.hardware_configuration = hardware_configuration
 
     def set_port(self, port):
         if self.serialobject.is_open:
@@ -860,7 +883,7 @@ class VICI:
             self.serialobject.close()
         self.PCConnect = False
         self.serialobject = controller
-        self.enabled = True
+        self.enabled = controller.enabled
         self.ControllerKey = "+"
         self.logger.append(self.name+" set to Microntroller")
 

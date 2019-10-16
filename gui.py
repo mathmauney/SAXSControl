@@ -399,6 +399,7 @@ class Main:
             run_config = self.config['Run Params']
             oil_config = self.config['Oil Valve']
             loading_config = self.config['Loading Valve']
+            instrument_config = self.config['Instruments']
             # Main Config
             self.sucrose = main_config.getboolean('Sucrose', False)
             # Elveflow Config
@@ -438,6 +439,18 @@ class Main:
         if not preload:
             self.set_oil_valve_names()
             self.set_loading_valve_names()
+        # Instrument Config
+        for i in range(int(instrument_config.get("n_pumps",0))):
+            field = "Pump"+str(i)
+            self.add_pump_set_buttons(int(instrument_config.get(field+"_address", 0)), instrument_config.get(field+"_name", ""), instrument_config.get(field+"_hardware", ""))
+
+        for i in range(int(instrument_config.get("n_rheodyne",0))):
+            field = "Rheodyne"+str(i)
+            self.AddRheodyneSetButtons(int(instrument_config.get(field+"_address", -1)), instrument_config.get(field+"_name", ""), instrument_config.get(field+"_hardware", ""))
+
+        for i in range(int(instrument_config.get("n_vici", 0))):
+            field = "VICI"+str(i)
+            self.AddVICISetButtons(instrument_config.get(field+"_name", ''), instrument_config.get(field+"_hardware", ""))
 
     def save_config(self):
         """Save a config.ini file."""
@@ -449,6 +462,7 @@ class Main:
             run_config = self.config['Run Params']
             oil_config = self.config['Oil Valve']
             loading_config = self.config['Loading Valve']
+            instrument_config = self.config['Instruments']
             # Main Config
             main_config['Sucrose'] = str(self.sucrose)
             # Elveflow Config
@@ -489,6 +503,28 @@ class Main:
 
             spec_config['tseries_time'] = str(self.tseries_time.get())
             spec_config['tseries_frames'] = str(self.tseries_frames.get())
+            # Instrument Config
+            npumps = 0
+            nrheodyne = 0
+            nvici = 0
+            for instrument in self.Instruments:
+                if instrument.instrument_type == "Pump":
+                    instrument_config["Pump"+str(npumps)+"_address"] = str(instrument.address)
+                    instrument_config["Pump"+str(npumps)+"_name"] = instrument.name
+                    instrument_config["Pump"+str(npumps)+"_hardware"] = instrument.hardware_configuration
+                    npumps += 1
+                if instrument.instrument_type == "Rheodyne":
+                    instrument_config["Rheodyne"+str(nrheodyne)+"_address"] = str(instrument.address_I2C)
+                    instrument_config["Rheodyne"+str(nrheodyne)+"_name"] = instrument.name
+                    instrument_config["Rheodyne"+str(nrheodyne)+"_hardware"] = instrument.hardware_configuration
+                    nrheodyne += 1
+                if instrument.instrument_type == "VICI":
+                    instrument_config["VICI"+str(nvici)+"_name"] = instrument.name
+                    instrument_config["VICI"+str(nvici)+"_hardware"] = instrument.hardware_configuration
+                    nvici += 1
+            instrument_config["n_pumps"] = str(npumps)
+            instrument_config["n_rheodyne"] = str(nrheodyne)
+            instrument_config["n_vici"] = str(nvici)
 
             self.config.write(open(filename, 'w', encoding='utf-8'))
 
@@ -777,14 +813,15 @@ class Main:
             self.flowpath.valve4.hardware = self.Instruments[InstrumentIndex]
         else:
             raise ValueError
+        self.Instruments[InstrumentIndex].hardware_configuration = keyword
 
-    def add_pump_set_buttons(self):
+    def add_pump_set_buttons(self, address=0, name="Pump", hardware=""):
         """Add pump buttons to the setup page."""
-        self.Instruments.append(SAXSDrivers.HPump(logger=self.Instrument_logger))
+        self.Instruments.append(SAXSDrivers.HPump(logger=self.Instrument_logger, name=name, address=address, hardware_configuration=hardware))
         self.NumberofPumps += 1
         InstrumentIndex = len(self.Instruments)-1
-
-        newvars = [tk.IntVar(value=0), tk.StringVar(), tk.StringVar()]
+        self.Instrument_logger.append("Added pump")
+        newvars = [tk.IntVar(value=address), tk.StringVar(value=name), tk.StringVar(value=hardware)]
         self.setup_page_variables.append(newvars)
 
         newbuttons = [
@@ -814,6 +851,8 @@ class Main:
                 self.setup_page_buttons[i][y].grid(row=i+2, column=y)
         self.RefreshCOMList()
         self.AddPumpControlButtons()
+        if hardware != "":
+            self.configure_to_hardware(hardware, InstrumentIndex)
 
     def RefreshDropdown(self, OptionMenulist, OptionstoPut, VariableLocation):
         # Update Values in Config Selector
@@ -853,7 +892,7 @@ class Main:
          tk.Label(self.manual_page, text="Mode"),
          tk.Button(self.manual_page, text="Pump", command=lambda: self.queue.put(self.Instruments[InstrumentIndex].set_mode_pump)),
          tk.Button(self.manual_page, text="Vol", command=lambda: self.queue.put(self.Instruments[InstrumentIndex].set_mode_vol)),
-         tk.Label(self.manual_page, text="  Target Vol:"),
+         tk.Label(self.manual_page, text="  Target Vol(ml):"),
          tk.Spinbox(self.manual_page, from_=0, to=1000, textvariable=self.manual_page_variables[InstrumentIndex][3]),
          # tk.Button(self.manual_page, text="Set", command=lambda: self.queue.put((self.Instruments[InstrumentIndex].set_target_vol, self.manual_page_variables[InstrumentIndex][3].get())))
          tk.Button(self.manual_page, text="Set", command=lambda: self.queue.put((self.Instruments[InstrumentIndex].set_target_vol, self.manual_page_variables[InstrumentIndex][3].get())))
@@ -874,11 +913,12 @@ class Main:
             if isinstance(button[0], COMPortSelector):
                 button[0].updatelist(SAXSDrivers.list_available_ports(self.AvailablePorts))
 
-    def AddRheodyneSetButtons(self):
-        self.Instruments.append(SAXSDrivers.Rheodyne(logger=self.Instrument_logger))
+    def AddRheodyneSetButtons(self, address=-1, name="", hardware=""):
+        self.Instruments.append(SAXSDrivers.Rheodyne(logger=self.Instrument_logger, address_I2C=address, name=name, hardware_configuration=hardware))
         InstrumentIndex = len(self.Instruments)-1
-        newvars = [tk.IntVar(value=-1), tk.StringVar(), tk.IntVar(value=2), tk.StringVar()]
+        newvars = [tk.IntVar(value=address), tk.StringVar(value=name), tk.IntVar(value=2), tk.StringVar(value=hardware)]
         self.setup_page_variables.append(newvars)
+        self.Instrument_logger.append("Added Rheodyne")
         newbuttons = [
          COMPortSelector(self.setup_page, exportselection=0, height=4),
          tk.Button(self.setup_page, text="Set Port", command=lambda: self.Instruments[InstrumentIndex].set_port(self.AvailablePorts[int(self.setup_page_buttons[InstrumentIndex][0].curselection()[0])].device)),
@@ -900,6 +940,9 @@ class Main:
                 self.setup_page_buttons[i][y].grid(row=i+2, column=y)
         self.AddRheodyneControlButtons()
         self.RefreshCOMList()
+        if hardware != "":
+            self.configure_to_hardware(hardware, InstrumentIndex)
+
         # self.RefreshDropdown()
 
     def AddRheodyneControlButtons(self):
@@ -921,11 +964,12 @@ class Main:
             for y in range(len(self.manual_page_buttons[i])):
                 self.manual_page_buttons[i][y].grid(row=i, column=y)
 
-    def AddVICISetButtons(self):
-        self.Instruments.append(SAXSDrivers.VICI(logger=self.Instrument_logger))
+    def AddVICISetButtons(self, name="", hardware=""):
+        self.Instruments.append(SAXSDrivers.VICI(logger=self.Instrument_logger, name=name, hardware_configuration=hardware))
         InstrumentIndex = len(self.Instruments)-1
-        newvars = [tk.IntVar(value=-1), tk.StringVar(), tk.StringVar()]
+        newvars = [tk.IntVar(value=-1), tk.StringVar(value=name), tk.StringVar(value=hardware)]
         self.setup_page_variables.append(newvars)
+        self.Instrument_logger.append("Added VICI Valve")
         newbuttons = [
          COMPortSelector(self.setup_page, exportselection=0, height=4),
          tk.Button(self.setup_page, text="Set Port", command=lambda: self.Instruments[InstrumentIndex].set_port(self.AvailablePorts[int(self.setup_page_buttons[InstrumentIndex][0].curselection()[0])].device)),
@@ -944,6 +988,8 @@ class Main:
         self.AddVICIControlButtons()
         self.RefreshCOMList()
         # self.RefreshDropdown()
+        if hardware != "":
+            self.configure_to_hardware(hardware, InstrumentIndex)
 
     def AddVICIControlButtons(self):
         InstrumentIndex = len(self.Instruments)-1
