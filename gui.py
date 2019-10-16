@@ -531,14 +531,14 @@ class Main:
         """Exit the GUI and stop all running things."""
         print("STARTING EXIT PROCEDURE")
         self.stop()
-        if self.elveflow_display.run_flag.is_set():
-            self.elveflow_display.stop(shutdown=True)
+        self.elveflow_display.stop(shutdown=True)
         # if self.SPEC_Connection.run_flag.is_set():
         #    self.SPEC_Connection.stop()
         if self.listen_run_flag.is_set():
             self.listen_run_flag.clear()
         print("WAITING FOR OTHER THREADS TO SHUT DOWN...")
         while not self.elveflow_display.done_shutting_down:
+            # We could do this smarter by waiting for events. But we're not smarter.
             time.sleep(0.2)
         print("THANK Y'ALL FOR COMING! À LA PROCHAINE !")
         self.main_window.destroy()
@@ -679,7 +679,7 @@ class Main:
         self.queue.put((self.elveflow_display.pressureValue_var[elveflow_oil_channel - 1].set, "0"))  # Set oil pressure to 0
         self.queue.put((self.elveflow_display.start_pressure, elveflow_oil_channel))
 
-        self.queue.put((self.python_logger.info, 'Clean and refill done'))
+        self.queue.put((self.python_logger.info, 'Clean and refill done. 完成了！'))
 
     def clean_only_command(self):
         self.queue.put((self.python_logger.info, "Starting to clean buffer"))
