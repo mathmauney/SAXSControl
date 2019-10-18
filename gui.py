@@ -94,6 +94,12 @@ class Main:
         self.Instrument_logs = tk.Frame(self.logs)
         self.state_frame = tk.Frame(self.main_window, width=window_width, height=state_height, bg='blue')
         # Widgets on Main page
+        self.background_image_path = 'img/dog-colorful-wallpaper-background.png'
+        self.background_image_path = 'img/rainbow_background.png'
+        self.background_image = tk.PhotoImage(file=self.background_image_path)
+        self.background_label = tk.Label(self.auto_page, image=self.background_image)
+        self.background_label.place(x=0, y=0, relwidth=1, relheight=1)
+
         self.spec_base_directory_label = tk.Label(self.auto_page, text='Spec Base Directory:')
         self.spec_base_directory = tk.StringVar(value='')
         self.spec_base_directory_box = tk.Entry(self.auto_page, textvariable=self.spec_base_directory)
