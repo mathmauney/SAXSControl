@@ -59,7 +59,8 @@ class ElveflowDisplay(tk.Canvas):
         self.elveflow_config = elveflow_config
         self.saveFile = None
         self.saveFileWriter = None
-        self.shutdown = False
+        self.started_shutting_down = False
+        self.done_shutting_down = False
 
         self.starttime = int(time.time())
         self.errorlogger.info("start time is %d" % self.starttime)
@@ -256,9 +257,8 @@ class ElveflowDisplay(tk.Canvas):
         self.data_y2_label_var.set(ElveflowDisplay.DEFAULT_Y2_LABEL)
         self.elveflow_handler.start(getheader_handler=self.populate_dropdowns)
 
+        self.run_flag.set()  # reset in preparation for if we start up the connection again
         def pollElveflowThread(run_flag, save_flag):
-            # technically a race condition here: what if the user tries to stop the thread right here, and then this thread resets it?
-            # in practice, I think it's not a concern...?
             print("STARTING DISPLAY THREAD %s" % threading.current_thread())
             try:
                 while run_flag.is_set():
@@ -270,12 +270,11 @@ class ElveflowDisplay(tk.Canvas):
                             self.saveFileWriter.writerow([str(dict_[key]) for key in self.elveflow_handler.header])
                     time.sleep(ElveflowDisplay.POLLING_PERIOD)
             finally:
-                try:
+                if self.started_shutting_down:
+                    self.done_shutting_down = True
+                else:
                     self.stop()
-                    print("DONE WITH THIS THREAD, %s" % threading.current_thread())
-                except RuntimeError:
-                    print("Runtime error detected in display thread %s while trying to close. Ignoring." % threading.current_thread())
-                self.run_flag.set()  # reset in preparation for if we start up the connection again
+                print("DONE WITH THIS DISPLAY THREAD, %s" % threading.current_thread())
 
         self.the_thread = threading.Thread(target=pollElveflowThread, args=(self.run_flag, self.save_flag))
         self.the_thread.start()
@@ -287,19 +286,9 @@ class ElveflowDisplay(tk.Canvas):
             self.saveFileNameSuffix_var.set("_%d.csv" % time.time())
 
     def stop(self, shutdown=False):
-        self.run_flag.clear()
-        if shutdown:
-            self.shutdown = True
-            # shutdown was a flag I was using to try to solve threading problems
-            # I don't think it actually does anything, but at least it's not hurting anything, anyway
-
         if self.elveflow_handler is not None:
             self.elveflow_handler.stop()
-        if FileIO.USE_SDK and not shutdown:
-            # if we're actually exiting, no need to update the GUI
-            # self.sourcename_entry.config(state=tk.NORMAL)
-            # for item in self.sensorTypes_optionmenu:
-            #     item.config(state=tk.NORMAL)
+        if FileIO.USE_SDK:
             for item in self.pressureSettingActive_var:
                 item.set(False)
             for item in self.pressureSettingActive_toggle:
@@ -312,7 +301,18 @@ class ElveflowDisplay(tk.Canvas):
                 except AttributeError:
                     pass
         self.stop_saving(shutdown=shutdown)
-        if not shutdown:
+        if shutdown:
+            self.started_shutting_down = True
+
+            if not self.run_flag.is_set():
+                # wait, there's no elveflow polling thread to set the done_shutting_down flag
+                # so we have to do everything ourselves
+                self.done_shutting_down = True
+
+            # only clear the run flag after setting the started_shutting_down flag
+            self.run_flag.clear()
+        else:
+            self.run_flag.clear()
             self._initialize_variables()
 
     def start_saving(self):
