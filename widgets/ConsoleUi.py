@@ -10,7 +10,7 @@ logger = logging.getLogger('python')
 class ConsoleUi:
     """Poll messages from a logging queue and display them in a scrolled text widget."""
 
-    def __init__(self, frame):
+    def __init__(self, frame, simple_time=False):
         self.frame = frame
         # Create a ScrolledText wdiget
         self.scrolled_text = ScrolledText(frame, state='disabled', height=39)
@@ -25,6 +25,8 @@ class ConsoleUi:
         self.log_queue = Queue()
         self.queue_handler = QueueHandler(self.log_queue)
         formatter = logging.Formatter('%(asctime)s: %(message)s')
+        if simple_time is True:
+            formatter = logging.Formatter("%(asctime)s: %(message)s", "%H:%M:%S")
         self.queue_handler.setFormatter(formatter)
         logger.addHandler(self.queue_handler)
         # Start polling messages from the queue
@@ -52,6 +54,10 @@ class ConsoleUi:
     def pass_logger(self, in_logger):
         in_logger.addHandler(self.queue_handler)
 
+    def set_levels(self, levels):
+        self.queue_handler.addFilter(MyFilter(levels))
+
+
 
 class QueueHandler(logging.Handler):
     """Class to send logging records to a queue
@@ -68,3 +74,11 @@ class QueueHandler(logging.Handler):
 
     def emit(self, record):
         self.log_queue.put(record)
+
+
+class MyFilter:
+    def __init__(self, levels):
+        self.__levels = levels
+
+    def filter(self, logRecord):
+        return logRecord.levelno in self.__levels
