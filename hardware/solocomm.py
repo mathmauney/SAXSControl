@@ -1,10 +1,13 @@
 """The butchered remains of the GLine robot software for SPEC control."""
 
-import socket, select, time, threading, sys, serial, signal
-import SpecClient
-from SpecClient import SpecCommand
-from SpecClient import SpecEventsDispatcher
-import ClosableQueue, queue
+import time
+import threading
+import sys
+from hardware import SpecClient
+from .SpecClient import SpecCommand
+from .SpecClient import SpecEventsDispatcher
+from .SpecClient import ClosableQueue
+import queue
 import logging
 
 
@@ -567,9 +570,6 @@ if __name__ == "__main__":
                     answer = soloSoftAnswerQueue.get()
                     soloSoftAnswerQueue.task_done()
                     print('Answer: ', answer)
-
-                elif inp.split()[0] == 'B':
-                    auroraCommandQueue.put([('B', inp[2:])])
 
             except IndexError:
                 print('Command not in the right format!')

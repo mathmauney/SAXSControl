@@ -3,7 +3,7 @@ import tkinter.font
 import logging
 import csv
 import numpy as np
-import FileIO
+from hardware import FileIO
 import threading
 import time
 import os.path

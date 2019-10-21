@@ -20,7 +20,7 @@ import time
 import types
 
 from . import SpecEventsDispatcher
-from SpecClient.SpecClientError import SpecClientError, SpecClientTimeoutError
+from .SpecClientError import SpecClientError, SpecClientTimeoutError
 from . import SpecConnectionsManager
 
 
@@ -254,18 +254,3 @@ def waitReply(connection, command, argsTuple, timeout = None):
     w.waitReply(command, argsTuple, timeout=timeout)
 
     return w.value
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
