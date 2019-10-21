@@ -484,9 +484,8 @@ class ElveflowDisplay(tk.Canvas):
         self.dataY2Label_var.set(ElveflowDisplay.DEFAULT_Y2_LABEL)
         self.elveflow_handler.start(getheader_handler=self.populate_dropdowns)
 
+        self.run_flag.set()  # reset in preparation for if we start up the connection again
         def pollElveflowThread(run_flag, save_flag):
-            # technically a race condition here: what if the user tries to stop the thread right here, and then this thread resets it?
-            # in practice, I think it's not a concern...?
             print("STARTING DISPLAY THREAD %s" % threading.current_thread())
             try:
                 while run_flag.is_set():
@@ -498,15 +497,11 @@ class ElveflowDisplay(tk.Canvas):
                             self.saveFileWriter.writerow([str(dict[key]) for key in self.elveflow_handler.header])
                     time.sleep(ElveflowDisplay.POLLING_PERIOD)
             finally:
-                try:
-                    if self.started_shutting_down:
-                        self.done_shutting_down = True
-                    else:
-                        self.stop()
-                    print("DONE WITH THIS THREAD, %s" % threading.current_thread())
-                except RuntimeError:
-                    print("Runtime error detected in display thread %s while trying to close. Ignoring." % threading.current_thread())
-                self.run_flag.set()  # reset in preparation for if we start up the connection again
+                if self.started_shutting_down:
+                    self.done_shutting_down = True
+                else:
+                    self.stop()
+                print("DONE WITH THIS DISPLAY THREAD, %s" % threading.current_thread())
 
         self.the_thread = threading.Thread(target=pollElveflowThread, args=(self.run_flag, self.save_flag))
         self.the_thread.start()
@@ -518,15 +513,9 @@ class ElveflowDisplay(tk.Canvas):
             self.saveFileNameSuffix_var.set("_%d.csv" % time.time())
 
     def stop(self, shutdown=False):
-        self.run_flag.clear()
-
         if self.elveflow_handler is not None:
             self.elveflow_handler.stop()
-        if FileIO.USE_SDK and not shutdown:
-            # if we're actually exiting, no need to update the GUI
-            # self.sourcename_entry.config(state=tk.NORMAL)
-            # for item in self.sensorTypes_optionmenu:
-            #     item.config(state=tk.NORMAL)
+        if FileIO.USE_SDK:
             for item in self.pressureSettingActive_var:
                 item.set(False)
             for item in self.pressureSettingActive_toggle:
@@ -541,7 +530,16 @@ class ElveflowDisplay(tk.Canvas):
         self.stop_saving(shutdown=shutdown)
         if shutdown:
             self.started_shutting_down = True
+
+            if not self.run_flag.is_set():
+                # wait, there's no elveflow polling thread to set the done_shutting_down flag
+                # so we have to do everything ourselves
+                self.done_shutting_down = True
+
+            # only clear the run flag after setting the started_shutting_down flag
+            self.run_flag.clear()
         else:
+            self.run_flag.clear()
             self._initialize_variables()
 
     def start_saving(self):
@@ -642,7 +640,7 @@ class ElveflowDisplay(tk.Canvas):
             if isPressure:
                 pressure_to_set = int(float(pressureValue.get()))
                 pressureValue.set(str(pressure_to_set))
-                self.elveflow_handler.set_pressure_loop(channel, pressure_to_set, interruptEvent=self.setPressureStop_flag[i],
+                self.elveflow_handler.set_pressure_loop(channel, pressure_to_set, interrupt_event=self.setPressureStop_flag[i],
                                                       on_finish=lambda: self.pressureSettingActive_var[i].set(False))
             else:  # volume control
                 if self.elveflow_config['sensor%i_type' % i] == "none":
@@ -669,7 +667,7 @@ class ElveflowDisplay(tk.Canvas):
                     self.kd_var.set("0.0")
                 flowrate_to_set = int(float(pressureValue.get()))
                 pressureValue.set(str(flowrate_to_set))
-                self.elveflow_handler.set_volume_loop(channel, flowrate_to_set, interruptEvent=self.setPressureStop_flag[i], pid_constants=(kp, ki, kd))
+                self.elveflow_handler.set_volume_loop(channel, flowrate_to_set, interrupt_event=self.setPressureStop_flag[i], pid_constants=(kp, ki, kd))
         except ValueError:
             self.errorlogger.error("unknown value for channel %i (pressure value is %r)" % (channel, pressureValue.get()))
             pressureValue.set("")
