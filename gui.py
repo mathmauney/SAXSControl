@@ -8,7 +8,7 @@ Alex Mauney
 import tkinter as tk
 from tkinter.scrolledtext import ScrolledText
 from tkinter import filedialog
-from widgets import FluidLevel, FlowPath, ElveflowDisplay, TextHandler, MiscLogger, COMPortSelector, ConsoleUi
+from widgets import FlowPath, ElveflowDisplay, TextHandler, MiscLogger, COMPortSelector, ConsoleUi
 import tkinter.ttk as ttk
 import time
 import SPEC
