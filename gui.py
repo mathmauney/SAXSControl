@@ -6,12 +6,10 @@ Alex Mauney
 
 
 import tkinter as tk
-from tkinter.scrolledtext import ScrolledText
 from tkinter import filedialog
-from widgets import FlowPath, ElveflowDisplay, TextHandler, MiscLogger, COMPortSelector, ConsoleUi
+from widgets import FlowPath, ElveflowDisplay, MiscLogger, COMPortSelector, ConsoleUi
 import tkinter.ttk as ttk
 import time
-import SPEC
 import FileIO
 from configparser import ConfigParser
 import logging
@@ -415,8 +413,6 @@ class Main:
             self.water_time.set(run_config.get('water_time', 0))
             self.air_time.set(run_config.get('air_time', 0))
             # Valve Config
-            oil_vars = []
-            loading_vars = []
             for i in range(0, 6):
                 field = 'name'+str(i+1)
                 self.oil_valve_names[i].set(oil_config.get(field, ''))
@@ -528,7 +524,6 @@ class Main:
 
     def update_graph(self):
         """Look into self's ElveflowDisplay and reproduce it on self.main_tab_fig."""
-
         self.main_tab_ax1.set_title("Elveflow readout for most recent scan", fontsize=16)
         data_x_label_var = self.elveflow_display.data_x_label_var.get()
         data_y1_label_var = self.elveflow_display.data_y1_label_var.get()

@@ -1,23 +1,6 @@
 import tkinter as tk
 import math
-import tkinter.font
 import logging
-import csv
-from tkinter.scrolledtext import ScrolledText
-from tkinter import ttk, VERTICAL, HORIZONTAL, N, S, E, W
-import numpy as np
-import FileIO
-import threading
-import time
-import os.path
-from queue import Queue, Empty as Queue_Empty
-import warnings
-import matplotlib
-from matplotlib import pyplot as plt
-
-matplotlib.use('TkAgg')
-warnings.filterwarnings("ignore", message="Attempting to set identical bottom==top")
-warnings.filterwarnings("ignore", message="Attempting to set identical left==right")
 
 logger = logging.getLogger('python')
 
@@ -294,7 +277,6 @@ class FlowPath(tk.Canvas):
             self.color1 = kwargs.pop('color1', self.color1)
             self.color2 = kwargs.pop('color2', self.color2)
             self.color3 = kwargs.pop('color3', self.color3)
-            prev_position = self.position
             self.position = position % 2
             try:
                 self.canvas.delete(self.arc1)
@@ -347,7 +329,7 @@ class FlowPath(tk.Canvas):
             colors[port] = fluid_color
             self.set_position(self.position)
             pair = pairs[port]
-            if propagation[port] is True:
+            if self.propagation[port] is True:
                 for line in self.fluid_lines[pair]:
                     self.canvas.itemconfig(line, fill=colors[port], outline=colors[port])
 
