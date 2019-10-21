@@ -574,7 +574,7 @@ class Main:
         data_x_label_var = self.elveflow_display.data_x_label_var.get()
         data_y1_label_var = self.elveflow_display.data_y1_label_var.get()
         data_y2_label_var = self.elveflow_display.data_y2_label_var.get()
-        self.main_tab_ax1.set_x_label(data_x_label_var, fontsize=14)
+        self.main_tab_ax1.set_xlabel(data_x_label_var, fontsize=14)
         self.main_tab_ax1.set_ylabel(data_y1_label_var, fontsize=14, color=ElveflowDisplay.COLOR_Y1)
         self.main_tab_ax2.set_ylabel(data_y2_label_var, fontsize=14, color=ElveflowDisplay.COLOR_Y2)
         try:
@@ -615,8 +615,9 @@ class Main:
     def buffer_sample_buffer_command(self):
         """Run a buffer-sample-buffer cycle."""
         if self.elveflow_display is None or self.elveflow_display.elveflow_handler is None:
-            self.python_logger.error("Elveflow connection not initialized! Please start the connection on the Elveflow tab.")
-            return
+            # TODO: not need to do this twice?
+            self.python_logger.warning("Elveflow connection not initialized! Please start the connection on the Elveflow tab.")
+            raise RuntimeError("Elveflow connection not initialized! Please start the connection on the Elveflow tab.")
 
         # before scheduling anything, clear the graph
         self.main_tab_ax1.clear()
@@ -625,7 +626,7 @@ class Main:
         self.the_line2 = self.main_tab_ax2.plot([], [], color=ElveflowDisplay.COLOR_Y2)[0]
         self.graph_start_time = int(time.time())
         self.graph_end_time = np.inf
-        self.python_logger.info("graph start time: %s" % self.graph_start_time)
+        self.python_logger.debug("main page graph start time: %s" % self.graph_start_time)
         self.flowpath.set_unlock_state(False)
 
         self.update_graph()

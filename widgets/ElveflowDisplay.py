@@ -63,7 +63,7 @@ class ElveflowDisplay(tk.Canvas):
         self.done_shutting_down = False
 
         self.starttime = int(time.time())
-        self.errorlogger.info("start time is %d" % self.starttime)
+        self.errorlogger.debug("start time is %d" % self.starttime)
 
         self.run_flag = threading.Event()
         self.save_flag = threading.Event()
@@ -324,13 +324,13 @@ class ElveflowDisplay(tk.Canvas):
             self.saveFile = open(os.path.join(ElveflowDisplay.OUTPUT_FOLDER, self.saveFileName_var.get() + self.saveFileNameSuffix_var.get()), 'a', encoding="utf-8", newline='')
             self.saveFileWriter = csv.writer(self.saveFile)
             self.saveFileWriter.writerow(self.elveflow_handler.header)
-            self.errorlogger.info('started saving to %s' % self.saveFile.name)
+            self.errorlogger.debug('started saving to %s' % self.saveFile.name)
         else:
             self.errorlogger.error('cannot start saving (header is unknown). Try again in a moment')
 
     def stop_saving(self, shutdown=False):
         if self.save_flag.is_set():
-            self.errorlogger.info('stopped saving')
+            self.errorlogger.debug('stopped saving')
         self.save_flag.clear()
         if FileIO.USE_SDK and not shutdown:
             self.stopSaving_button.config(state=tk.DISABLED)
