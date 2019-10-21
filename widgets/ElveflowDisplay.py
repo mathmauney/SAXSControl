@@ -366,7 +366,7 @@ class ElveflowDisplay(tk.Canvas):
         data_x_label_var = self.data_x_label_var.get()
         data_y1_label_var = self.data_y1_label_var.get()
         data_y2_label_var = self.data_y2_label_var.get()
-        self.ax1.set_x_label(data_x_label_var, fontsize=14)
+        self.ax1.set_xlabel(data_x_label_var, fontsize=14)
         self.ax1.set_ylabel(data_y1_label_var, fontsize=14, color=ElveflowDisplay.COLOR_Y1)
         self.ax2.set_ylabel(data_y2_label_var, fontsize=14, color=ElveflowDisplay.COLOR_Y2)
         try:
