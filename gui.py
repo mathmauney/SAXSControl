@@ -89,7 +89,8 @@ class Main:
         self.setup_page = tk.Frame(self.core)
         self.elveflow_page = tk.Frame(self.core)
         self.logs = ttk.Notebook(self.main_window, width=log_width, height=log_height)
-        self.python_logs = tk.Frame(self.logs)
+        self.user_logs = tk.Frame(self.logs)
+        self.advanced_logs = tk.Frame(self.logs)
         self.instrument_logs = tk.Frame(self.logs)
         self.state_frame = tk.Frame(self.main_window, width=window_width, height=state_height, bg='blue')
         # Widgets on Main page
@@ -221,7 +222,9 @@ class Main:
 
         # logs
         log_length = 39  # in lines
-        self.python_logger_gui = ConsoleUi(self.python_logs)
+        self.user_logger_gui = ConsoleUi(self.user_logs, True)
+        self.user_logger_gui.set_levels((logging.INFO, logging.WARNING))
+        self.advanced_logger_gui = ConsoleUi(self.advanced_logs)
         self.instrument_logger = MiscLogger(self.instrument_logs, state='disabled', height=log_length)
         self.instrument_logger.configure(font='TkFixedFont')
         self.controller.logger = self.instrument_logger
@@ -265,7 +268,8 @@ class Main:
         self.core.add(self.setup_page, text='Setup')
         self.core.add(self.elveflow_page, text='Elveflow')
         # Log Tab Bar
-        self.logs.add(self.python_logs, text='Python')
+        self.logs.add(self.user_logs, text='Simple')
+        self.logs.add(self.advanced_logs, text='Advanced')
         self.logs.add(self.instrument_logs, text='Instruments')
         # Main Page
         self.spec_base_directory_label.grid(row=0, column=0)
@@ -357,7 +361,8 @@ class Main:
         self.instrument_logger.grid(row=0, column=0, sticky='NSEW')
         self.python_logger = logging.getLogger("python")
         self.python_logger.setLevel(logging.DEBUG)
-        self.python_logger_gui.pass_logger(self.python_logger)
+        self.user_logger_gui.pass_logger(self.python_logger)
+        self.advanced_logger_gui.pass_logger(self.python_logger)
         self.python_logger.addHandler(file_handler)  # logging to a file
 
     def stop(self):
