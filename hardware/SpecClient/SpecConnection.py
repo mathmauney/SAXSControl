@@ -336,7 +336,7 @@ class SpecConnectionDispatcher(asyncore.dispatcher):
                         try:
                             reply = self.registeredReplies[replyID]
                         except:
-                            logging.getLogger("SpecClient").exception("Unexpected error while receiving a message from server")
+                            logging.getLogger("python").exception("Unexpected error while receiving a message from server")
                         else:
                             del self.registeredReplies[replyID]
 

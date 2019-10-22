@@ -7,7 +7,7 @@ from queue import Queue, Empty as Queue_Empty, Full as Queue_Full
 from tkinter import filedialog
 from simple_pid import PID
 
-USE_SDK = True
+USE_SDK = False
 SDK_SENSOR_TYPES = {
     "none": 0,
     "1.5 µL/min": 1,

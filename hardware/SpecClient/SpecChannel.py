@@ -65,12 +65,8 @@ class SpecChannel:
         self.registered = False
         self.value = None
 
-        print('Spec channel connects')
-        print('Calling SpecEventsDispatcher.connect() with :' + str(connection) + str(self.connected))
         SpecEventsDispatcher.connect(connection, 'connected', self.connected)
-        print('Calling SpecEventsDispatcher.connect() with :' + str(connection) + str(self.disconnected))
         SpecEventsDispatcher.connect(connection, 'disconnected', self.disconnected)
-        print('Spec channel connects done')
 
         if connection.isSpecConnected():
             self.connected()

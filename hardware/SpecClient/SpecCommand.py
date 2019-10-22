@@ -202,7 +202,7 @@ class SpecCommandA(BaseSpecCommand):
         if self.connection.serverVersion < 3:
             id = self.connection.send_msg_cmd_with_return(command)
         else:
-            if type(command) == bytes:
+            if type(command) == str:
                 id = self.connection.send_msg_cmd_with_return(command)
             else:
                 id = self.connection.send_msg_func_with_return(command)

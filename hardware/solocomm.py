@@ -98,7 +98,7 @@ class SpecCommThread(threading.Thread):
         # ############# CONNECT ON STARTUP ##############
         try:
             self.specCommand = MySpecCommand('', self.host, self)
-            print('Connected to SPEC')
+            logger.info('Connected to SPEC')
             self.connected = True
         except SpecClient.SpecClientError.SpecClientTimeoutError:
             self.specCommand = None
@@ -447,7 +447,7 @@ class ControlThread(threading.Thread):
         return commands
 
     def setupSpecMkdirCommands(self, command):
-
+        print('In setupSpecMkdir')
         commands = []
 
         for item in command[1].split(','):
@@ -493,9 +493,10 @@ class ControlThread(threading.Thread):
             commands = self.setupSpecExposureCommands(command)
             adxCommandQueue.put(commands)
         elif command[1].split()[0].startswith('MKDIR'):
-            # print 'Making new directory'
+            print('Making new directory')
             commands = self.setupSpecMkdirCommands(command)
             adxCommandQueue.put(commands)
+            print('Put command: %s' % commands)
         elif command[1].split()[0].startswith('LOGFILE'):
             print('writing log file via spec')
             # print command

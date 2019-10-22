@@ -19,11 +19,11 @@ def robustApply(slot, arguments = ()):
     """Call slot with appropriate number of arguments"""
     if hasattr(slot, '__call__'):
         # Slot is a class instance ?
-        if hasattr( slot.__call__, 'im_func'): # or hasattr( slot.__call__, 'im_code'): WARNING:im_code does not seem to exist?
+        if hasattr( slot.__call__, '__func__'): # or hasattr( slot.__call__, 'im_code'): WARNING:im_code does not seem to exist?
             # Reassign slot to the actual method that will be called
             slot = slot.__call__
 
-    if hasattr(slot, 'im_func'):
+    if hasattr(slot, '__func__'):
         # an instance method
         n_args = slot.__func__.__code__.co_argcount - 1
     else:
@@ -60,7 +60,6 @@ class Event:
         global connections
 
         try:
-            print(str(connections))
             self.receivers = connections[senderId][signal]
         except:
             print('problem setting recievers')
@@ -87,13 +86,11 @@ class EventsQueue(queue.Queue):
         """Put an event into the queue."""
 
         receiversList = event.receivers
-        print('In put(), recivers = ' + str(receiversList))
         self.mutex.acquire()
         try:
             was_empty = not self._qsize()
 
             for r in receiversList:
-                print('Reciever = ' + str(r))
                 if not was_empty:
                     if r.dispatchMode == UPDATEVALUE:
                         for i in range(len(self.queue)):
@@ -103,7 +100,6 @@ class EventsQueue(queue.Queue):
                                 break
 
                 self._put( (r, event.args) )
-                print('Sucessfully put')
         except:
             print('problem in put')
         finally:
@@ -278,7 +274,6 @@ def connect(sender, signal, slot, dispatchMode = UPDATEVALUE):
         connections[senderId] = signals
 
     def remove(object, senderId=senderId):
-        print('Remove from connect being called')
         _removeSender(senderId)
 
     try:
@@ -341,8 +336,6 @@ def disconnect(sender, signal, slot):
 
 def emit(sender, signal, arguments = ()):
     eventsToDispatch.put(Event(sender, signal, arguments))
-    print('Item put in emit queue: ' + str(sender) + str(signal))
-
 
 
 def dispatch():
@@ -350,13 +343,11 @@ def dispatch():
     while 1:
         try:
             receiver, args = eventsToDispatch.get()
-            print('Dispatch grabbed')
         except IndexError:
             break
         else:
             receiver(args)
             if (time.time()-t0) >= 1:
-                print('timeout in dispatch')
                 break
 
 
@@ -386,7 +377,6 @@ def _removeReceiver(weakReceiver):
 
 def _cleanupConnections(senderId, signal):
     """Delete any empty signals for sender. Delete sender if empty."""
-    print('Cleanup Called')
     receivers = connections[senderId][signal]
 
     if len(receivers) == 0:

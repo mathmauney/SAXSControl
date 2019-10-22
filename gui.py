@@ -111,7 +111,7 @@ class Main:
         self.clean_button = tk.Button(self.auto_page, text='Clean/Refill', command=self.clean_and_refill_command)
         self.load_sample_button = tk.Button(self.auto_page, text='Load Sample', command=self.load_sample_command)
         self.load_buffer_button = tk.Button(self.auto_page, text='Load Buffer', command=self.load_buffer_command)
-        self.clean_only_button = tk.Button(self.auto_page, text='Clean Only', command=self.clean_only_command)
+        self.clean_only_button = tk.Button(self.auto_page, text='Clean Only', command=self.run_tseries)
         self.refill_only_button = tk.Button(self.auto_page, text='Refill Only', command=self.refill_only_command)
         self.fig_dpi = 96  # this shouldn't matter too much (because we normalize against it) except in how font sizes are handled in the plot
         self.main_tab_fig = plt.Figure(figsize=(core_width*2/3/self.fig_dpi, core_height*3/4/self.fig_dpi), dpi=self.fig_dpi)
@@ -1070,41 +1070,45 @@ class Main:
     def run_tseries(self, postfix=None):
         """Run a tseries."""
         # Input Sanitation
+        print("In tseries")
         try:
             number_of_frames = self.tseries_frames.get()
             exposure_time = self.tseries_time.get()
             file_number = self.spec_fileno.get()
 
             if number_of_frames < 1 or file_number < 0:
+                print("ValueError time")
                 raise ValueError
 
         except ValueError:
-            tk.messagebox.showinfo('Error', 'Exposure time, number of frames or filenumber is invalid.', 'Invalid Input')
+            tk.messagebox.showinfo('Error', 'Exposure time, number of frames or filenumber is invalid.')
             return
 
         filename = self.spec_filename.get().strip()
 
         for eachChar in filename:
             if eachChar in self.illegal_chars:
-                tk.messagebox.showinfo('Error', 'Filename contains invalid characters. \nThese include: %s (includes spaces).' % (self.illegal_chars), 'Invalid Input')
+                tk.messagebox.showinfo('Error', 'Filename contains invalid characters. \nThese include: %s (includes spaces).' % (self.illegal_chars))
                 return
 
         if filename == '':
-            tk.messagebox.showinfo('Error', 'File must have a name.', 'Invalid Input')
+            tk.messagebox.showinfo('Error', 'File must have a name.')
             return
 
-        changedir, directory = self.Changedirectory()
+        changedir, directory = self.ChangeDirectory()
+        print("Ran ChangeDirectory")
 
         if changedir:
+            print("In changedir if")
             self.exposing = True
-            file_number = file_number = self.spec_fileno.get()
+            file_number = self.spec_fileno.get()
 
             new_dark = '0'
 
-            print(('A EXPOSE '+filename + '_' + file_number + ',' + str(exposure_time) + ',' + str(number_of_frames)))
+            print(('A EXPOSE ' + filename + '_' + str(file_number) + ',' + str(exposure_time) + ',' + str(number_of_frames)))
 
             file = filename
-            file += '_' + file_number
+            file += '_' + str(file_number)
             if postfix is not None:
                 file += '_' + postfix
 
@@ -1112,8 +1116,9 @@ class Main:
                                         str(exposure_time) + ',' + str(number_of_frames) +
                                         ',' + str(directory) + ',' + str(new_dark))])
 
-            self.spec_fileno.delete(0, 'end')
-            self.spec_fileno.insert(0, file_number+1)
+            # self.spec_fileno.delete(0, 'end')
+            self.spec_fileno.set(file_number+1)
+
 
 
 if __name__ == "__main__":
