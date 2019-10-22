@@ -20,7 +20,7 @@ import time
 import types
 
 from . import SpecEventsDispatcher
-from SpecClient.SpecClientError import SpecClientError, SpecClientTimeoutError
+from .SpecClientError import SpecClientError, SpecClientTimeoutError
 from . import SpecConnectionsManager
 
 

@@ -116,7 +116,6 @@ class ElveflowHandler_ESI:
             try:
                 for line in line_generator():
                     self.buffer_queue.put(line, False)
-                    # print("putting line %s" % line)
                     time.sleep(0.1)
             except Queue_Full:
                 pass
@@ -173,7 +172,7 @@ class ElveflowHandler_SDK:
     PID_SLEEPTIME = 0.1  # how many seconds between each command of the PID loop
     QUEUE_MAXLEN = 0  # zero means infinite
 
-    PRESSURE_MAXSLOPE = 1000 * PID_SLEEPTIME     # in mbar per update frame
+    PRESSURE_MAXSLOPE = 888 * PID_SLEEPTIME     # in mbar per update frame; the 888 is in mbar/s
     VOLUME_KP = 0
     VOLUME_KI = 50
     VOLUME_KD = 0
@@ -253,14 +252,15 @@ class ElveflowHandler_SDK:
                 except Queue_Full:
                     pass
 
+            # Cleanup code:
             try:
-                # error = Elveflow_SDK.OB1_Destructor(self.instr_ID.value)
-                # self.errorlogger.info("Closing connection with Elveflow%s." % ("" if error == 0 else (" (Error code %i)" % error)))
+                self.run_flag.set() # set this back on again to let the pressure loops run
                 def closing_function(i):
                     if i == 4:
                         def on_finish():
                             print("Closing Elveflow connection")
-                            print("Error code: %s" % Elveflow_SDK.OB1_Destructor(self.instr_ID.value))
+                            print("Elveflow closing error code (zero means good): %s" % Elveflow_SDK.OB1_Destructor(self.instr_ID.value))
+                            self.run_flag.clear() # turn it off, just in case
                     else:
                         def on_finish():
                             closing_function(i+1)
@@ -324,10 +324,10 @@ class ElveflowHandler_SDK:
         if error != 0:
             self.errorlogger.warning('ERROR CODE SET PRESSURE CHANNEL %i: %s' % (channel_number, error))
 
-    def set_pressure_loop(self, channel_number, value, interruptEvent=None, on_finish=None):
+    def set_pressure_loop(self, channel_number, value, interrupt_event=None, on_finish=None):
         """starts a thread that raises the Elveflow pressure without a big spike
         TODO: make it stop when it reaches the target"""
-        if interruptEvent is None:
+        if interrupt_event is None:
             # if there isn't one already, create a dummy one
             interrupt_event = threading.Event()
             interrupt_event.clear()
@@ -350,10 +350,6 @@ class ElveflowHandler_SDK:
                     return
 
                 curr_pressure = get_pressure.value
-                # self.errorlogger.info("CHANNEL %s: GWAAAAAAAAAAAAAAAAAAAAAAAAAAAA %s THREAD %s." % (channel_number, target, threading.current_thread()))
-                # self.errorlogger.info("CHANNEL %s: run flag %s THREAD %s." % (channel_number, self.run_flag.is_set(), threading.current_thread()))
-                # self.errorlogger.info("CHANNEL %s: interrupt flag %s THREAD %s." % (channel_number, interrupt_event.is_set(), threading.current_thread()))
-
 
                 while self.run_flag.is_set() and not interrupt_event.is_set():
                     # if we have an error reading, don't try to set anything
@@ -383,20 +379,20 @@ class ElveflowHandler_SDK:
             except RuntimeError:
                 print("Runtime error detected in pressure loop channel %s thread %s while trying to close. Ignoring." % (channel_number, threading.current_thread()))
 
-        self.reading_thread = threading.Thread(target=start_thread, args=(channel_number, value, interruptEvent))
+        self.reading_thread = threading.Thread(target=start_thread, args=(channel_number, value, interrupt_event))
         self.reading_thread.start()
         return self.reading_thread
 
-    def set_volume_loop(self, channel_number, value, interruptEvent=None, pid_constants=None):
+    def set_volume_loop(self, channel_number, value, interrupt_event=None, pid_constants=None):
         """starts a thread that sets the Elveflow flow rate"""
-        if interruptEvent is None:
+        if interrupt_event is None:
             # if there isn't one already, create a dummy one
-            interruptEvent = threading.Event()
-            interruptEvent.clear()
+            interrupt_event = threading.Event()
+            interrupt_event.clear()
         if pid_constants is None:
             pid_constants = (ElveflowHandler_SDK.VOLUME_KP, ElveflowHandler_SDK.VOLUME_KI, ElveflowHandler_SDK.VOLUME_KD)
 
-        def start_thread(channel_number, target, interruptEvent, pid_constants):
+        def start_thread(channel_number, target, interrupt_event, pid_constants):
             self.errorlogger.info("STARTING PRESSURE LOOP CHANNEL %s THREAD %s." % (channel_number, threading.current_thread()))
             pid = PID(*pid_constants, setpoint=target)
             initial_pressure = c_double()
@@ -405,7 +401,7 @@ class ElveflowHandler_SDK:
                 self.errorlogger.warning('ERROR CODE GETTING PRESSURE %i: %s' % (channel_number, error))
             self.errorlogger.debug("INITIAL PRESSURE IS %f" % initial_pressure.value)
 
-            while self.run_flag.is_set() and not interruptEvent.is_set():
+            while self.run_flag.is_set() and not interrupt_event.is_set():
                 time.sleep(ElveflowHandler_SDK.PID_SLEEPTIME)
                 get_flowrate = c_double()
                 error = Elveflow_SDK.OB1_Get_Sens_Data(self.instr_ID.value, c_int32(channel_number), 1, byref(get_flowrate))
@@ -434,7 +430,7 @@ class ElveflowHandler_SDK:
             except RuntimeError:
                 print("Runtime error detected in flow rate loop channel %s thread %s while trying to close. Ignoring." % (channel_number, threading.current_thread()))
 
-        self.reading_thread = threading.Thread(target=start_thread, args=(channel_number, value, interruptEvent, pid_constants))
+        self.reading_thread = threading.Thread(target=start_thread, args=(channel_number, value, interrupt_event, pid_constants))
         self.reading_thread.start()
 
 

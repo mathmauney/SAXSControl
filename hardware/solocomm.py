@@ -1,10 +1,13 @@
 """The butchered remains of the GLine robot software for SPEC control."""
 
-import socket, select, time, threading, sys, serial, signal
-import SpecClient
-from SpecClient import SpecCommand
-from SpecClient import SpecEventsDispatcher
-import ClosableQueue, queue
+import time
+import threading
+import sys
+from hardware import SpecClient
+from .SpecClient import SpecCommand
+from .SpecClient import SpecEventsDispatcher
+from .SpecClient import ClosableQueue
+import queue
 import logging
 
 
@@ -18,6 +21,7 @@ adxAnswerQueue = ClosableQueue.CQueue()
 
 logger = logging.getLogger('python')
 
+
 class CommException(Exception):
     def __init__(self, value):
         self.parameter = value
@@ -25,12 +29,14 @@ class CommException(Exception):
     def __str__(self):
         return repr(self.parameter)
 
+
 class AbortException(Exception):
     def __init__(self, value):
         self.parameter = value
 
     def __str__(self):
         return repr(self.parameter)
+
 
 class MySpecCommand(SpecCommand.SpecCommandA):
 
@@ -88,7 +94,8 @@ class SpecCommThread(threading.Thread):
         self.connected = False
 
     def run(self):
-        ############## CONNECT ON STARTUP ##############
+
+        # ############# CONNECT ON STARTUP ##############
         try:
             self.specCommand = MySpecCommand('', self.host, self)
             print('Connected to SPEC')
@@ -237,7 +244,7 @@ def parseListOfCommands(self, cmdList):
 
     return parsedCommandList
 
-def parseCommandFile(filename):
+def parse_command_file(filename):
 
     f = open(filename, 'r')
 
@@ -516,7 +523,7 @@ if __name__ == "__main__":
 
     if len(sys.argv) > 1:
         commandFile = sys.argv[1]
-        commandList = parseCommandFile(commandFile)
+        commandList = parse_command_file(commandFile)
     else:
         commandList = []
 
@@ -564,9 +571,6 @@ if __name__ == "__main__":
                     answer = soloSoftAnswerQueue.get()
                     soloSoftAnswerQueue.task_done()
                     print('Answer: ', answer)
-
-                elif inp.split()[0] == 'B':
-                    auroraCommandQueue.put([('B', inp[2:])])
 
             except IndexError:
                 print('Command not in the right format!')

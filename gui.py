@@ -6,20 +6,19 @@ Alex Mauney
 
 
 import tkinter as tk
-from tkinter.scrolledtext import ScrolledText
 from tkinter import filedialog
-from widgets import FluidLevel, FlowPath, ElveflowDisplay, TextHandler, MiscLogger, COMPortSelector, ConsoleUi
+from widgets import FlowPath, ElveflowDisplay, MiscLogger, COMPortSelector, ConsoleUi
 import tkinter.ttk as ttk
 import time
-import SPEC
-import FileIO
+from hardware import FileIO
 from configparser import ConfigParser
 import logging
+
 import threading
-import SAXSDrivers
+from hardware import SAXSDrivers
 import os.path
 import csv
-import solocomm
+from hardware import solocomm
 import numpy as np
 import warnings
 import matplotlib
@@ -55,9 +54,9 @@ class Main:
         self.main_window.report_callback_exception = self.handle_exception
         self.main_window.title('Main Window')
         self.adxIsDone = False
-        self.illegalChars = '!@#$%^&*()."\\|:;<>?=~ ' + "'"
-        self.OldBaseDirectory = '/mnt/currentdaq/BioSAXS/'
-        self.OldSubDirectory = ''
+        self.illegal_chars = '!@#$%^&*()."\\|:;<>?=~ ' + "'"
+        self.old_base_directory = '/mnt/currentdaq/BioSAXS/'
+        self.old_sub_directory = ''
         self.main_window.attributes("-fullscreen", True)  # Makes the window fullscreen
         # Figure out geometry
         window_width = self.main_window.winfo_screenwidth()
@@ -90,8 +89,9 @@ class Main:
         self.setup_page = tk.Frame(self.core)
         self.elveflow_page = tk.Frame(self.core)
         self.logs = ttk.Notebook(self.main_window, width=log_width, height=log_height)
-        self.python_logs = tk.Frame(self.logs)
-        self.Instrument_logs = tk.Frame(self.logs)
+        self.user_logs = tk.Frame(self.logs)
+        self.advanced_logs = tk.Frame(self.logs)
+        self.instrument_logs = tk.Frame(self.logs)
         self.state_frame = tk.Frame(self.main_window, width=window_width, height=state_height, bg='blue')
         # Widgets on Main page
         self.spec_base_directory_label = tk.Label(self.auto_page, text='Spec Base Directory:')
@@ -109,11 +109,10 @@ class Main:
         self.spec_fileno_box = tk.Entry(self.auto_page, textvariable=self.spec_fileno)
         self.buffer_sample_buffer_button = tk.Button(self.auto_page, text='Run Buffer/Sample/Buffer', command=self.buffer_sample_buffer_command)
         self.clean_button = tk.Button(self.auto_page, text='Clean/Refill', command=self.clean_and_refill_command)
-        self.load_button = tk.Button(self.auto_page, text='Load Position', command=self.load_command)
+        self.load_sample_button = tk.Button(self.auto_page, text='Load Sample', command=self.load_sample_command)
+        self.load_buffer_button = tk.Button(self.auto_page, text='Load Buffer', command=self.load_buffer_command)
         self.clean_only_button = tk.Button(self.auto_page, text='Clean Only', command=self.clean_only_command)
-        #self.clean_only_button = tk.Button(self.auto_page, text='Clean Only', commmand=self.clean_only_command)
         self.refill_only_button = tk.Button(self.auto_page, text='Refill Only', command=self.refill_only_command)
-
         self.fig_dpi = 96  # this shouldn't matter too much (because we normalize against it) except in how font sizes are handled in the plot
         self.main_tab_fig = plt.Figure(figsize=(core_width*2/3/self.fig_dpi, core_height*3/4/self.fig_dpi), dpi=self.fig_dpi)
         self.main_tab_ax1 = self.main_tab_fig.add_subplot(111)
@@ -205,7 +204,7 @@ class Main:
         # Make Instrument
         self.AvailablePorts = SAXSDrivers.list_available_ports()
         self.controller = SAXSDrivers.SAXSController(timeout=0.1)
-        self.Instruments = []
+        self.instruments = []
         self.pump = None
         self.NumberofPumps = 0
         # Setup Page
@@ -213,9 +212,9 @@ class Main:
         self.AvailablePorts = SAXSDrivers.list_available_ports()
         self.setup_page_buttons = []
         self.setup_page_variables = []
-        self.refresh_com_ports = tk.Button(self.setup_page, text="Refresh COM", command=lambda: self.RefreshCOMList())
+        self.refresh_com_ports = tk.Button(self.setup_page, text="Refresh COM", command=lambda: self.refresh_com_list())
         self.AddPump = tk.Button(self.setup_page, text="Add Pump", command=lambda: self.add_pump_set_buttons())
-        self.AddRheodyne = tk.Button(self.setup_page, text="Add Rheodyne", command=lambda: self.AddRheodyneSetButtons())
+        self.AddRheodyne = tk.Button(self.setup_page, text="Add Rheodyne", command=lambda: self.add_rheodyne_set_buttons())
         self.AddVICI = tk.Button(self.setup_page, text="Add VICI Valve", command=lambda: self.AddVICISetButtons())
         self.ControllerCOM = COMPortSelector(self.setup_page, exportselection=0, height=3)
         self.ControllerSet = tk.Button(self.setup_page, text="Set Microntroller", command=lambda: self.controller.set_port(self.AvailablePorts[int(self.ControllerCOM.curselection()[0])].device))
@@ -223,12 +222,12 @@ class Main:
 
         # logs
         log_length = 39  # in lines
-        self.python_logger_gui = ConsoleUi(self.python_logs)
-        #self.python_logger_gui = ScrolledText(self.python_logs, state='disabled', height=log_length)
-        #self.python_logger_gui.configure(font='TkFixedFont')
-        self.Instrument_logger = MiscLogger(self.Instrument_logs, state='disabled', height=log_length)
-        self.Instrument_logger.configure(font='TkFixedFont')
-        self.controller.logger = self.Instrument_logger
+        self.user_logger_gui = ConsoleUi(self.user_logs, True)
+        self.user_logger_gui.set_levels((logging.INFO, logging.WARNING))
+        self.advanced_logger_gui = ConsoleUi(self.advanced_logs)
+        self.instrument_logger = MiscLogger(self.instrument_logs, state='disabled', height=log_length)
+        self.instrument_logger.configure(font='TkFixedFont')
+        self.controller.logger = self.instrument_logger
         #
         # Flow setup frames
         self.load_config(filename='config.ini', preload=True)
@@ -239,8 +238,8 @@ class Main:
         time.sleep(0.6)   # I have no idea why we need this but everything crashes and burns if we don't include it
         # It acts as though there's a race condition, but aren't we still single-threaded at this point?
         # I suspect something might be going wrong with the libraries, then, especially tkinter and matplotlib
-        self.RefreshDropdown(self.oil_valve_name_boxes, self.flowpath.valve2.gui_names, self.oil_valve_names)
-        self.RefreshDropdown(self.loading_valve_name_boxes, self.flowpath.valve4.gui_names, self.loading_valve_names)
+        self.refresh_dropdown(self.oil_valve_name_boxes, self.flowpath.valve2.gui_names, self.oil_valve_names)
+        self.refresh_dropdown(self.loading_valve_name_boxes, self.flowpath.valve4.gui_names, self.loading_valve_names)
         self.draw_static()
         self.elveflow_display = ElveflowDisplay(self.elveflow_page, core_height, core_width, self.config['Elveflow'], self.python_logger)
         self.elveflow_display.grid(row=0, column=0)
@@ -269,8 +268,9 @@ class Main:
         self.core.add(self.setup_page, text='Setup')
         self.core.add(self.elveflow_page, text='Elveflow')
         # Log Tab Bar
-        self.logs.add(self.python_logs, text='Python')
-        self.logs.add(self.Instrument_logs, text='Instruments')
+        self.logs.add(self.user_logs, text='Simple')
+        self.logs.add(self.advanced_logs, text='Advanced')
+        self.logs.add(self.instrument_logs, text='Instruments')
         # Main Page
         self.spec_base_directory_label.grid(row=0, column=0)
         self.spec_base_directory_box.grid(row=1, column=0)
@@ -281,24 +281,23 @@ class Main:
         self.spec_filename_box.grid(row=3, column=0)
         self.spec_fileno_label.grid(row=2, column=1)
         self.spec_fileno_box.grid(row=3, column=1)
-        self.buffer_sample_buffer_button.grid(row=5, column=0)
-        self.load_button.grid(row=5, column=1)
-        self.clean_button.grid(row=6, column=0)
-        self.clean_only_button.grid(row=6, column=1)
-        self.refill_only_button.grid(row=6, column=2)
-        self.canvas.get_tk_widget().grid(row=0, column=2, rowspan=6, columnspan=8, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+        self.buffer_sample_buffer_button.grid(row=11, column=0)
+        self.load_sample_button.grid(row=11, column=1)
+        self.load_buffer_button.grid(row=11, column=2)
+        self.clean_button.grid(row=12, column=0)
+        self.clean_only_button.grid(row=12, column=1)
+        self.refill_only_button.grid(row=12, column=2)
+        self.canvas.get_tk_widget().grid(row=0, column=2, rowspan=10, columnspan=8, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
         # Manual page
         # Config page
         rowcounter = 0
         self.save_config_button.grid(row=rowcounter, column=0)
         self.load_config_button.grid(row=rowcounter, column=1)
         rowcounter += 1
-        rowcounter += 1 # not sure why we do this twice, but we do
         self.config_spec_address_label.grid(row=rowcounter, column=0)
         self.config_spec_address.grid(row=rowcounter, column=1)
         self.spec_connect_button.grid(row=rowcounter, column=2)
         rowcounter += 1
-        rowcounter += 1 # not sure why we do this twice, but we do
         self.volumes_label.grid(row=rowcounter, column=0)
         self.first_buffer_volume_box.grid(row=rowcounter, column=1)
         self.sample_volume_box.grid(row=rowcounter, column=2)
@@ -350,33 +349,27 @@ class Main:
         self.ControllerCOM.grid(row=1, column=0)
         self.ControllerSet.grid(row=1, column=2)
         self.I2CScanButton.grid(row=1, column=3)
-        self.RefreshCOMList()
+        self.refresh_com_list()
         # FlowPath
         self.flowpath.grid(row=0, column=0)
         # Python Log
-        # self.python_logger_gui.grid(row=0, column=0, sticky='NSEW')
         nowtime = time.time()
-        # python_handler = TextHandler(self.python_logger_gui)
         file_handler = logging.FileHandler(os.path.join(LOG_FOLDER, "log%010d.txt" % nowtime), encoding='utf-8')
-        # python_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
         file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
-        # python_handler.setLevel(logging.DEBUG)
         file_handler.setLevel(logging.DEBUG)
         # SPEC Log
-        self.Instrument_logger.grid(row=0, column=0, sticky='NSEW')
-        # logging.basicConfig(level=logging.INFO,
-        #                     format='%(asctime)s - %(levelname)s - %(message)s')
+        self.instrument_logger.grid(row=0, column=0, sticky='NSEW')
         self.python_logger = logging.getLogger("python")
         self.python_logger.setLevel(logging.DEBUG)
-        # self.python_logger.addHandler(python_handler)  # logging to the screen
-        self.python_logger_gui.pass_logger(self.python_logger)
+        self.user_logger_gui.pass_logger(self.python_logger)
+        self.advanced_logger_gui.pass_logger(self.python_logger)
         self.python_logger.addHandler(file_handler)  # logging to a file
 
     def stop(self):
         """Stop all running widgets."""
         with self.queue.mutex:
             self.queue.queue.clear()
-        SAXSDrivers.InstrumentTerminateFunction(self.Instruments)
+        SAXSDrivers.InstrumentTerminateFunction(self.instruments)
         # Add Elveflow stop if we use it for non-pressure
 
     def load_config(self, filename=None, preload=False):
@@ -391,30 +384,16 @@ class Main:
             with open(filename, encoding='utf-8') as f:
                 # why does it only sometimes find the file?
                 self.config.read_file(f)
-            oil_config = self.config['Oil Valve']
-            loading_config = self.config['Loading Valve']
             main_config = self.config['Main']
             elveflow_config = self.config['Elveflow']
             spec_config = self.config['SPEC']
-            self.spec_sub_directory_box.delete(0, 'end')
-            self.spec_sub_directory_box.insert(0, spec_config.get('sub_dir', self.OldSubDirectory))
-            self.OldSubDirectory = self.spec_sub_directory.get()
-            self.spec_base_directory_box.delete(0, 'end')
-            self.spec_base_directory_box.insert(0, spec_config.get('base_dir', self.OldBaseDirectory))
-            self.OldBaseDirectory = self.spec_base_directory.get()
+            run_config = self.config['Run Params']
+            oil_config = self.config['Oil Valve']
+            loading_config = self.config['Loading Valve']
+            instrument_config = self.config['Instruments']
+            # Main Config
             self.sucrose = main_config.getboolean('Sucrose', False)
-            self.config_spec_address.delete(0, 'end')
-            self.config_spec_address.insert(0, main_config.get('spec_host', ''))
-            self.tseries_time_box.delete(0, 'end')
-            self.tseries_time_box.insert(0, main_config.get('tseries_time', '10'))
-            self.tseries_frames_box.delete(0, 'end')
-            self.tseries_frames_box.insert(0, main_config.get('tseries_frames', '10'))
-            oil_vars = []
-            loading_vars = []
-            for i in range(0, 6):
-                field = 'name'+str(i+1)
-                self.oil_valve_names[i].set(oil_config.get(field, ''))
-                self.loading_valve_names[i].set(loading_config.get(field, ''))
+            # Elveflow Config
             self.elveflow_sourcename.set(elveflow_config['elveflow_sourcename'])
             self.elveflow_sensortypes[0].set(elveflow_config['sensor1_type'])
             self.elveflow_sensortypes[1].set(elveflow_config['sensor2_type'])
@@ -422,19 +401,84 @@ class Main:
             self.elveflow_sensortypes[3].set(elveflow_config['sensor4_type'])
             self.elveflow_oil_channel.set(elveflow_config['elveflow_oil_channel'])
             self.elveflow_oil_pressure.set(elveflow_config['elveflow_oil_pressure'])
+            # SPEC Config
+            self.spec_address.set(spec_config.get('spec_host', ''))
+            self.tseries_time.set(spec_config.get('tseries_time', '10'))
+            self.tseries_frames.set(spec_config.get('tseries_frames', '10'))
+            self.spec_sub_directory.set(spec_config.get('sub_dir', self.old_sub_directory))
+            self.old_sub_directory = self.spec_sub_directory.get()
+            self.spec_base_directory.set(spec_config.get('base_dir', self.old_base_directory))
+            self.old_base_directory = self.spec_base_directory.get()
+            # Run Config
+            self.sample_flowrate.set(run_config.get('sample_rate', 10))
+            self.oil_refill_flowrate.set(run_config.get('oil_rate', 10))
+            self.first_buffer_volume.set(run_config.get('buffer1_vol', 25))
+            self.sample_volume.set(run_config.get('sample_vol', 25))
+            self.last_buffer_volume.set(run_config.get('buffer2_vol', 25))
+            self.low_soap_time.set(run_config.get('low_soap_time', 0))
+            self.high_soap_time.set(run_config.get('high_soap_time', 0))
+            self.water_time.set(run_config.get('water_time', 0))
+            self.air_time.set(run_config.get('air_time', 0))
+            # Valve Config
+            for i in range(0, 6):
+                field = 'name'+str(i+1)
+                self.oil_valve_names[i].set(oil_config.get(field, ''))
+                self.loading_valve_names[i].set(loading_config.get(field, ''))
+
         if not preload:
             self.set_oil_valve_names()
             self.set_loading_valve_names()
+        # Instrument Config
+        for i in range(int(instrument_config.get("n_pumps",0))):
+            field = "Pump"+str(i)
+            self.add_pump_set_buttons(int(instrument_config.get(field+"_address", 0)), instrument_config.get(field+"_name", ""), instrument_config.get(field+"_hardware", ""))
+
+        for i in range(int(instrument_config.get("n_rheodyne",0))):
+            field = "Rheodyne"+str(i)
+            self.AddRheodyneSetButtons(int(instrument_config.get(field+"_address", -1)), instrument_config.get(field+"_name", ""), instrument_config.get(field+"_hardware", ""))
+
+        for i in range(int(instrument_config.get("n_vici", 0))):
+            field = "VICI"+str(i)
+            self.AddVICISetButtons(instrument_config.get(field+"_name", ''), instrument_config.get(field+"_hardware", ""))
 
     def save_config(self):
         """Save a config.ini file."""
         filename = filedialog.asksaveasfilename(initialdir=".", title="Select file", filetypes=(("config files", "*.ini"), ("all files", "*.*")))
         if filename != '':
-            oil_config = self.config['Oil Valve']
-            loading_config = self.config['Loading Valve']
+            main_config = self.config['Main']
             elveflow_config = self.config['Elveflow']
             spec_config = self.config['SPEC']
-
+            run_config = self.config['Run Params']
+            oil_config = self.config['Oil Valve']
+            loading_config = self.config['Loading Valve']
+            instrument_config = self.config['Instruments']
+            # Main Config
+            main_config['Sucrose'] = str(self.sucrose)
+            # Elveflow Config
+            elveflow_config['elveflow_sourcename'] = self.elveflow_sourcename.get()
+            elveflow_config['sensor1_type'] = self.elveflow_sensortypes[0].get()
+            elveflow_config['sensor2_type'] = self.elveflow_sensortypes[1].get()
+            elveflow_config['sensor3_type'] = self.elveflow_sensortypes[2].get()
+            elveflow_config['sensor4_type'] = self.elveflow_sensortypes[3].get()
+            elveflow_config['elveflow_oil_channel'] = self.elveflow_oil_channel.get()
+            elveflow_config['elveflow_oil_pressure'] = self.elveflow_oil_pressure.get()
+            # SPEC Config
+            spec_config['spec_host'] = self.spec_address.get()
+            spec_config['tseries_time'] = str(self.tseries_time.get())
+            spec_config['tseries_frames'] = str(self.tseries_frames.get())
+            spec_config['sub_dir'] = self.spec_sub_directory.get()
+            spec_config['base_dir'] = self.spec_base_directory.get()
+            # Run Config
+            run_config['sample_rate'] = str(self.sample_flowrate.get())
+            run_config['oil_rate'] = str(self.oil_refill_flowrate.get())
+            run_config['buffer1_vol'] = str(self.first_buffer_volume.get())
+            run_config['sample_vol'] = str(self.sample_volume.get())
+            run_config['buffer2_vol'] = str(self.last_buffer_volume.get())
+            run_config['low_soap_time'] = str(self.low_soap_time.get())
+            run_config['high_soap_time'] = str(self.high_soap_time.get())
+            run_config['water_time'] = str(self.water_time.get())
+            run_config['air_time'] = str(self.air_time.get())
+            # Valve Configs
             for i in range(0, 6):
                 field = 'name'+str(i+1)
                 oil_name = self.oil_valve_names[i].get()
@@ -448,6 +492,28 @@ class Main:
 
             spec_config['tseries_time'] = str(self.tseries_time.get())
             spec_config['tseries_frames'] = str(self.tseries_frames.get())
+            # Instrument Config
+            npumps = 0
+            nrheodyne = 0
+            nvici = 0
+            for instrument in self.Instruments:
+                if instrument.instrument_type == "Pump":
+                    instrument_config["Pump"+str(npumps)+"_address"] = str(instrument.address)
+                    instrument_config["Pump"+str(npumps)+"_name"] = instrument.name
+                    instrument_config["Pump"+str(npumps)+"_hardware"] = instrument.hardware_configuration
+                    npumps += 1
+                if instrument.instrument_type == "Rheodyne":
+                    instrument_config["Rheodyne"+str(nrheodyne)+"_address"] = str(instrument.address_I2C)
+                    instrument_config["Rheodyne"+str(nrheodyne)+"_name"] = instrument.name
+                    instrument_config["Rheodyne"+str(nrheodyne)+"_hardware"] = instrument.hardware_configuration
+                    nrheodyne += 1
+                if instrument.instrument_type == "VICI":
+                    instrument_config["VICI"+str(nvici)+"_name"] = instrument.name
+                    instrument_config["VICI"+str(nvici)+"_hardware"] = instrument.hardware_configuration
+                    nvici += 1
+            instrument_config["n_pumps"] = str(npumps)
+            instrument_config["n_rheodyne"] = str(nrheodyne)
+            instrument_config["n_vici"] = str(nvici)
 
             self.config.write(open(filename, 'w', encoding='utf-8'))
 
@@ -490,46 +556,48 @@ class Main:
         """Exit the GUI and stop all running things."""
         print("STARTING EXIT PROCEDURE")
         self.stop()
-        if self.elveflow_display.run_flag.is_set():
-            self.elveflow_display.stop(shutdown=True)
+        self.elveflow_display.stop(shutdown=True)
         # if self.SPEC_Connection.run_flag.is_set():
         #    self.SPEC_Connection.stop()
         if self.listen_run_flag.is_set():
             self.listen_run_flag.clear()
+        print("WAITING FOR OTHER THREADS TO SHUT DOWN...")
+        while not self.elveflow_display.done_shutting_down:
+            # We could do this smarter by waiting for events. But we're not smarter.
+            time.sleep(0.2)
+        print("THANK Y'ALL FOR COMING! A LA PROCHAINE !")
         self.main_window.destroy()
 
     def update_graph(self):
-        """look into self's ElveflowDisplay and reproduce it on self.main_tab_fig"""
-
+        """Look into self's ElveflowDisplay and reproduce it on self.main_tab_fig."""
         self.main_tab_ax1.set_title("Elveflow readout for most recent scan", fontsize=16)
-        dataXLabel_var = self.elveflow_display.dataXLabel_var.get()
-        dataY1Label_var = self.elveflow_display.dataY1Label_var.get()
-        dataY2Label_var = self.elveflow_display.dataY2Label_var.get()
-        self.main_tab_ax1.set_xlabel(dataXLabel_var, fontsize=14)
-        self.main_tab_ax1.set_ylabel(dataY1Label_var, fontsize=14, color=ElveflowDisplay.COLOR_Y1)
-        self.main_tab_ax2.set_ylabel(dataY2Label_var, fontsize=14, color=ElveflowDisplay.COLOR_Y2)
+        data_x_label_var = self.elveflow_display.data_x_label_var.get()
+        data_y1_label_var = self.elveflow_display.data_y1_label_var.get()
+        data_y2_label_var = self.elveflow_display.data_y2_label_var.get()
+        self.main_tab_ax1.set_x_label(data_x_label_var, fontsize=14)
+        self.main_tab_ax1.set_ylabel(data_y1_label_var, fontsize=14, color=ElveflowDisplay.COLOR_Y1)
+        self.main_tab_ax2.set_ylabel(data_y2_label_var, fontsize=14, color=ElveflowDisplay.COLOR_Y2)
         try:
-            dataX = np.array([elt[dataXLabel_var] for elt in self.elveflow_display.data])
-            dataY1 = np.array([elt[dataY1Label_var] for elt in self.elveflow_display.data])
-            dataY2 = np.array([elt[dataY2Label_var] for elt in self.elveflow_display.data])
+            data_x = np.array([elt[data_x_label_var] for elt in self.elveflow_display.data])
+            data_y1 = np.array([elt[data_y1_label_var] for elt in self.elveflow_display.data])
+            data_y2 = np.array([elt[data_y2_label_var] for elt in self.elveflow_display.data])
 
-            # self.python_logger.info("Current time %s, end time %s" % (int(time.time() - self.elveflow_display.starttime), self.graph_end_time))
-            dataX_viable = (dataX >= self.graph_start_time) # & (dataX < self.graph_end_time)
-            dataX = dataX[dataX_viable]
-            dataY1 = dataY1[dataX_viable]
-            dataY2 = dataY2[dataX_viable]
+            data_x_viable = (data_x >= self.graph_start_time)  # & (data_x < self.graph_end_time)
+            data_x = data_x[data_x_viable]
+            data_y1 = data_y1[data_x_viable]
+            data_y2 = data_y2[data_x_viable]
 
-            if dataXLabel_var == self.elveflow_display.elveflow_handler.header[0]:
-                dataX -= self.elveflow_display.starttime
-            if dataY1Label_var == self.elveflow_display.elveflow_handler.header[0]:
-                dataY1 -= self.elveflow_display.starttime
-            if dataY2Label_var == self.elveflow_display.elveflow_handler.header[0]:
-                dataY2 -= self.elveflow_display.starttime
+            if data_x_label_var == self.elveflow_display.elveflow_handler.header[0]:
+                data_x -= self.elveflow_display.starttime
+            if data_y1_label_var == self.elveflow_display.elveflow_handler.header[0]:
+                data_y1 -= self.elveflow_display.starttime
+            if data_y2_label_var == self.elveflow_display.elveflow_handler.header[0]:
+                data_y2 -= self.elveflow_display.starttime
 
-            extremes = [np.nanmin(dataX), np.nanmax(dataX), np.nanmin(dataY1), np.nanmax(dataY1), np.nanmin(dataY2), np.nanmax(dataY2)]
-            if len(dataX) > 0:
-                self.the_line1.set_data(dataX, dataY1)
-                self.the_line2.set_data(dataX, dataY2)
+            extremes = [np.nanmin(data_x), np.nanmax(data_x), np.nanmin(data_y1), np.nanmax(data_y1), np.nanmin(data_y2), np.nanmax(data_y2)]
+            if len(data_x) > 0:
+                self.the_line1.set_data(data_x, data_y1)
+                self.the_line2.set_data(data_x, data_y2)
         except (ValueError, KeyError):
             extremes = [*self.main_tab_ax1.get_xlim(), *self.main_tab_ax1.get_ylim(), *self.main_tab_ax2.get_ylim()]
         limits = [item if item is not None else extremes[i]
@@ -538,28 +606,11 @@ class Main:
         self.main_tab_ax1.set_ylim(*limits[2:4])
         self.main_tab_ax2.set_ylim(*limits[4:6])
 
-        self.canvas.draw() # may need the stupid hack from widgets.py
+        self.canvas.draw()  # may need the stupid hack from widgets.py
 
     def graph_vline(self):
+        """Add a vertical line to the graph."""
         self.main_tab_ax1.axvline(int(time.time() - self.elveflow_display.starttime), color='k', linewidth=5)
-
-    def pump_refill_command(self):
-        """Do nothing. It's a dummy command."""
-        self.flowpath.set_unlock_state(False)
-        self.queue.put((self.elveflow_display.elveflow_handler.setPressure, 4, 100))  # Pressurize Oil with Elveflow
-        #   Switch valve (may be hooked to pump)
-        self.queue.put(self.pump.set_mode_vol)
-        self.queue.put((time.sleep, 0.1))
-        self.queue.put(self.pump.refill)    # Set pump refill params
-        self.queue.put((time.sleep, 0.1))
-        self.queue.put((self.pump.set_target_vol, (self.first_buffer_volume.get()+self.sample_volume.get()+self.last_buffer_volume.get())/1000))
-        self.queue.put((time.sleep, 0.1))
-        self.queue.put(self.pump.start_pump)     # Refill pump
-        self.queue.put((time.sleep, 10))
-        self.queue.put(self.pump.infuse)    # Set pump to injection mode
-        #   Switch valve
-        self.queue.put((self.elveflow_display.elveflow_handler.setPressure, 4, 0))  # Vent Oil
-        pass
 
     def buffer_sample_buffer_command(self):
         """Run a buffer-sample-buffer cycle."""
@@ -573,6 +624,8 @@ class Main:
         self.the_line1 = self.main_tab_ax1.plot([], [], color=ElveflowDisplay.COLOR_Y1)[0]
         self.the_line2 = self.main_tab_ax2.plot([], [], color=ElveflowDisplay.COLOR_Y2)[0]
         self.graph_start_time = int(time.time())
+        self.graph_end_time = np.inf
+        self.python_logger.info("graph start time: %s" % self.graph_start_time)
         self.flowpath.set_unlock_state(False)
 
         self.update_graph()
@@ -614,8 +667,11 @@ class Main:
         self.queue.put(update_end_time)
         self.queue.put((self.python_logger.info, "Done with running buffer-sample-buffer"))
 
+        self.clean_and_refill_command()  # Run a clean and refill after finishing
+
     def clean_and_refill_command(self):
-        elveflow_oil_channel = int(self.elveflow_oil_channel.get()) #throws an error if the conversion doesn't work
+        """Clean the buffer and sample loops, then refill the oil."""
+        elveflow_oil_channel = int(self.elveflow_oil_channel.get())  # throws an error if the conversion doesn't work
         elveflow_oil_pressure = self.elveflow_oil_pressure.get()
 
         self.queue.put((self.python_logger.info, "Starting to run clean/refill command"))
@@ -624,6 +680,17 @@ class Main:
         self.queue.put((self.elveflow_display.start_pressure, elveflow_oil_channel))
         self.queue.put((self.pump.refill_volume, (self.sample_volume.get()+self.first_buffer_volume.get()+self.last_buffer_volume.get())/1000, self.oil_refill_flowrate.get()))
 
+        self.clean_only_command()
+
+        self.queue.put((self.pump.wait_until_stopped, 120))
+        self.queue.put(self.pump.infuse)
+        self.queue.put((self.elveflow_display.pressureValue_var[elveflow_oil_channel - 1].set, "0"))  # Set oil pressure to 0
+        self.queue.put((self.elveflow_display.start_pressure, elveflow_oil_channel))
+
+        self.queue.put((self.python_logger.info, 'Clean and refill done. 完成了！'))
+
+    def clean_only_command(self):
+        """Clean the buffer and sample loops."""
         self.queue.put((self.python_logger.info, "Starting to clean buffer"))
         self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
         self.queue.put((self.flowpath.valve3.set_auto_position, 0))
@@ -644,11 +711,12 @@ class Main:
         self.queue.put((self.flowpath.valve3.set_auto_position, 0))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Air"))
         self.queue.put((time.sleep, self.air_time.get()))
+        self.queue.put((self.python_logger.info, "Finished cleaning buffer"))
 
         self.queue.put((self.python_logger.info, "Starting to clean sample"))
         self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
         self.queue.put((self.flowpath.valve3.set_auto_position, 1))
-        self.queue.put((self.flowpath.valve4.set_auto_position,"Water"))
+        self.queue.put((self.flowpath.valve4.set_auto_position, "Water"))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Low Flow Soap"))
         self.queue.put((time.sleep, self.low_soap_time.get()))
 
@@ -667,26 +735,43 @@ class Main:
         self.queue.put((self.flowpath.valve4.set_auto_position, "Air"))
         self.queue.put((time.sleep, self.air_time.get()))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Load"))
-        self.queue.put((self.flowpath.valve3.set_auto_position,0))
+        self.queue.put((self.flowpath.valve3.set_auto_position, 0))
+        self.queue.put((self.python_logger.info, "Finished cleaning sample"))
+
+    def refill_only_command(self):
+        """Refill the oil only."""
+        elveflow_oil_channel = int(self.elveflow_oil_channel.get())  # throws an error if the conversion doesn't work
+        elveflow_oil_pressure = self.elveflow_oil_pressure.get()
+
+        self.queue.put((self.elveflow_display.pressureValue_var[elveflow_oil_channel - 1].set, elveflow_oil_pressure))  # Set oil pressure
+        self.queue.put((self.elveflow_display.start_pressure, elveflow_oil_channel))
+        self.queue.put((self.pump.refill_volume, (self.sample_volume.get()+self.first_buffer_volume.get()+self.last_buffer_volume.get())/1000, self.oil_refill_flowrate.get()))
+
         self.queue.put((self.pump.wait_until_stopped, 120))
         self.queue.put(self.pump.infuse)
         self.queue.put((self.elveflow_display.pressureValue_var[elveflow_oil_channel - 1].set, "0"))  # Set oil pressure to 0
         self.queue.put((self.elveflow_display.start_pressure, elveflow_oil_channel))
 
-        self.queue.put((self.python_logger.info, 'cleaning done'))
+        self.queue.put((self.python_logger.info, "Finished refilling syringe"))
 
-    def clean_only_command(self):
-        pass
+    def load_sample_command(self):
+        self.queue.put((self.flowpath.valve4.set_auto_position, "Load"))
+        self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
+        self.queue.put((self.flowpath.valve3.set_auto_position, 1))
 
-    def refill_only_command(self):
-        pass
-
-    def load_command(self):
-        pass
+    def load_buffer_command(self):
+        self.queue.put((self.flowpath.valve4.set_auto_position, "Load"))
+        self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
+        self.queue.put((self.flowpath.valve3.set_auto_position, 0))
 
     def toggle_buttons(self):
         """Toggle certain buttons on and off when they should not be allowed to add to queue."""
-        buttons = (self.buffer_sample_buffer_button, self.clean_button)
+        buttons = (self.buffer_sample_buffer_button,
+                   self.clean_button,
+                   self.load_buffer_button,
+                   self.load_sample_button,
+                   self.refill_only_button,
+                   self.clean_only_button)
         if self.queue_busy:
             for button in buttons:
                 button['state'] = 'disabled'
@@ -694,41 +779,43 @@ class Main:
             for button in buttons:
                 button['state'] = 'normal'
 
-    def configure_to_hardware(self, keyword, InstrumentIndex):
+    def configure_to_hardware(self, keyword, instrument_index):
+        """Assign an instrument to the software version of it."""
         # TODO: Add checks for value type
         if keyword == self.hardware_config_options[0]:
-            self.pump = self.Instruments[InstrumentIndex]
+            self.pump = self.instruments[instrument_index]
         elif keyword == self.hardware_config_options[1]:
-            self.flowpath.valve2.hardware = self.Instruments[InstrumentIndex]
+            self.flowpath.valve2.hardware = self.instruments[instrument_index]
         elif keyword == self.hardware_config_options[2]:
-            self.flowpath.valve3.hardware = self.Instruments[InstrumentIndex]
+            self.flowpath.valve3.hardware = self.instruments[instrument_index]
         elif keyword == self.hardware_config_options[3]:
-            self.flowpath.valve4.hardware = self.Instruments[InstrumentIndex]
+            self.flowpath.valve4.hardware = self.instruments[instrument_index]
         else:
             raise ValueError
+        self.Instruments[InstrumentIndex].hardware_configuration = keyword
 
-    def add_pump_set_buttons(self):
+    def add_pump_set_buttons(self, address=0, name="Pump", hardware=""):
         """Add pump buttons to the setup page."""
-        self.Instruments.append(SAXSDrivers.HPump(logger=self.Instrument_logger))
+        self.instruments.append(SAXSDrivers.HPump(logger=self.instrument_logger, name=name, address=address, hardware_configuration=hardware))
         self.NumberofPumps += 1
-        InstrumentIndex = len(self.Instruments)-1
-
-        newvars = [tk.IntVar(value=0), tk.StringVar(), tk.StringVar()]
+        instrument_index = len(self.instruments)-1
+        self.instrument_logger.append("Added pump")
+        newvars = [tk.IntVar(value=address), tk.StringVar(value=name), tk.StringVar(value=hardware)]
         self.setup_page_variables.append(newvars)
 
         newbuttons = [
          COMPortSelector(self.setup_page, exportselection=0, height=4),
-         tk.Button(self.setup_page, text="Set Port", command=lambda: self.Instruments[InstrumentIndex].set_port(self.AvailablePorts[int(self.setup_page_buttons[InstrumentIndex][0].curselection()[0])].device)),
+         tk.Button(self.setup_page, text="Set Port", command=lambda: self.instruments[instrument_index].set_port(self.AvailablePorts[int(self.setup_page_buttons[instrument_index][0].curselection()[0])].device)),
          tk.Label(self.setup_page, text="or"),
-         tk.Button(self.setup_page, text="Send to Controller", command=lambda: self.Instruments[InstrumentIndex].set_to_controller(self.controller)),
+         tk.Button(self.setup_page, text="Send to Controller", command=lambda: self.instruments[instrument_index].set_to_controller(self.controller)),
          tk.Label(self.setup_page, text="   Pump Address:"),
-         tk.Spinbox(self.setup_page, from_=0, to=100, textvariable=self.setup_page_variables[InstrumentIndex][0]),
+         tk.Spinbox(self.setup_page, from_=0, to=100, textvariable=self.setup_page_variables[instrument_index][0]),
          tk.Label(self.setup_page, text="   Pump Name:"),
-         tk.Entry(self.setup_page, textvariable=self.setup_page_variables[InstrumentIndex][1]),
-         tk.Button(self.setup_page, text="Set values", command=lambda: self.InstrumentChangeValues(InstrumentIndex)),
+         tk.Entry(self.setup_page, textvariable=self.setup_page_variables[instrument_index][1]),
+         tk.Button(self.setup_page, text="Set values", command=lambda: self.instrument_change_values(instrument_index)),
          tk.Label(self.setup_page, text="Instrument configuration"),
-         tk.OptionMenu(self.setup_page, self.setup_page_variables[InstrumentIndex][2], *self.hardware_config_options),
-         tk.Button(self.setup_page, text="Set", command=lambda: self.configure_to_hardware(self.setup_page_variables[InstrumentIndex][2].get(), InstrumentIndex))
+         tk.OptionMenu(self.setup_page, self.setup_page_variables[instrument_index][2], *self.hardware_config_options),
+         tk.Button(self.setup_page, text="Set", command=lambda: self.configure_to_hardware(self.setup_page_variables[instrument_index][2].get(), instrument_index))
          ]
 
         # Pumps share a port-> Dont need extra ones
@@ -741,152 +828,160 @@ class Main:
         for i in range(len(self.setup_page_buttons)):
             for y in range(len(self.setup_page_buttons[i])):
                 self.setup_page_buttons[i][y].grid(row=i+2, column=y)
-        self.RefreshCOMList()
-        self.AddPumpControlButtons()
+        self.refresh_com_list()
+        self.add_pump_control_buttons()
+        if hardware != "":
+            self.configure_to_hardware(hardware, InstrumentIndex)
 
-    def RefreshDropdown(self, OptionMenulist, OptionstoPut, VariableLocation):
+    def refresh_dropdown(self, option_menu_list, options_to_put, VariableLocation):
         # Update Values in Config Selector
         for i in range(6):
-            m = OptionMenulist[i].children['menu']
+            m = option_menu_list[i].children['menu']
             m.delete(0, tk.END)
             m.add_command(label="", command=lambda var=VariableLocation[i], val="": var.set(val))  # Add option to leave empty
-            for name in OptionstoPut:
+            for name in options_to_put:
                 if not name == "":
                     m.add_command(label=name, command=lambda var=VariableLocation[i], val=name: var.set(val))
 
-    def InstrumentChangeValues(self, InstrumentIndex, isvalve=False):
-        self.Instruments[InstrumentIndex].change_values(int((self.setup_page_variables[InstrumentIndex][0]).get()), (self.setup_page_variables[InstrumentIndex][1]).get())
-        self.manual_page_variables[InstrumentIndex][0].set(self.Instruments[InstrumentIndex].name+":  ")
+    def instrument_change_values(self, instrument_index, isvalve=False):
+        self.instruments[instrument_index].change_values(int((self.setup_page_variables[instrument_index][0]).get()), (self.setup_page_variables[instrument_index][1]).get())
+        self.manual_page_variables[instrument_index][0].set(self.instruments[instrument_index].name+":  ")
         if isvalve:
-            self.manual_page_buttons[InstrumentIndex][2].config(to=self.setup_page_variables[InstrumentIndex][2].get())
-        # self.RefreshDropdown()
+            self.manual_page_buttons[instrument_index][2].config(to=self.setup_page_variables[instrument_index][2].get())
+        # self.refresh_dropdown()
 
-    def AddPumpControlButtons(self):
-        InstrumentIndex = len(self.Instruments)-1
+    def add_pump_control_buttons(self):
+        instrument_index = len(self.instruments)-1
         newvars = [tk.StringVar(), tk.DoubleVar(value=0), tk.DoubleVar(value=0), tk.DoubleVar(value=0)]
-        newvars[0].set(self.Instruments[InstrumentIndex].name+":  ")
+        newvars[0].set(self.instruments[instrument_index].name+":  ")
         self.manual_page_variables.append(newvars)
         newbuttons = [
-         tk.Label(self.manual_page, textvariable=self.manual_page_variables[InstrumentIndex][0]),
-         tk.Button(self.manual_page, text="Run", command=lambda: self.queue.put(self.Instruments[InstrumentIndex].start_pump)),
-         tk.Button(self.manual_page, text="Stop", command=lambda:self.queue.put(self.Instruments[InstrumentIndex].stop_pump)),
+         tk.Label(self.manual_page, textvariable=self.manual_page_variables[instrument_index][0]),
+         tk.Button(self.manual_page, text="Run", command=lambda: self.queue.put(self.instruments[instrument_index].start_pump)),
+         tk.Button(self.manual_page, text="Stop", command=lambda:self.queue.put(self.instruments[instrument_index].stop_pump)),
          tk.Label(self.manual_page, text="  Infuse Rate:"),
-         tk.Spinbox(self.manual_page, from_=0, to=1000, textvariable=self.manual_page_variables[InstrumentIndex][1]),
-         tk.Button(self.manual_page, text="Set", command=lambda: self.queue.put((self.Instruments[InstrumentIndex].set_infuse_rate, self.manual_page_variables[InstrumentIndex][1].get()))),
+         tk.Spinbox(self.manual_page, from_=0, to=1000, textvariable=self.manual_page_variables[instrument_index][1]),
+         tk.Button(self.manual_page, text="Set", command=lambda: self.queue.put((self.instruments[instrument_index].set_infuse_rate, self.manual_page_variables[instrument_index][1].get()))),
          tk.Label(self.manual_page, text="  Refill Rate:"),
-         tk.Spinbox(self.manual_page, from_=0, to=1000, textvariable=self.manual_page_variables[InstrumentIndex][2]),
-         tk.Button(self.manual_page, text="Set", command=lambda: self.queue.put((self.Instruments[InstrumentIndex].set_refill_rate, self.manual_page_variables[InstrumentIndex][2].get()))),
+         tk.Spinbox(self.manual_page, from_=0, to=1000, textvariable=self.manual_page_variables[instrument_index][2]),
+         tk.Button(self.manual_page, text="Set", command=lambda: self.queue.put((self.instruments[instrument_index].set_refill_rate, self.manual_page_variables[instrument_index][2].get()))),
          tk.Label(self.manual_page, text="  Direction:"),
-         tk.Button(self.manual_page, text="Infuse", command=lambda: self.queue.put(self.Instruments[InstrumentIndex].infuse)),
-         tk.Button(self.manual_page, text="Refill", command=lambda: self.queue.put(self.Instruments[InstrumentIndex].refill)),
+         tk.Button(self.manual_page, text="Infuse", command=lambda: self.queue.put(self.instruments[instrument_index].infuse)),
+         tk.Button(self.manual_page, text="Refill", command=lambda: self.queue.put(self.instruments[instrument_index].refill)),
          tk.Label(self.manual_page, text="Mode"),
-         tk.Button(self.manual_page, text="Pump", command=lambda: self.queue.put(self.Instruments[InstrumentIndex].set_mode_pump)),
-         tk.Button(self.manual_page, text="Vol", command=lambda: self.queue.put(self.Instruments[InstrumentIndex].set_mode_vol)),
-         tk.Label(self.manual_page, text="  Target Vol:"),
-         tk.Spinbox(self.manual_page, from_=0, to=1000, textvariable=self.manual_page_variables[InstrumentIndex][3]),
-         # tk.Button(self.manual_page, text="Set", command=lambda: self.queue.put((self.Instruments[InstrumentIndex].set_target_vol, self.manual_page_variables[InstrumentIndex][3].get())))
-         tk.Button(self.manual_page, text="Set", command=lambda: self.queue.put((self.Instruments[InstrumentIndex].set_target_vol, self.manual_page_variables[InstrumentIndex][3].get())))
+         tk.Button(self.manual_page, text="Pump", command=lambda: self.queue.put(self.instruments[instrument_index].set_mode_pump)),
+         tk.Button(self.manual_page, text="Vol", command=lambda: self.queue.put(self.instruments[instrument_index].set_mode_vol)),
+         tk.Label(self.manual_page, text="  Target Vol (ml):"),
+         tk.Spinbox(self.manual_page, from_=0, to=1000, textvariable=self.manual_page_variables[instrument_index][3]),
+         # tk.Button(self.manual_page, text="Set", command=lambda: self.queue.put((self.instruments[instrument_index].set_target_vol, self.manual_page_variables[instrument_index][3].get())))
+         tk.Button(self.manual_page, text="Set", command=lambda: self.queue.put((self.instruments[instrument_index].set_target_vol, self.manual_page_variables[instrument_index][3].get())))
          ]
         # Bind Enter to Spinboxes
-        newbuttons[4].bind('<Return>', lambda event: self.queue.put((self.Instruments[InstrumentIndex].set_infuse_rate, self.manual_page_variables[InstrumentIndex][1].get())))
-        newbuttons[7].bind('<Return>', lambda event: self.queue.put((self.Instruments[InstrumentIndex].set_refill_rate, self.manual_page_variables[InstrumentIndex][2].get())))
-        newbuttons[16].bind('<Return>', lambda event: self.queue.put((self.Instruments[InstrumentIndex].set_target_vol, self.manual_page_variables[InstrumentIndex][3].get())))
+        newbuttons[4].bind('<Return>', lambda event: self.queue.put((self.instruments[instrument_index].set_infuse_rate, self.manual_page_variables[instrument_index][1].get())))
+        newbuttons[7].bind('<Return>', lambda event: self.queue.put((self.instruments[instrument_index].set_refill_rate, self.manual_page_variables[instrument_index][2].get())))
+        newbuttons[16].bind('<Return>', lambda event: self.queue.put((self.instruments[instrument_index].set_target_vol, self.manual_page_variables[instrument_index][3].get())))
         self.manual_page_buttons.append(newbuttons)
         # Build Pump
         for i in range(len(self.manual_page_buttons)):
             for y in range(len(self.manual_page_buttons[i])):
                 self.manual_page_buttons[i][y].grid(row=i, column=y)
 
-    def RefreshCOMList(self):
+    def refresh_com_list(self):
         self.ControllerCOM.updatelist(SAXSDrivers.list_available_ports(self.AvailablePorts))
         for button in self.setup_page_buttons:
             if isinstance(button[0], COMPortSelector):
                 button[0].updatelist(SAXSDrivers.list_available_ports(self.AvailablePorts))
 
-    def AddRheodyneSetButtons(self):
-        self.Instruments.append(SAXSDrivers.Rheodyne(logger=self.Instrument_logger))
-        InstrumentIndex = len(self.Instruments)-1
-        newvars = [tk.IntVar(value=-1), tk.StringVar(), tk.IntVar(value=2), tk.StringVar()]
+    def add_rheodyne_set_buttons(self, address=-1, name="", hardware=""):
+        self.instruments.append(SAXSDrivers.Rheodyne(logger=self.instrument_logger, address_I2C=address, name=name, hardware_configuration=hardware))
+        instrument_index = len(self.instruments)-1
+        newvars = [tk.IntVar(value=address), tk.StringVar(value=name), tk.IntVar(value=2), tk.StringVar(value=hardware)]
         self.setup_page_variables.append(newvars)
+        self.instrument_logger.append("Added Rheodyne")
         newbuttons = [
          COMPortSelector(self.setup_page, exportselection=0, height=4),
-         tk.Button(self.setup_page, text="Set Port", command=lambda: self.Instruments[InstrumentIndex].set_port(self.AvailablePorts[int(self.setup_page_buttons[InstrumentIndex][0].curselection()[0])].device)),
+         tk.Button(self.setup_page, text="Set Port", command=lambda: self.instruments[instrument_index].set_port(self.AvailablePorts[int(self.setup_page_buttons[instrument_index][0].curselection()[0])].device)),
          tk.Label(self.setup_page, text="or"),
-         tk.Button(self.setup_page, text="Send to Controller", command=lambda: self.Instruments[InstrumentIndex].set_to_controller(self.controller)),
+         tk.Button(self.setup_page, text="Send to Controller", command=lambda: self.instruments[instrument_index].set_to_controller(self.controller)),
          tk.Label(self.setup_page, text="   Type:"),
-         tk.Spinbox(self.setup_page, values=(2, 6), textvariable=self.setup_page_variables[InstrumentIndex][2]),
+         tk.Spinbox(self.setup_page, values=(2, 6), textvariable=self.setup_page_variables[instrument_index][2]),
          tk.Label(self.setup_page, text="   I2C Address:"),
-         tk.Spinbox(self.setup_page, from_=-1, to=100, textvariable=self.setup_page_variables[InstrumentIndex][0]),
+         tk.Spinbox(self.setup_page, from_=-1, to=100, textvariable=self.setup_page_variables[instrument_index][0]),
          tk.Label(self.setup_page, text="   Valve Name:"),
-         tk.Entry(self.setup_page, textvariable=self.setup_page_variables[InstrumentIndex][1]),
-         tk.Button(self.setup_page, text="Set values", command=lambda: self.InstrumentChangeValues(InstrumentIndex, True)),
-         tk.OptionMenu(self.setup_page, self.setup_page_variables[InstrumentIndex][3], *self.hardware_config_options),
-         tk.Button(self.setup_page, text="Set", command=lambda: self.configure_to_hardware(self.setup_page_variables[InstrumentIndex][3].get(), InstrumentIndex))
+         tk.Entry(self.setup_page, textvariable=self.setup_page_variables[instrument_index][1]),
+         tk.Button(self.setup_page, text="Set values", command=lambda: self.instrument_change_values(instrument_index, True)),
+         tk.OptionMenu(self.setup_page, self.setup_page_variables[instrument_index][3], *self.hardware_config_options),
+         tk.Button(self.setup_page, text="Set", command=lambda: self.configure_to_hardware(self.setup_page_variables[instrument_index][3].get(), instrument_index))
          ]
         self.setup_page_buttons.append(newbuttons)
         for i in range(len(self.setup_page_buttons)):
             for y in range(len(self.setup_page_buttons[i])):
                 self.setup_page_buttons[i][y].grid(row=i+2, column=y)
         self.AddRheodyneControlButtons()
-        self.RefreshCOMList()
-        # self.RefreshDropdown()
+        self.refresh_com_list()
+        if hardware != "":
+            self.configure_to_hardware(hardware, InstrumentIndex)
+        # self.refresh_dropdown()
 
     def AddRheodyneControlButtons(self):
-        InstrumentIndex = len(self.Instruments)-1
+        instrument_index = len(self.instruments)-1
         newvars = [tk.StringVar(), tk.IntVar(value=0)]
-        newvars[0].set(self.Instruments[InstrumentIndex].name+":  ")
+        newvars[0].set(self.instruments[instrument_index].name+":  ")
         self.manual_page_variables.append(newvars)
 
         newbuttons = [
-         tk.Label(self.manual_page, textvariable=self.manual_page_variables[InstrumentIndex][0]),
+         tk.Label(self.manual_page, textvariable=self.manual_page_variables[instrument_index][0]),
          tk.Label(self.manual_page, text="   Position:"),
-         tk.Spinbox(self.manual_page, from_=1, to=self.setup_page_variables[InstrumentIndex][2].get(), textvariable=self.manual_page_variables[InstrumentIndex][1]),
-         tk.Button(self.manual_page, text="Change", command=lambda: self.queue.put((self.Instruments[InstrumentIndex].switchvalve, self.manual_page_variables[InstrumentIndex][1].get()))),
+         tk.Spinbox(self.manual_page, from_=1, to=self.setup_page_variables[instrument_index][2].get(), textvariable=self.manual_page_variables[instrument_index][1]),
+         tk.Button(self.manual_page, text="Change", command=lambda: self.queue.put((self.instruments[instrument_index].switchvalve, self.manual_page_variables[instrument_index][1].get()))),
          ]
-        newbuttons[2].bind('<Return>', lambda event: self.queue.put((self.Instruments[InstrumentIndex].switchvalve, self.manual_page_variables[InstrumentIndex][1].get())))
+        newbuttons[2].bind('<Return>', lambda event: self.queue.put((self.instruments[instrument_index].switchvalve, self.manual_page_variables[instrument_index][1].get())))
         self.manual_page_buttons.append(newbuttons)
         # Place buttons
         for i in range(len(self.manual_page_buttons)):
             for y in range(len(self.manual_page_buttons[i])):
                 self.manual_page_buttons[i][y].grid(row=i, column=y)
 
+
     def AddVICISetButtons(self):
-        self.Instruments.append(SAXSDrivers.VICI(logger=self.Instrument_logger))
-        InstrumentIndex = len(self.Instruments)-1
-        newvars = [tk.IntVar(value=-1), tk.StringVar(), tk.StringVar()]
+        self.instruments.append(SAXSDrivers.VICI(logger=self.instrument_logger, name=name, hardware_configuration=hardware))
+        instrument_index = len(self.instruments)-1
+        newvars = [tk.IntVar(value=-1), tk.StringVar(value=name), tk.StringVar(value=hardware)]
         self.setup_page_variables.append(newvars)
+        self.instrument_logger.append("Added VICI Valve")
         newbuttons = [
          COMPortSelector(self.setup_page, exportselection=0, height=4),
-         tk.Button(self.setup_page, text="Set Port", command=lambda: self.Instruments[InstrumentIndex].set_port(self.AvailablePorts[int(self.setup_page_buttons[InstrumentIndex][0].curselection()[0])].device)),
+         tk.Button(self.setup_page, text="Set Port", command=lambda: self.instruments[instrument_index].set_port(self.AvailablePorts[int(self.setup_page_buttons[instrument_index][0].curselection()[0])].device)),
          tk.Label(self.setup_page, text="or"),
-         tk.Button(self.setup_page, text="Send to Controller", command=lambda:self.Instruments[InstrumentIndex].set_to_controller(self.controller)),
+         tk.Button(self.setup_page, text="Send to Controller", command=lambda:self.instruments[instrument_index].set_to_controller(self.controller)),
          tk.Label(self.setup_page, text="   Valve Name:"),
-         tk.Entry(self.setup_page, textvariable=self.setup_page_variables[InstrumentIndex][1]),
-         tk.Button(self.setup_page, text="Set values", command=lambda: self.InstrumentChangeValues(InstrumentIndex, False)),
-         tk.OptionMenu(self.setup_page, self.setup_page_variables[InstrumentIndex][2], *self.hardware_config_options),
-         tk.Button(self.setup_page, text="Set", command=lambda: self.configure_to_hardware(self.setup_page_variables[InstrumentIndex][2].get(), InstrumentIndex))
+         tk.Entry(self.setup_page, textvariable=self.setup_page_variables[instrument_index][1]),
+         tk.Button(self.setup_page, text="Set values", command=lambda: self.instrument_change_values(instrument_index, False)),
+         tk.OptionMenu(self.setup_page, self.setup_page_variables[instrument_index][2], *self.hardware_config_options),
+         tk.Button(self.setup_page, text="Set", command=lambda: self.configure_to_hardware(self.setup_page_variables[instrument_index][2].get(), instrument_index))
          ]
         self.setup_page_buttons.append(newbuttons)
         for i in range(len(self.setup_page_buttons)):
             for y in range(len(self.setup_page_buttons[i])):
                 self.setup_page_buttons[i][y].grid(row=i+2, column=y)
         self.AddVICIControlButtons()
-        self.RefreshCOMList()
-        # self.RefreshDropdown()
+        self.refresh_com_list()
+        if hardware != "":
+            self.configure_to_hardware(hardware, InstrumentIndex)
 
     def AddVICIControlButtons(self):
-        InstrumentIndex = len(self.Instruments)-1
+        instrument_index = len(self.instruments)-1
         newvars = [tk.StringVar(), tk.StringVar(value="A")]
-        newvars[0].set(self.Instruments[InstrumentIndex].name+":  ")
+        newvars[0].set(self.instruments[instrument_index].name+":  ")
         self.manual_page_variables.append(newvars)
 
         newbuttons = [
-         tk.Label(self.manual_page, textvariable=self.manual_page_variables[InstrumentIndex][0]),
+         tk.Label(self.manual_page, textvariable=self.manual_page_variables[instrument_index][0]),
          tk.Label(self.manual_page, text="   Position:"),
-         tk.Spinbox(self.manual_page, values=("A", "B"), textvariable=self.manual_page_variables[InstrumentIndex][1]),
-         tk.Button(self.manual_page, text="Change", command=lambda: self.queue.put((self.Instruments[InstrumentIndex].switchvalve, self.manual_page_variables[InstrumentIndex][1].get()))),
+         tk.Spinbox(self.manual_page, values=("A", "B"), textvariable=self.manual_page_variables[instrument_index][1]),
+         tk.Button(self.manual_page, text="Change", command=lambda: self.queue.put((self.instruments[instrument_index].switchvalve, self.manual_page_variables[instrument_index][1].get()))),
          ]
-        newbuttons[2].bind('<Return>', lambda event: self.queue.put((self.Instruments[InstrumentIndex].switchvalve, self.manual_page_variables[InstrumentIndex][1].get())))
+        newbuttons[2].bind('<Return>', lambda event: self.queue.put((self.instruments[instrument_index].switchvalve, self.manual_page_variables[instrument_index][1].get())))
         self.manual_page_buttons.append(newbuttons)
         # Place buttons
         for i in range(len(self.manual_page_buttons)):
@@ -898,8 +993,8 @@ class Main:
         SubDirectory = self.spec_sub_directory.get()
 
         for eachChar in SubDirectory:
-            if eachChar in self.illegalChars:
-                tk.messagebox.showinfo("Error", 'Directory name contains invalid characters. \nThese include: %s (includes spaces).' % (self.illegalChars), 'Invalid Input')
+            if eachChar in self.illegal_chars:
+                tk.messagebox.showinfo("Error", 'Directory name contains invalid characters. \nThese include: %s (includes spaces).' % (self.illegal_chars), 'Invalid Input')
                 return (False)
 
         if '//' in SubDirectory:
@@ -917,7 +1012,7 @@ class Main:
 
         Directory = os.path.join(BaseDirectory, SubDirectory)
 
-        OldDirectory = os.path.join(self.OldBaseDirectory, self.OldSubDirectory)
+        OldDirectory = os.path.join(self.old_base_directory, self.old_sub_directory)
 
         if OldDirectory != Directory:
             # self.SetStatus('Changing Directory . . .')
@@ -944,95 +1039,81 @@ class Main:
             if not found:
                 index = check
 
-            # print 'Index: %i' %(index)
-
-
             cmd = ''
             for a in range(index+1, len(nd_parts)):
                 self.adxIsDone = False
-                # print 'New directories to make'
                 tdirectory = '/'.join(nd_parts[:a])
-                # print tdirectory
                 if a < len(nd_parts)-1:
                     cmd = cmd + 'MKDIR_NO ' + str(tdirectory)+','
-                    # solocomm.controlQueue.put([('A', 'MKDIR_NO ' + str(tdirectory))])
                 else:
                     cmd = cmd + 'MKDIR ' + str(tdirectory)
 
             solocomm.controlQueue.put([('A', cmd)])
 
-            self.main_window.after(1000, self.OnMkdirTimer)
+            self.main_window.after(1000, self.on_mkdir_timer)
 
-        self.OldBaseDirectory = BaseDirectory
-        self.OldSubDirectory = SubDirectory
+        self.old_base_directory = BaseDirectory
+        self.old_sub_directory = SubDirectory
 
         return (True, Directory)
 
-    def OnMkdirTimer(self):
+    def on_mkdir_timer(self):
+        """After making a new spec directory.
+
+        Don't think this is needed, but would be useful for feedback later if we want.
+        """
         if self.adxIsDone:
             if not self.exposing:
                 solocomm.controlQueue.put([('G', 'ADXDONE_OK')])
         pass
 
-
-    def OnExposeButton(self, postfix=None):
-
-        ### Input Sanitation ###
+    def run_tseries(self, postfix=None):
+        """Run a tseries."""
+        # Input Sanitation
         try:
-            NoOfFrames = self.tseries_frames.get()
-            ExposureTime = self.tseries_time.get()
-            FileNumber = self.spec_fileno.get()
+            number_of_frames = self.tseries_frames.get()
+            exposure_time = self.tseries_time.get()
+            file_number = self.spec_fileno.get()
 
-            if NoOfFrames < 1 or FileNumber < 0:
+            if number_of_frames < 1 or file_number < 0:
                 raise ValueError
 
         except ValueError:
             tk.messagebox.showinfo('Error', 'Exposure time, number of frames or filenumber is invalid.', 'Invalid Input')
             return
-        ###
 
-        Filename = self.spec_filename.get().strip()
+        filename = self.spec_filename.get().strip()
 
-        for eachChar in Filename:
-            if eachChar in self.illegalChars:
-                tk.messagebox.showinfo('Error', 'Filename contains invalid characters. \nThese include: %s (includes spaces).' %(self.illegalChars), 'Invalid Input')
+        for eachChar in filename:
+            if eachChar in self.illegal_chars:
+                tk.messagebox.showinfo('Error', 'Filename contains invalid characters. \nThese include: %s (includes spaces).' % (self.illegal_chars), 'Invalid Input')
                 return
 
-        if Filename == '':
+        if filename == '':
             tk.messagebox.showinfo('Error', 'File must have a name.', 'Invalid Input')
             return
 
-        changedir, Directory = self.ChangeDirectory()
+        changedir, directory = self.Changedirectory()
 
         if changedir:
-            #try:
-            #    self.writeLogFile()
-            #except:
-            #    pass
             self.exposing = True
-            FileNumber = FileNumber = self.spec_fileno.get()
-            # NewDark = self.exposureChkboxForceDark.GetValue()
-            #self.exposeButton.Enable(False)
-            #self.SetStatus('Exposing Sample')
+            file_number = file_number = self.spec_fileno.get()
 
-            #self.counter.SetTime((ExposureTime+0.04) * int(NoOfFrames)+1)
-            #self.soundInitiatingExposure.Play()
+            new_dark = '0'
 
-            NewDark = '0'
+            print(('A EXPOSE '+filename + '_' + file_number + ',' + str(exposure_time) + ',' + str(number_of_frames)))
 
-            print(('A EXPOSE '+Filename + '_' + FileNumber + ',' + str(ExposureTime) + ',' + str(NoOfFrames)))
-
-            file = Filename
-            file += '_' + FileNumber
+            file = filename
+            file += '_' + file_number
             if postfix is not None:
                 file += '_' + postfix
 
-            solocomm.controlQueue.put([('A', 'EXPOSE '+ file + ',' +
-                                         str(ExposureTime) + ',' + str(NoOfFrames) +
-                                         ',' + str(Directory) + ',' + str(NewDark))])
+            solocomm.controlQueue.put([('A', 'EXPOSE ' + file + ',' +
+                                        str(exposure_time) + ',' + str(number_of_frames) +
+                                        ',' + str(directory) + ',' + str(new_dark))])
 
             self.spec_fileno.delete(0, 'end')
-            self.spec_fileno.insert(0, FileNumber+1)
+            self.spec_fileno.insert(0, file_number+1)
 
 
 if __name__ == "__main__":
