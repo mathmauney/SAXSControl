@@ -536,7 +536,7 @@ class FlowPath(tk.Canvas):
         x_avg = math.floor((x0 + x1) / 2)
         self.waste_line = self.create_fluid_line('y', x_avg, y0, -50, color='grey30')
         self.valve2.connect(self.waste_line, 5)
-        self.waste_text = self.create_text(x_avg+10, 10, anchor='se', text='Waste', fill='white', angle=90, font=("Helvetica", 12))
+        self.waste_text = self.create_text(x_avg+10, 10, anchor='se', text='Waste', fill='black', angle=90, font=("Helvetica", 12))
         self.tag_raise(self.waste_text)
         # From Valve 2 to Valve 3
         x0, y0, x1, y1 = self.coords(self.valve3.circles[3])

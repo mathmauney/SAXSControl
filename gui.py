@@ -76,23 +76,33 @@ class Main:
             core_height = window_height - state_height - 50
             log_height = core_height
 
+        # Make it pretty
+        #self.gui_bg_color = "SteelBlue4"
+        #self.gui_bg_color = "lavender"
+        self.gui_bg_color = "deep pink"
+        #self.gui_bg_color = "steel blue"
+
+        self.main_window.configure(bg=self.gui_bg_color)
+        ttk.Style().configure("TNotebook", background=self.gui_bg_color)
+
         # Button Bar
         self.buttons = tk.Frame(self.main_window)
         self.exit_button = tk.Button(self.main_window, text='X', command=self.exit_)
         self.stop_button = tk.Button(self.main_window, text='STOP', command=self.stop, fg='red', font='Arial 16 bold')
 
         # Main Structures
+
         self.core = ttk.Notebook(self.main_window, width=core_width, height=core_height)
-        self.auto_page = tk.Frame(self.core)
-        self.config_page = tk.Frame(self.core)
-        self.manual_page = tk.Frame(self.core)
-        self.setup_page = tk.Frame(self.core)
-        self.elveflow_page = tk.Frame(self.core)
+        self.auto_page = tk.Frame(self.core, bg=self.gui_bg_color)
+        self.config_page = tk.Frame(self.core, bg=self.gui_bg_color)
+        self.manual_page = tk.Frame(self.core, bg=self.gui_bg_color)
+        self.setup_page = tk.Frame(self.core, bg=self.gui_bg_color)
+        self.elveflow_page = tk.Frame(self.core, bg=self.gui_bg_color)
         self.logs = ttk.Notebook(self.main_window, width=log_width, height=log_height)
         self.user_logs = tk.Frame(self.logs)
         self.advanced_logs = tk.Frame(self.logs)
         # self.instrument_logs = tk.Frame(self.logs)
-        self.state_frame = tk.Frame(self.main_window, width=window_width, height=state_height, bg='blue')
+        self.state_frame = tk.Frame(self.main_window, width=window_width, height=state_height, bg=self.gui_bg_color)
         # Widgets on Main page
         self.spec_base_directory_label = tk.Label(self.auto_page, text='Spec Base Directory:')
         self.spec_base_directory = tk.StringVar(value='')
@@ -237,9 +247,9 @@ class Main:
         # Flow setup frames
         self.load_config(filename='config.ini', preload=True)
         if self.sucrose:
-            self.flowpath = FlowPath(self.state_frame, self, sucrose=True)
+            self.flowpath = FlowPath(self.state_frame, self, sucrose=True, bg=self.gui_bg_color)
         else:
-            self.flowpath = FlowPath(self.state_frame, self)
+            self.flowpath = FlowPath(self.state_frame, self, bg=self.gui_bg_color)
         time.sleep(0.6)   # I have no idea why we need this but everything crashes and burns if we don't include it
         # It acts as though there's a race condition, but aren't we still single-threaded at this point?
         # I suspect something might be going wrong with the libraries, then, especially tkinter and matplotlib
