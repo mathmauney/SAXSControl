@@ -1015,10 +1015,6 @@ class Main:
         OldDirectory = os.path.join(self.old_base_directory, self.old_sub_directory)
 
         if OldDirectory != Directory:
-            # self.SetStatus('Changing Directory . . .')
-            # print 'Directory test:'
-            # print OldDirectory
-            # print Directory
             if OldDirectory[-1] != '/':
                 OldDirectory = OldDirectory+'/'
             if Directory[-1] != '/':
@@ -1070,14 +1066,12 @@ class Main:
     def run_tseries(self, postfix=None):
         """Run a tseries."""
         # Input Sanitation
-        print("In tseries")
         try:
             number_of_frames = self.tseries_frames.get()
             exposure_time = self.tseries_time.get()
             file_number = self.spec_fileno.get()
 
             if number_of_frames < 1 or file_number < 0:
-                print("ValueError time")
                 raise ValueError
 
         except ValueError:
@@ -1096,7 +1090,6 @@ class Main:
             return
 
         changedir, directory = self.ChangeDirectory()
-        print("Ran ChangeDirectory")
 
         if changedir:
             print("In changedir if")

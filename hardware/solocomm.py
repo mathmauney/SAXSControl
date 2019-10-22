@@ -61,11 +61,12 @@ class MySpecCommand(SpecCommand.SpecCommandA):
         return self.getReady
 
     def beginWait(self):
-        print('Command sent to spec')
+        logger.debug('Command sent to spec')
+        pass
 
     def replyArrived(self, reply):
-        print('Reply from spec1234: ', str(reply.data))
-        print('Errorcode: ', str(reply.error))
+        logger.debug('Reply from spec1234: ', str(reply.data))
+        logger.debug('Errorcode: ', str(reply.error))
         self.reply = reply
 
     def GetReply(self):
@@ -104,7 +105,6 @@ class SpecCommThread(threading.Thread):
             self.specCommand = None
             controlQueue.put([('G', 'A LED_ERROR')])
             controlQueue.put([('G', 'A CONNECT_ERROR')])
-            print('Spec Timeout')
             logger.warning("Unable to connect to SPEC")
 
         ###############################################
@@ -114,7 +114,7 @@ class SpecCommThread(threading.Thread):
                 commandList = adxCommandQueue.get()
                 adxCommandQueue.task_done()
 
-                print('SpecThread Processing : ', str(commandList))
+                logger.debug('SpecThread Processing : ', str(commandList))
 
                 self.abortProcess = False
                 self.exposure = False
@@ -135,7 +135,7 @@ class SpecCommThread(threading.Thread):
                             if eachCommand.split()[1] == 'mkdir':
                                 self.LEDOn = True
                         answer = self.waitForAnswerFromSpec()
-                        print('Received Answer From SPEC :', str(answer))
+                        logger.debug('Received Answer From SPEC :', str(answer))
                     except (AttributeError, SpecClient.SpecClientError.SpecClientNotConnectedError):
                         controlQueue.put([('G', 'A LED_ERROR')])
                         controlQueue.put([('G', 'A CONNECT_ERROR')])
@@ -158,7 +158,6 @@ class SpecCommThread(threading.Thread):
         self.waitingForAnswer = True
 
         self.specCommand.ClearReply()
-        print('Waiting for answer from SPEC...')
         while self.waitingForAnswer and self.abortProcess == False:
             SpecEventsDispatcher.dispatch()
             time.sleep(0.01)
@@ -169,10 +168,8 @@ class SpecCommThread(threading.Thread):
                 self.specCommand.ClearReply()
                 return answer.getValue()
         if self.abortProcess:
-            print('No longer waiting')
             self.specCommand.abort()
             answer = self.waitForAnswerFromSpecAbort()
-            print('Got resonse from spec for abort: %s' % (answer))
             if self.exposure:
                 controlQueue.put([('A', 'closes')])
             return 'Aborted'
@@ -195,7 +192,6 @@ class SpecCommThread(threading.Thread):
                 return answer.getValue()
 
             loopcount = loopcount + 1
-        print('Waiting for abort response timed out!!!')
 
     def tryReconnect(self, TryOnce=False, host=None):
         reconnected = False
@@ -206,10 +202,10 @@ class SpecCommThread(threading.Thread):
 
         if TryOnce:
             try:
-                print('Trying to reconnect to SPEC...')
+                logger.info('Trying to reconnect to SPEC...')
                 self.specCommand = MySpecCommand('', self.host, self)
                 reconnected = True
-                print('Connected!')
+                logger.info('Connected!')
                 return True
             except SpecClient.SpecClientError.SpecClientTimeoutError:
                 logger.warning("Unable to connect to SPEC")
@@ -217,11 +213,11 @@ class SpecCommThread(threading.Thread):
         else:
             while not reconnected:
                 try:
-                    print('Trying to reconnect to SPEC...')
+                    logger.info('Trying to reconnect to SPEC...')
                     time.sleep(1)
                     self.specCommand = MySpecCommand('', host, self)
                     reconnected = True
-                    print('Connected!')
+                    logger.info('Connected!')
                     return True
                 except SpecClient.SpecClientError.SpecClientTimeoutError:
                     pass
@@ -371,7 +367,6 @@ class ControlThread(threading.Thread):
                 elif isinstance(queue_item, list):
                     commandList = queue_item
                     for command in commandList:
-                        # print 'Processing command: ', command
                         server = command[0]
                         cmd = command[1]
 
@@ -381,7 +376,6 @@ class ControlThread(threading.Thread):
                         try:
                             # ADX
                             if server == 'A':
-                                # print 'In ADX processing section of controlthread'
                                 self.queueAdxCommandAndGetAnswer(command)
 
                         except (CommException, queue.Empty):
@@ -442,18 +436,15 @@ class ControlThread(threading.Thread):
 
         commands.append(expose)
 
-        # print commands
 
         return commands
 
     def setupSpecMkdirCommands(self, command):
-        print('In setupSpecMkdir')
         commands = []
 
         for item in command[1].split(','):
             com = item.split()[0]
             Directory=item.split()[1]
-            # print 'Directory to make is: %s' %(Directory)
 
 
             newdir = 'u mkdir ' + str(Directory)
@@ -493,17 +484,12 @@ class ControlThread(threading.Thread):
             commands = self.setupSpecExposureCommands(command)
             adxCommandQueue.put(commands)
         elif command[1].split()[0].startswith('MKDIR'):
-            print('Making new directory')
             commands = self.setupSpecMkdirCommands(command)
             adxCommandQueue.put(commands)
-            print('Put command: %s' % commands)
         elif command[1].split()[0].startswith('LOGFILE'):
-            print('writing log file via spec')
-            # print command
             if self.ADXComm.isSpec:
                 commands = self.setupSpecLogCommands(command)
 
-            # print commands
             adxCommandQueue.put(commands)
         else:
             adxCommandQueue.put([command[1]])
@@ -519,9 +505,6 @@ class ControlThread(threading.Thread):
 
 
 if __name__ == "__main__":
-
-    print("Entering Main!")
-
     if len(sys.argv) > 1:
         commandFile = sys.argv[1]
         commandList = parse_command_file(commandFile)
@@ -546,19 +529,16 @@ if __name__ == "__main__":
                         soloSoftCommandQueue.put(command)
                         answer = soloSoftAnswerQueue.get()
                         soloSoftAnswerQueue.task_done()
-                        print('Answer :', answer)
 
                 elif server == 'R':
                     soloSoftCommandQueue.put(command)
                     answer = soloSoftAnswerQueue.get()
                     soloSoftAnswerQueue.task_done()
-                    print('Answer :', answer)
 
             if commandList[-1][1] == 'LOOPEND':
                 commandList = commandList[loopStartIdx:loopEndIdx+1]
             else:
                 commandList = []
-            print(' ')
 
         else:
             inp = input('Write command: ')
@@ -571,7 +551,6 @@ if __name__ == "__main__":
                     soloSoftCommandQueue.put((serv, cmd))
                     answer = soloSoftAnswerQueue.get()
                     soloSoftAnswerQueue.task_done()
-                    print('Answer: ', answer)
 
             except IndexError:
-                print('Command not in the right format!')
+                pass

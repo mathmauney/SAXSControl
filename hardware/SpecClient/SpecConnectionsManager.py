@@ -124,16 +124,11 @@ class _ThreadedSpecConnectionsManager(threading.Thread):
         Arguments:
         specVersion -- a string in the 'host:port' form
         """
-        print('In get connection')
         gc.collect()
-        print('Gc.collect() called')
         try:
             con = self.connections[specVersion]()
-            print('Got gonnection in getConnection()')
         except KeyError:
-            print('KeyError in gotConnection')
             con = SpecConnection.SpecConnection(specVersion)
-            print('Made new SpecConnection')
             def removeConnection(ref, connectionName = specVersion):
                 self.closeConnection(connectionName)
 
@@ -144,11 +139,9 @@ class _ThreadedSpecConnectionsManager(threading.Thread):
                 self.connectionDispatchers[specVersion] = con.dispatcher
             finally:
                 self.lock.release()
-        print('Middle of getConnection')
         if not self.__started:
             self.start()
             self.__started = True
-        print('Out of getConnectoin')
         return con
 
 

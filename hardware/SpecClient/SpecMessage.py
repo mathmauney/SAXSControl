@@ -12,7 +12,7 @@ __version__ = '1.0'
 
 import struct
 import time
-import types
+import logging
 
 from . import SpecArray
 from . import SpecReply
@@ -22,6 +22,8 @@ from . import SpecReply
 MAGIC_NUMBER=4277009102
 NATIVE_HEADER_VERSION=4
 NULL='\000'
+
+logger = logging.getLogger('python')
 
 # cmd
 (CLOSE, ABORT, CMD, CMD_WITH_RETURN, REGISTER, UNREGISTER, EVENT,  \
@@ -211,8 +213,8 @@ class SpecMessage:
                     try:
                         data = str(data)
                     except:
-                        print('Error in message read')
-                        print(str(data))
+                        logger.debug('Error in message read')
+                        logger.debug(str(data))
                         pass
 
             return data
@@ -302,31 +304,28 @@ class message4(SpecMessage):
                     self.sec, self.usec, self.cmd, \
                     datatype, self.rows, self.cols, \
                     datalen, self.err, self.flags, name  = struct.unpack(self.packedHeaderDataFormat, rawstring)
-        #print 'READ header', self.magic, 'vers=', self.vers, 'size=', self.size, 'cmd=', self.cmd, 'type=', datatype, 'datalen=', datalen, 'err=', self.err, 'flags=', self.flags, 'name=', str(self.name)
         self.time = self.sec + float(self.usec) / 1E6
         # self.name = name.replace(NULL, '') #remove padding null bytes
         self.name = name
         if self.err > 0:
             datatype = ERROR #change message type to 'ERROR' for further processing
-        print('Read header, CMD = ' + str(self.cmd))
+        logger.debug('Read header, CMD = ' + str(self.cmd))
         return (datatype, datalen)
 
 
     def sendingString(self):
         if self.type is None:
-            print('invalid message')
+            logger.debut('invalid message')
             return ''
 
         data = self.sendingDataString(self.data, self.type)
         datalen = len(data.encode('ascii'))
 
-        #print 'WRITE header', self.magic, 'vers=', self.vers, 'size=', self.size, 'cmd=', self.cmd, 'type=', self.type, 'datalen=', datalen, 'err=', self.err, 'flags=', self.flags, 'name=', str(self.name)
-        #print 'WRITE data', data
         header = struct.pack(self.packedHeaderDataFormat, self.magic, self.vers, self.size,
                              self.sn, self.sec, self.usec, self.cmd, self.type,
                              self.rows, self.cols, datalen, self.err, self.flags, str(self.name).encode('ascii'))
-        print('Header: ' + str(header))
-        print('Data: ' + str(data.encode('ascii')))
+        logger.debug('Header: ' + str(header))
+        logger.debug('Data: ' + str(data.encode('ascii')))
         return header + data.encode('ascii')
 
 

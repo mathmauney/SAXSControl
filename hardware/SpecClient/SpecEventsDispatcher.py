@@ -8,7 +8,7 @@ import time
 (UPDATEVALUE, FIREEVENT) = (1, 2)
 connections = {} # { senderId0: { signal0: [receiver0, ..., receiverN], signal1: [...], ... }, senderId1: ... }
 senders = {} # { senderId: sender, ... }
-
+logger = logging.getLogger('python')
 
 class SpecClientDispatcherError(Exception):
     def __init__(self, args=None):
@@ -62,10 +62,10 @@ class Event:
         try:
             self.receivers = connections[senderId][signal]
         except:
-            print('problem setting recievers')
-            print('connections = ' + str(connections))
-            print('senderId = ' + str(senderId))
-            print('signal = ' + str(signal))
+            logger.debug('problem setting recievers')
+            logger.debug('connections = ' + str(connections))
+            logger.debug('senderId = ' + str(senderId))
+            logger.debug('signal = ' + str(signal))
             pass
 
 
@@ -101,7 +101,7 @@ class EventsQueue(queue.Queue):
 
                 self._put( (r, event.args) )
         except:
-            print('problem in put')
+            logger.debug('problem in SpecEventsDispatcher.put')
         finally:
             self.mutex.release()
 
@@ -256,11 +256,9 @@ def callableObjectRef(object):
 
 def connect(sender, signal, slot, dispatchMode = UPDATEVALUE):
     if sender is None or signal is None:
-        print('Got none in connect')
         return
 
     if not callable(slot):
-        print('Got non-callable in connect')
         return
 
     global connections
@@ -280,7 +278,7 @@ def connect(sender, signal, slot, dispatchMode = UPDATEVALUE):
         weakSender = weakref.ref(sender, remove)
         senders[senderId] = weakSender
     except:
-        print('Problem in dispatcher connection')
+        logger.debug('Problem in dispatcher connection')
         pass
 
     receivers = []
@@ -353,7 +351,6 @@ def dispatch():
 
 def _removeSender(senderId):
     try:
-        #print('Removing sender')
         del connections[senderId]
         del senders[senderId]
     except KeyError:
@@ -362,7 +359,6 @@ def _removeSender(senderId):
 
 def _removeReceiver(weakReceiver):
     """Remove receiver from connections"""
-    #print('Removing reciever')
     for senderId in list(connections.keys()):
         for signal in list(connections[senderId].keys()):
             receivers = connections[senderId][signal]
@@ -387,3 +383,8 @@ def _cleanupConnections(senderId, signal):
         if len(signals) == 0:
             # no more signals
             _removeSender(senderId)
+
+
+def cmp(a, b):
+    """For python2 code compatibility."""
+    return (a > b) - (a < b)

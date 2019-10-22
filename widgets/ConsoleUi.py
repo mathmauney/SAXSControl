@@ -58,7 +58,6 @@ class ConsoleUi:
         self.queue_handler.addFilter(MyFilter(levels))
 
 
-
 class QueueHandler(logging.Handler):
     """Class to send logging records to a queue
     It can be used from different threads
