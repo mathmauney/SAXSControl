@@ -50,7 +50,7 @@ class SAXSController(serial.Serial):
         """Scan I2C line."""
         if not self.enabled:
             self.logger.info("Microcontroller not set up")
-            return
+            raise ValueError
         if not self.is_open:
             self.open()
         self.write(b'I')
@@ -61,7 +61,7 @@ class SAXSController(serial.Serial):
     def get_addresses(self):
         if not self.enabled:
             self.logger.info("Microcontroller not set up")
-            return
+            raise ValueError
         if not self.is_open:
             self.open()
         # Check instruments
@@ -134,7 +134,7 @@ class HPump:
         responceflag = False
         if not HPump.enabled:
             self.logger.info(self.name+" not enabled")
-            return
+            raise ValueError
         if self.pc_connect:
             if not resource.is_open:
                 resource.open()
@@ -177,7 +177,7 @@ class HPump:
         responceflag = False
         if not HPump.enabled:
             self.logger.info(self.name+" not enabled")
-            return
+            raise ValueError
         if self.pc_connect:
             if not resource.is_open:
                 resource.open()
@@ -220,7 +220,7 @@ class HPump:
         # consider moving to after checking with pump
         if not HPump.enabled:
             self.logger.info(self.name+" not enabled")
-            return
+            raise ValueError
         ratestr = str(rate).zfill(5)
         if self.pc_connect:
             if not resource.is_open:
@@ -245,7 +245,7 @@ class HPump:
         # consider moving to after checking with pump
         if not HPump.enabled:
             self.logger.info(self.name+" not enabled")
-            return
+            raise ValueError
 
         ratestr = str(rate).zfill(5)
         if self.pc_connect:
@@ -271,7 +271,7 @@ class HPump:
         # Function to change the current flowrate whether infuse or withdraw
         if not HPump.enabled:
             self.logger.info(self.name+" not enabled")
-            return
+            raise ValueError
 
         if(self.infusing):
             return self.set_infuse_rate(rate, units)
@@ -281,7 +281,7 @@ class HPump:
     def send_command(self, command, resource=pumpserial):   # sends an albitrary command
         if not HPump.enabled:
             self.logger.info(self.name+" not enabled")
-            return
+            raise ValueError
         if self.pc_connect:
             if not resource.is_open:
                 resource.open()
@@ -292,7 +292,7 @@ class HPump:
     def infuse(self, resource=pumpserial):
         if not HPump.enabled:
             self.logger.info(self.name+" not enabled")
-            return
+            raise ValueError
         self.infusing = True
         if self.pc_connect:
             if not resource.is_open:
@@ -310,7 +310,7 @@ class HPump:
     def refill(self, resource=pumpserial):
         if not HPump.enabled:
             self.logger.info(self.name+" not enabled")
-            return
+            raise ValueError
         self.infusing = False
         if self.pc_connect:
             if not resource.is_open:
@@ -328,7 +328,7 @@ class HPump:
     def reverse(self, resource=pumpserial):
         if not HPump.enabled:
             self.logger.info(self.name+" not enabled")
-            return
+            raise ValueError
         self.infusing = not self.infusing
         if self.pc_connect:
             if not resource.is_open:
@@ -342,6 +342,7 @@ class HPump:
 
     def set_mode_pump(self,  resource=pumpserial):
         if not HPump.enabled:
+            self.logger.info(self.name+" not enabled")
             return
         if self.pc_connect:
             if not resource.is_open:
@@ -359,7 +360,7 @@ class HPump:
     def set_mode_vol(self,  resource=pumpserial):
         if not HPump.enabled:
             self.logger.info(self.name+" not enabled")
-            return
+            raise ValueError
         if self.pc_connect:
             if not resource.is_open:
                 resource.open()
@@ -376,7 +377,7 @@ class HPump:
     def set_mode_progam(self,  resource=pumpserial):
         if not HPump.enabled:
             self.logger.info(self.name+" not enabled")
-            return
+            raise ValueError
         if self.pc_connect:
             if not resource.is_open:
                 resource.open()
@@ -393,7 +394,7 @@ class HPump:
     def set_target_vol(self, vol, resource=pumpserial):
         if not HPump.enabled:
             self.logger.info(self.name+" not enabled")
-            return
+            raise ValueError
         volstr = str(vol).zfill(5)
         if self.pc_connect:
             if not resource.is_open:
@@ -413,7 +414,7 @@ class HPump:
         success = False
         if not HPump.enabled:
             self.logger.info(self.name+" not enabled")
-            return
+            raise ValueError
         if self.pc_connect:
             if not resource.is_open:
                 resource.open()
@@ -502,7 +503,7 @@ class HPump:
         success = False
         if not HPump.enabled:
             self.logger.info(self.name+" not enabled")
-            return
+            raise ValueError
         if self.pc_connect:
             if not resource.is_open:
                 resource.open()
@@ -534,7 +535,7 @@ class HPump:
         success = False
         if not HPump.enabled:
             self.logger.info(self.name+" not enabled")
-            return
+            raise ValueError
         if self.pc_connect:
             if not resource.is_open:
                 resource.open()
@@ -566,7 +567,7 @@ class HPump:
         success = False
         if not HPump.enabled:
             self.logger.info(self.name+" not enabled")
-            return
+            raise ValueError
         if self.pc_connect:
             if not resource.is_open:
                 resource.open()
@@ -602,7 +603,7 @@ class HPump:
         success = False
         if not HPump.enabled:
             self.logger.info(self.name+" not enabled")
-            return
+            raise ValueError
         if self.pc_connect:
             if not resource.is_open:
                 resource.open()
@@ -638,7 +639,7 @@ class HPump:
         success = False
         if not HPump.enabled:
             self.logger.info(self.name+" not enabled")
-            return
+            raise ValueError
         if self.pc_connect:
             if not resource.is_open:
                 resource.open()
@@ -672,7 +673,7 @@ class HPump:
     def stop(self, resource=pumpserial):
         if not HPump.enabled:
             self.logger.info(self.name+" not enabled")
-            return
+            return  # not raising error so that the remaining of the stop function isnt dumped
         if self.pc_connect:
             if not resource.is_open:
                 resource.open()
@@ -741,7 +742,7 @@ class Rheodyne:
             raise RuntimeError  # error valve didnt acknowledge
         if not self.enabled:
             self.logger.info(self.name+" not enabled")
-            return
+            raise ValueError
         if self.pc_connect:
             if not self.serial_object.is_open:
                 self.serial_object.open()
@@ -774,7 +775,7 @@ class Rheodyne:
         maxiterations = 10
         if not self.enabled:
             self.logger.info(self.name+" not enabled")
-            return
+            raise ValueError
 
         if self.pc_connect:
             if not self.serial_object.is_open:
@@ -824,7 +825,7 @@ class Rheodyne:
         # Addres needs to be even int
         if not self.enabled:
             self.logger.info(self.name+" not enabled")
-            return
+            raise ValueError
         if address % 2 == 0:
             if self.pc_connect:
                 s = hex(address)
@@ -899,7 +900,7 @@ class VICI:
                 raise ValueError
         if not self.enabled:
             self.logger.info(self.name+" not set up, switching ignored")
-            return
+            raise ValueError
         if not self.serialobject.is_open:
             self.serialobject.open()
         commandtosend = self.ControllerKey+"GO"+position+"\r"
@@ -918,7 +919,7 @@ class VICI:
     def currentposition(self):
         if not self.enabled:
             self.logger.info(self.name+" not set up, Query ignored")
-            return
+            raise ValueError
 
         if not self.serialobject.is_open:
             self.serialobject.open()
