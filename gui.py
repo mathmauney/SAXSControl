@@ -107,12 +107,17 @@ class Main:
         self.spec_fileno_label = tk.Label(self.auto_page, text='File #:')
         self.spec_fileno = tk.IntVar(value=0)
         self.spec_fileno_box = tk.Entry(self.auto_page, textvariable=self.spec_fileno)
-        self.buffer_sample_buffer_button = tk.Button(self.auto_page, text='Run Buffer/Sample/Buffer', command=self.buffer_sample_buffer_command)
-        self.clean_button = tk.Button(self.auto_page, text='Clean/Refill', command=self.clean_and_refill_command)
-        self.load_sample_button = tk.Button(self.auto_page, text='Load Sample', command=self.load_sample_command)
-        self.load_buffer_button = tk.Button(self.auto_page, text='Load Buffer', command=self.load_buffer_command)
-        self.clean_only_button = tk.Button(self.auto_page, text='Clean Only', command=self.clean_only_command)
-        self.refill_only_button = tk.Button(self.auto_page, text='Refill Only', command=self.refill_only_command)
+        # Auto buttons
+        auto_button_font = 'Arial 18 bold'
+        auto_button_width = 10
+        self.buffer_sample_buffer_button = tk.Button(self.auto_page, text='Auto Run', command=self.buffer_sample_buffer_command, font=auto_button_font, width=auto_button_width, height=3)
+        self.clean_button = tk.Button(self.auto_page, text='Clean/Refill', command=self.clean_and_refill_command, font=auto_button_font, width=auto_button_width, height=3)
+        self.load_sample_button = tk.Button(self.auto_page, text='Load Sample', command=self.load_sample_command, font=auto_button_font, width=auto_button_width)
+        self.load_buffer_button = tk.Button(self.auto_page, text='Load Buffer', command=self.load_buffer_command, font=auto_button_font, width=auto_button_width)
+        self.clean_only_button = tk.Button(self.auto_page, text='Clean Only', command=self.clean_only_command, font=auto_button_font, width=auto_button_width)
+        self.refill_only_button = tk.Button(self.auto_page, text='Refill Only', command=self.refill_only_command, font=auto_button_font, width=auto_button_width)
+        self.purge_button = tk.Button(self.auto_page, text='Purge', command=self.purge_command, font=auto_button_font, width=auto_button_width, height=3)
+        # Elveflow Plots
         self.fig_dpi = 96  # this shouldn't matter too much (because we normalize against it) except in how font sizes are handled in the plot
         self.main_tab_fig = plt.Figure(figsize=(core_width*2/3/self.fig_dpi, core_height*3/4/self.fig_dpi), dpi=self.fig_dpi)
         self.main_tab_ax1 = self.main_tab_fig.add_subplot(111)
@@ -283,12 +288,14 @@ class Main:
         self.spec_filename_box.grid(row=3, column=0)
         self.spec_fileno_label.grid(row=2, column=1)
         self.spec_fileno_box.grid(row=3, column=1)
-        self.buffer_sample_buffer_button.grid(row=11, column=0)
-        self.load_sample_button.grid(row=11, column=1)
-        self.load_buffer_button.grid(row=11, column=2)
-        self.clean_button.grid(row=12, column=0)
-        self.clean_only_button.grid(row=12, column=1)
+        # Main Page Buttons
+        self.buffer_sample_buffer_button.grid(row=11, column=0, rowspan=2)
+        self.load_sample_button.grid(row=11, column=3)
+        self.load_buffer_button.grid(row=12, column=3)
+        self.clean_button.grid(row=11, column=1, rowspan=2)
+        self.clean_only_button.grid(row=11, column=2)
         self.refill_only_button.grid(row=12, column=2)
+        self.purge_button.grid(row=11, column=4, rowspan=2)
         self.canvas.get_tk_widget().grid(row=0, column=2, rowspan=10, columnspan=8, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
         # Manual page
         # Config page
@@ -774,6 +781,9 @@ class Main:
         self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
         self.queue.put((self.flowpath.valve3.set_auto_position, 0))
 
+    def purge_command(self):
+        pass
+
     def toggle_buttons(self):
         """Toggle certain buttons on and off when they should not be allowed to add to queue."""
         buttons = (self.buffer_sample_buffer_button,
@@ -951,7 +961,6 @@ class Main:
         for i in range(len(self.manual_page_buttons)):
             for y in range(len(self.manual_page_buttons[i])):
                 self.manual_page_buttons[i][y].grid(row=i, column=y)
-
 
     def AddVICISetButtons(self, name="VICI", hardware=""):
         self.instruments.append(SAXSDrivers.VICI(logger=self.python_logger, name=name, hardware_configuration=hardware))
