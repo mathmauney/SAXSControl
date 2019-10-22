@@ -244,6 +244,7 @@ class Main:
         self.elveflow_display = ElveflowDisplay(self.elveflow_page, core_height, core_width, self.config['Elveflow'], self.python_logger)
         self.elveflow_display.grid(row=0, column=0)
         self.queue = solocomm.controlQueue
+        self.manual_queue = solocomm.ManualControlQueue
         self.queue_busy = False
         self.listen_run_flag = threading.Event()
         self.listen_run_flag.set()
@@ -251,6 +252,7 @@ class Main:
         # self.listen_thread.start()
         self.load_config(filename='config.ini')
         self.connect_to_spec()
+        self.start_manual_thread()
         self.elveflow_display.start()
 
     def draw_static(self):
@@ -537,6 +539,12 @@ class Main:
             self.solo_controller.ADXComm.tryReconnect(TryOnce=True, host=self.spec_address.get())
         except AttributeError:
             self.solo_controller = solocomm.initConnections(self, host=self.spec_address.get())
+
+    def start_manual_thread(self):
+        """ Creates the thread for running instruments separate from auto thread"""
+        manual_thread = solocomm.ManualControlThread(self)
+        manual_thread.setDaemon(True)
+        manual_thread.start()
 
     def handle_exception(self, exception, value, traceback):
         """Add python exceptions to the GUI log."""
@@ -859,29 +867,29 @@ class Main:
         self.manual_page_variables.append(newvars)
         newbuttons = [
          tk.Label(self.manual_page, textvariable=self.manual_page_variables[instrument_index][0]),
-         tk.Button(self.manual_page, text="Run", command=lambda: self.queue.put(self.instruments[instrument_index].start_pump)),
-         tk.Button(self.manual_page, text="Stop", command=lambda:self.queue.put(self.instruments[instrument_index].stop_pump)),
+         tk.Button(self.manual_page, text="Run", command=lambda: self.manual_queue.put(self.instruments[instrument_index].start_pump)),
+         tk.Button(self.manual_page, text="Stop", command=lambda:self.manual_queue.put(self.instruments[instrument_index].stop_pump)),
          tk.Label(self.manual_page, text="  Infuse Rate:"),
          tk.Spinbox(self.manual_page, from_=0, to=1000, textvariable=self.manual_page_variables[instrument_index][1]),
-         tk.Button(self.manual_page, text="Set", command=lambda: self.queue.put((self.instruments[instrument_index].set_infuse_rate, self.manual_page_variables[instrument_index][1].get()))),
+         tk.Button(self.manual_page, text="Set", command=lambda: self.manual_queue.put((self.instruments[instrument_index].set_infuse_rate, self.manual_page_variables[instrument_index][1].get()))),
          tk.Label(self.manual_page, text="  Refill Rate:"),
          tk.Spinbox(self.manual_page, from_=0, to=1000, textvariable=self.manual_page_variables[instrument_index][2]),
-         tk.Button(self.manual_page, text="Set", command=lambda: self.queue.put((self.instruments[instrument_index].set_refill_rate, self.manual_page_variables[instrument_index][2].get()))),
+         tk.Button(self.manual_page, text="Set", command=lambda: self.manual_queue.put((self.instruments[instrument_index].set_refill_rate, self.manual_page_variables[instrument_index][2].get()))),
          tk.Label(self.manual_page, text="  Direction:"),
-         tk.Button(self.manual_page, text="Infuse", command=lambda: self.queue.put(self.instruments[instrument_index].infuse)),
-         tk.Button(self.manual_page, text="Refill", command=lambda: self.queue.put(self.instruments[instrument_index].refill)),
+         tk.Button(self.manual_page, text="Infuse", command=lambda: self.manual_queue.put(self.instruments[instrument_index].infuse)),
+         tk.Button(self.manual_page, text="Refill", command=lambda: self.manual_queue.put(self.instruments[instrument_index].refill)),
          tk.Label(self.manual_page, text="Mode"),
-         tk.Button(self.manual_page, text="Pump", command=lambda: self.queue.put(self.instruments[instrument_index].set_mode_pump)),
-         tk.Button(self.manual_page, text="Vol", command=lambda: self.queue.put(self.instruments[instrument_index].set_mode_vol)),
+         tk.Button(self.manual_page, text="Pump", command=lambda: self.manual_queue.put(self.instruments[instrument_index].set_mode_pump)),
+         tk.Button(self.manual_page, text="Vol", command=lambda: self.manual_queue.put(self.instruments[instrument_index].set_mode_vol)),
          tk.Label(self.manual_page, text="  Target Vol (ml):"),
          tk.Spinbox(self.manual_page, from_=0, to=1000, textvariable=self.manual_page_variables[instrument_index][3]),
          # tk.Button(self.manual_page, text="Set", command=lambda: self.queue.put((self.instruments[instrument_index].set_target_vol, self.manual_page_variables[instrument_index][3].get())))
-         tk.Button(self.manual_page, text="Set", command=lambda: self.queue.put((self.instruments[instrument_index].set_target_vol, self.manual_page_variables[instrument_index][3].get())))
+         tk.Button(self.manual_page, text="Set", command=lambda: self.manual_queue.put((self.instruments[instrument_index].set_target_vol, self.manual_page_variables[instrument_index][3].get())))
          ]
         # Bind Enter to Spinboxes
-        newbuttons[4].bind('<Return>', lambda event: self.queue.put((self.instruments[instrument_index].set_infuse_rate, self.manual_page_variables[instrument_index][1].get())))
-        newbuttons[7].bind('<Return>', lambda event: self.queue.put((self.instruments[instrument_index].set_refill_rate, self.manual_page_variables[instrument_index][2].get())))
-        newbuttons[16].bind('<Return>', lambda event: self.queue.put((self.instruments[instrument_index].set_target_vol, self.manual_page_variables[instrument_index][3].get())))
+        newbuttons[4].bind('<Return>', lambda event: self.manual_queue.put((self.instruments[instrument_index].set_infuse_rate, self.manual_page_variables[instrument_index][1].get())))
+        newbuttons[7].bind('<Return>', lambda event: self.manual_queue.put((self.instruments[instrument_index].set_refill_rate, self.manual_page_variables[instrument_index][2].get())))
+        newbuttons[16].bind('<Return>', lambda event: self.manual_queue.put((self.instruments[instrument_index].set_target_vol, self.manual_page_variables[instrument_index][3].get())))
         self.manual_page_buttons.append(newbuttons)
         # Build Pump
         for i in range(len(self.manual_page_buttons)):
@@ -894,7 +902,7 @@ class Main:
             if isinstance(button[0], COMPortSelector):
                 button[0].updatelist(SAXSDrivers.list_available_ports(self.AvailablePorts))
 
-    def add_rheodyne_set_buttons(self, address=-1, name="", hardware=""):
+    def add_rheodyne_set_buttons(self, address=-1, name="Rheodyne", hardware=""):
         self.instruments.append(SAXSDrivers.Rheodyne(logger=self.python_logger, address_I2C=address, name=name, hardware_configuration=hardware))
         instrument_index = len(self.instruments)-1
         newvars = [tk.IntVar(value=address), tk.StringVar(value=name), tk.IntVar(value=2), tk.StringVar(value=hardware)]
@@ -935,9 +943,9 @@ class Main:
          tk.Label(self.manual_page, textvariable=self.manual_page_variables[instrument_index][0]),
          tk.Label(self.manual_page, text="   Position:"),
          tk.Spinbox(self.manual_page, from_=1, to=self.setup_page_variables[instrument_index][2].get(), textvariable=self.manual_page_variables[instrument_index][1]),
-         tk.Button(self.manual_page, text="Change", command=lambda: self.queue.put((self.instruments[instrument_index].switchvalve, self.manual_page_variables[instrument_index][1].get()))),
+         tk.Button(self.manual_page, text="Change", command=lambda: self.manual_queue.put((self.instruments[instrument_index].switchvalve, self.manual_page_variables[instrument_index][1].get()))),
          ]
-        newbuttons[2].bind('<Return>', lambda event: self.queue.put((self.instruments[instrument_index].switchvalve, self.manual_page_variables[instrument_index][1].get())))
+        newbuttons[2].bind('<Return>', lambda event: self.manual_queue.put((self.instruments[instrument_index].switchvalve, self.manual_page_variables[instrument_index][1].get())))
         self.manual_page_buttons.append(newbuttons)
         # Place buttons
         for i in range(len(self.manual_page_buttons)):
@@ -945,7 +953,7 @@ class Main:
                 self.manual_page_buttons[i][y].grid(row=i, column=y)
 
 
-    def AddVICISetButtons(self, name="", hardware=""):
+    def AddVICISetButtons(self, name="VICI", hardware=""):
         self.instruments.append(SAXSDrivers.VICI(logger=self.python_logger, name=name, hardware_configuration=hardware))
         instrument_index = len(self.instruments)-1
         newvars = [tk.IntVar(value=-1), tk.StringVar(value=name), tk.StringVar(value=hardware)]
@@ -981,9 +989,9 @@ class Main:
          tk.Label(self.manual_page, textvariable=self.manual_page_variables[instrument_index][0]),
          tk.Label(self.manual_page, text="   Position:"),
          tk.Spinbox(self.manual_page, values=("A", "B"), textvariable=self.manual_page_variables[instrument_index][1]),
-         tk.Button(self.manual_page, text="Change", command=lambda: self.queue.put((self.instruments[instrument_index].switchvalve, self.manual_page_variables[instrument_index][1].get()))),
+         tk.Button(self.manual_page, text="Change", command=lambda: self.manual_queue.put((self.instruments[instrument_index].switchvalve, self.manual_page_variables[instrument_index][1].get()))),
          ]
-        newbuttons[2].bind('<Return>', lambda event: self.queue.put((self.instruments[instrument_index].switchvalve, self.manual_page_variables[instrument_index][1].get())))
+        newbuttons[2].bind('<Return>', lambda event: self.manual_queue.put((self.instruments[instrument_index].switchvalve, self.manual_page_variables[instrument_index][1].get())))
         self.manual_page_buttons.append(newbuttons)
         # Place buttons
         for i in range(len(self.manual_page_buttons)):

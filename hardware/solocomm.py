@@ -15,6 +15,7 @@ soloSoftCommandQueue = ClosableQueue.CQueue()
 soloSoftAnswerQueue = ClosableQueue.CQueue()
 
 controlQueue = ClosableQueue.CQueue()
+ManualControlQueue = ClosableQueue.CQueue()
 
 adxCommandQueue = ClosableQueue.CQueue()
 adxAnswerQueue = ClosableQueue.CQueue()
@@ -515,6 +516,70 @@ class ControlThread(threading.Thread):
             self.ADXComm.abort()
             self.cleanUpAfterAbort()
 
+class ManualControlThread(threading.Thread):
+
+    def __init__(self, MainGUI):
+
+        threading.Thread.__init__(self)
+        self.MainGUI = MainGUI
+        self.abortProcess = False
+
+    def run(self):
+        while self.MainGUI.listen_run_flag.is_set():
+            if not ManualControlQueue.empty():
+                queue_item = ManualControlQueue.get()
+                if isinstance(queue_item, list):
+                    commandList = queue_item
+                    if len(commandList) == 1 and (commandList[0][1] == 'SAFETYCHECK' or commandList[0][0] == 'G'):
+                        pass
+                    else:
+                        self.MainGUI.queue_busy = True
+                        # self.MainGUI.toggle_buttons()
+                elif not self.MainGUI.queue_busy:
+                    self.MainGUI.queue_busy = True
+                    # self.MainGUI.toggle_buttons()
+
+                if isinstance(queue_item, tuple):
+                    try:
+                        queue_item[0](*queue_item[1:])
+                    except:
+                        logger.exception("Caught exception in tuple queue item:")
+                        self.abort()
+                        pass
+                elif callable(queue_item):
+                    try:
+                        queue_item()
+                    except:
+                        logger.exception("Caught exception in tuple queue item:")
+                        self.abort()
+                        pass
+
+                if self.abortProcess:
+                    self.cleanUpAfterAbort()
+
+    def cleanUpAfterAbort(self):
+        """Clear queue and reset threads."""
+
+        self.abortProcess = False
+
+        controlQueueEmpty = ManualControlQueue.empty()
+
+        while controlQueueEmpty is False:
+            try:
+                tst = ManualControlQueue.get(timeout=3)
+                logger.debug('Queue cleaned ' + repr(tst))
+                ManualControlQueue.task_done()
+                controlQueueEmpty = ManualControlQueue.empty()
+            except queue.Empty:
+                controlQueueEmpty = True
+
+    def abort(self):
+        logger.warning("Queue Aborted")
+        if self.MainGUI.queue_busy:
+            self.abortProcess = True
+
+        else:
+            self.cleanUpAfterAbort()
 
 if __name__ == "__main__":
 
