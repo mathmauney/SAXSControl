@@ -91,7 +91,7 @@ class Main:
         self.logs = ttk.Notebook(self.main_window, width=log_width, height=log_height)
         self.user_logs = tk.Frame(self.logs)
         self.advanced_logs = tk.Frame(self.logs)
-        self.instrument_logs = tk.Frame(self.logs)
+        # self.instrument_logs = tk.Frame(self.logs)
         self.state_frame = tk.Frame(self.main_window, width=window_width, height=state_height, bg='blue')
         # Widgets on Main page
         self.spec_base_directory_label = tk.Label(self.auto_page, text='Spec Base Directory:')
@@ -225,9 +225,9 @@ class Main:
         self.user_logger_gui = ConsoleUi(self.user_logs, True)
         self.user_logger_gui.set_levels((logging.INFO, logging.WARNING))
         self.advanced_logger_gui = ConsoleUi(self.advanced_logs)
-        self.instrument_logger = MiscLogger(self.instrument_logs, state='disabled', height=log_length)
-        self.instrument_logger.configure(font='TkFixedFont')
-        self.controller.logger = self.instrument_logger
+        # self.instrument_logger = MiscLogger(self.instrument_logs, state='disabled', height=log_length)
+        # self.instrument_logger.configure(font='TkFixedFont')
+
         #
         # Flow setup frames
         self.load_config(filename='config.ini', preload=True)
@@ -270,7 +270,7 @@ class Main:
         # Log Tab Bar
         self.logs.add(self.user_logs, text='Simple')
         self.logs.add(self.advanced_logs, text='Advanced')
-        self.logs.add(self.instrument_logs, text='Instruments')
+        # self.logs.add(self.instrument_logs, text='Instruments')
         # Main Page
         self.spec_base_directory_label.grid(row=0, column=0)
         self.spec_base_directory_box.grid(row=1, column=0)
@@ -358,12 +358,14 @@ class Main:
         file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
         file_handler.setLevel(logging.DEBUG)
         # SPEC Log
-        self.instrument_logger.grid(row=0, column=0, sticky='NSEW')
+        # self.instrument_logger.grid(row=0, column=0, sticky='NSEW')
+        # Should logger definition be in draw function?
         self.python_logger = logging.getLogger("python")
         self.python_logger.setLevel(logging.DEBUG)
         self.user_logger_gui.pass_logger(self.python_logger)
         self.advanced_logger_gui.pass_logger(self.python_logger)
         self.python_logger.addHandler(file_handler)  # logging to a file
+        self.controller.logger = self.python_logger  # Pass the logger to the controller
 
     def stop(self):
         """Stop all running widgets."""
@@ -796,10 +798,10 @@ class Main:
 
     def add_pump_set_buttons(self, address=0, name="Pump", hardware=""):
         """Add pump buttons to the setup page."""
-        self.instruments.append(SAXSDrivers.HPump(logger=self.instrument_logger, name=name, address=address, hardware_configuration=hardware))
+        self.instruments.append(SAXSDrivers.HPump(logger=self.python_logger, name=name, address=address, hardware_configuration=hardware))
         self.NumberofPumps += 1
         instrument_index = len(self.instruments)-1
-        self.instrument_logger.append("Added pump")
+        self.python_logger.info("Added pump")
         newvars = [tk.IntVar(value=address), tk.StringVar(value=name), tk.StringVar(value=hardware)]
         self.setup_page_variables.append(newvars)
 
@@ -893,11 +895,11 @@ class Main:
                 button[0].updatelist(SAXSDrivers.list_available_ports(self.AvailablePorts))
 
     def add_rheodyne_set_buttons(self, address=-1, name="", hardware=""):
-        self.instruments.append(SAXSDrivers.Rheodyne(logger=self.instrument_logger, address_I2C=address, name=name, hardware_configuration=hardware))
+        self.instruments.append(SAXSDrivers.Rheodyne(logger=self.python_logger, address_I2C=address, name=name, hardware_configuration=hardware))
         instrument_index = len(self.instruments)-1
         newvars = [tk.IntVar(value=address), tk.StringVar(value=name), tk.IntVar(value=2), tk.StringVar(value=hardware)]
         self.setup_page_variables.append(newvars)
-        self.instrument_logger.append("Added Rheodyne")
+        self.python_logger.info("Added Rheodyne")
         newbuttons = [
          COMPortSelector(self.setup_page, exportselection=0, height=4),
          tk.Button(self.setup_page, text="Set Port", command=lambda: self.instruments[instrument_index].set_port(self.AvailablePorts[int(self.setup_page_buttons[instrument_index][0].curselection()[0])].device)),
@@ -943,12 +945,12 @@ class Main:
                 self.manual_page_buttons[i][y].grid(row=i, column=y)
 
 
-    def AddVICISetButtons(self):
-        self.instruments.append(SAXSDrivers.VICI(logger=self.instrument_logger, name=name, hardware_configuration=hardware))
+    def AddVICISetButtons(self, name="", hardware=""):
+        self.instruments.append(SAXSDrivers.VICI(logger=self.python_logger, name=name, hardware_configuration=hardware))
         instrument_index = len(self.instruments)-1
         newvars = [tk.IntVar(value=-1), tk.StringVar(value=name), tk.StringVar(value=hardware)]
         self.setup_page_variables.append(newvars)
-        self.instrument_logger.append("Added VICI Valve")
+        self.python_logger.info("Added VICI Valve")
         newbuttons = [
          COMPortSelector(self.setup_page, exportselection=0, height=4),
          tk.Button(self.setup_page, text="Set Port", command=lambda: self.instruments[instrument_index].set_port(self.AvailablePorts[int(self.setup_page_buttons[instrument_index][0].curselection()[0])].device)),

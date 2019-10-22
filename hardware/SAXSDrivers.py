@@ -44,30 +44,30 @@ class SAXSController(serial.Serial):
         self.port = port
         self.open()
         self.enabled = True
-        self.logger.append("Controller set to port "+port)
+        self.logger.info("Controller set to port "+port)
 
     def scan_i2c(self):
         """Scan I2C line."""
         if not self.enabled:
-            self.logger.append("Microcontroller not set up")
+            self.logger.info("Microcontroller not set up")
             return
         if not self.is_open:
             self.open()
         self.write(b'I')
         while self.in_waiting > 0:
-            self.logger.append(self.readline().decode())
+            self.logger.info(self.readline().decode())
 
 # To finish for Hardware Configure
     def get_addresses(self):
         if not self.enabled:
-            self.logger.append("Microcontroller not set up")
+            self.logger.info("Microcontroller not set up")
             return
         if not self.is_open:
             self.open()
         # Check instruments
         self.write(b'I')
         while self.in_waiting > 0:
-            self.logger.append(self.readline().decode())
+            self.logger.info(self.readline().decode())
 
 
 class HPump:
@@ -104,7 +104,7 @@ class HPump:
         resource.port = port
         self.pc_connect = True
         HPump.enabled = True
-        self.logger.append(self.name+" port set to "+port)
+        self.logger.info(self.name+" port set to "+port)
 
     # function  to send control over the controller
     # Pump intialization need pump number
@@ -115,15 +115,15 @@ class HPump:
         self.pc_connect = False
         self.controller = controller
         HPump.enabled = controller.enabled
-        self.logger.append(self.name+" set to Microntroller")
+        self.logger.info(self.name+" set to Microntroller")
 
     def change_values(self, address, name):
         """Change the name or address of the instrument."""
         if self.name != name:
-            self.logger.append("Changing Name: "+self.name+" to "+name)
+            self.logger.info("Changing Name: "+self.name+" to "+name)
             self.name = name
         if not self.address != address:
-            self.logger.append("Setting"+self.name+"address :"+name)
+            self.logger.info("Setting"+self.name+"address :"+name)
             self.address = address
 
 # Pump action commands
@@ -133,7 +133,7 @@ class HPump:
         """Send a start command to the pump."""
         responceflag = False
         if not HPump.enabled:
-            self.logger.append(self.name+" not enabled")
+            self.logger.info(self.name+" not enabled")
             return
         if self.pc_connect:
             if not resource.is_open:
@@ -146,11 +146,11 @@ class HPump:
                 pumpanswer = resource.readline().decode()
                 if self.address+"<" in pumpanswer:
                     self.running = True
-                    self.logger.append("Refilling " + self.name)
+                    self.logger.info("Refilling " + self.name)
                     responceflag = True
                 elif self.address+">" in pumpanswer:
                     self.running = True
-                    self.logger.append("Infusing " + self.name)
+                    self.logger.info("Infusing " + self.name)
                     responceflag = True
         else:
             if not self.controller.is_open:
@@ -163,20 +163,20 @@ class HPump:
                 pumpanswer = self.controller.readline().decode()
                 if self.address+"<" in pumpanswer:
                     self.running = True
-                    self.logger.append("Refilling " + self.name)
+                    self.logger.info("Refilling " + self.name)
                     responceflag = True
                 elif self.address+">" in pumpanswer:
                     self.running = True
-                    self.logger.append("Infusing " + self.name)
+                    self.logger.info("Infusing " + self.name)
                     responceflag = True
         if not responceflag:
-            self.logger.append("Error starting pump")
+            self.logger.info("Error starting pump")
             raise RuntimeError
 
     def stop_pump(self, resource=pumpserial):
         responceflag = False
         if not HPump.enabled:
-            self.logger.append(self.name+" not enabled")
+            self.logger.info(self.name+" not enabled")
             return
         if self.pc_connect:
             if not resource.is_open:
@@ -189,11 +189,11 @@ class HPump:
                 pumpanswer = resource.readline()
                 if self.address+"*" in pumpanswer:
                     self.running = False
-                    self.logger.append("Paused " + self.name)
+                    self.logger.info("Paused " + self.name)
                     responceflag = True
                 elif self.address+":" in pumpanswer:
                     self.running = False
-                    self.logger.append("Stopped " + self.name)
+                    self.logger.info("Stopped " + self.name)
                     responceflag = True
         else:
             if not self.controller.is_open:
@@ -206,20 +206,20 @@ class HPump:
                 pumpanswer = self.controller.readline().decode()
                 if self.address+":" in pumpanswer:
                     self.running = False
-                    self.logger.append("Paused " + self.name)
+                    self.logger.info("Paused " + self.name)
                     responceflag = True
                 elif self.address+"*" in pumpanswer:
                     self.running = False
-                    self.logger.append("Stopped " + self.name)
+                    self.logger.info("Stopped " + self.name)
                     responceflag = True
         if not responceflag:
-            self.logger.append("Error Stopping Pump")
+            self.logger.info("Error Stopping Pump")
             raise RuntimeError
 
     def set_infuse_rate(self, rate, units="UM", resource=pumpserial):
         # consider moving to after checking with pump
         if not HPump.enabled:
-            self.logger.append(self.name+" not enabled")
+            self.logger.info(self.name+" not enabled")
             return
         ratestr = str(rate).zfill(5)
         if self.pc_connect:
@@ -235,16 +235,16 @@ class HPump:
             self.controller.write(("-"+self.address+"RAT"+ratestr+units+"\n\r").encode())
         time.sleep(0.2)
         if rate == self.check_infuse_rate():
-            self.logger.append(self.name+" infuse Rate set to "+str(rate))
+            self.logger.info(self.name+" infuse Rate set to "+str(rate))
             self.infuserate = rate
         else:
-            self.logger.append("Error setting infuse rate for "+self.name)
+            self.logger.info("Error setting infuse rate for "+self.name)
             raise RuntimeError
 
     def set_refill_rate(self, rate, units="UM", resource=pumpserial):
         # consider moving to after checking with pump
         if not HPump.enabled:
-            self.logger.append(self.name+" not enabled")
+            self.logger.info(self.name+" not enabled")
             return
 
         ratestr = str(rate).zfill(5)
@@ -261,16 +261,16 @@ class HPump:
         # TODO: add possibillity to change units
         time.sleep(0.2)
         if rate == self.check_refill_rate():
-            self.logger.append(self.name+" refill rate set to "+str(rate))
+            self.logger.info(self.name+" refill rate set to "+str(rate))
             self.fillrate = rate
         else:
-            self.logger.append("Error setting refill rate for "+self.name)
+            self.logger.info("Error setting refill rate for "+self.name)
             raise RuntimeError
 
     def set_flow_rate(self, rate, units="UM", resource=pumpserial):
         # Function to change the current flowrate whether infuse or withdraw
         if not HPump.enabled:
-            self.logger.append(self.name+" not enabled")
+            self.logger.info(self.name+" not enabled")
             return
 
         if(self.infusing):
@@ -280,7 +280,7 @@ class HPump:
 
     def send_command(self, command, resource=pumpserial):   # sends an albitrary command
         if not HPump.enabled:
-            self.logger.append(self.name+" not enabled")
+            self.logger.info(self.name+" not enabled")
             return
         if self.pc_connect:
             if not resource.is_open:
@@ -291,7 +291,7 @@ class HPump:
 
     def infuse(self, resource=pumpserial):
         if not HPump.enabled:
-            self.logger.append(self.name+" not enabled")
+            self.logger.info(self.name+" not enabled")
             return
         self.infusing = True
         if self.pc_connect:
@@ -305,11 +305,11 @@ class HPump:
             self.controller.write(("-"+self.address+"DIRINF"+"\n\r").encode())
         time.sleep(0.2)
         self.check_direction("INFUSE")
-        self.logger.append(self.name+" set to infuse")
+        self.logger.info(self.name+" set to infuse")
 
     def refill(self, resource=pumpserial):
         if not HPump.enabled:
-            self.logger.append(self.name+" not enabled")
+            self.logger.info(self.name+" not enabled")
             return
         self.infusing = False
         if self.pc_connect:
@@ -323,11 +323,11 @@ class HPump:
             self.controller.write(("-"+self.address+"DIRREF"+"\n\r").encode())
         time.sleep(0.2)
         self.check_direction("REFILL")
-        self.logger.append(self.name+" set to refill")
+        self.logger.info(self.name+" set to refill")
 
     def reverse(self, resource=pumpserial):
         if not HPump.enabled:
-            self.logger.append(self.name+" not enabled")
+            self.logger.info(self.name+" not enabled")
             return
         self.infusing = not self.infusing
         if self.pc_connect:
@@ -354,11 +354,11 @@ class HPump:
             self.controller.write(("-"+self.address+"MOD PMP"+"\n\r").encode())
         time.sleep(0.2)
         self.check_mode("PUMP")
-        self.logger.append(self.name+" mode set to PUMP")
+        self.logger.info(self.name+" mode set to PUMP")
 
     def set_mode_vol(self,  resource=pumpserial):
         if not HPump.enabled:
-            self.logger.append(self.name+" not enabled")
+            self.logger.info(self.name+" not enabled")
             return
         if self.pc_connect:
             if not resource.is_open:
@@ -371,11 +371,11 @@ class HPump:
             self.controller.write(("-"+self.address+"MOD VOL"+"\n\r").encode())
         time.sleep(0.2)
         self.check_mode("VOL")
-        self.logger.append(self.name+" mode set to VOL")
+        self.logger.info(self.name+" mode set to VOL")
 
     def set_mode_progam(self,  resource=pumpserial):
         if not HPump.enabled:
-            self.logger.append(self.name+" not enabled")
+            self.logger.info(self.name+" not enabled")
             return
         if self.pc_connect:
             if not resource.is_open:
@@ -388,11 +388,11 @@ class HPump:
             self.controller.write(("-"+self.address+"MOD PGM"+"\n\r").encode())
         time.sleep(0.2)
         self.check_mode("PROG")
-        self.logger.append(self.name+" Mode set to program")
+        self.logger.info(self.name+" Mode set to program")
 
     def set_target_vol(self, vol, resource=pumpserial):
         if not HPump.enabled:
-            self.logger.append(self.name+" not enabled")
+            self.logger.info(self.name+" not enabled")
             return
         volstr = str(vol).zfill(5)
         if self.pc_connect:
@@ -406,13 +406,13 @@ class HPump:
             self.controller.write(("-"+self.address+'TGT'+volstr+"\n\r").encode())
 
         time.sleep(0.2)
-        self.logger.append(self.name+" Target Vol is "+str(self.check_target_volume())+" ml")
+        self.logger.info(self.name+" Target Vol is "+str(self.check_target_volume())+" ml")
 
     def is_running(self, resource=pumpserial):
         running = False
         success = False
         if not HPump.enabled:
-            self.logger.append(self.name+" not enabled")
+            self.logger.info(self.name+" not enabled")
             return
         if self.pc_connect:
             if not resource.is_open:
@@ -439,12 +439,12 @@ class HPump:
             if success:
                 return running
             else:
-                self.logger.append("Failure Connecting to Pump")
+                self.logger.info("Failure Connecting to Pump")
         else:
             if not self.controller.is_open:
                 self.controller.open()
             while self.controller.in_waiting > 0:   # Clear Buffer
-                self.logger.append(self.controller.read().decode())
+                self.logger.info(self.controller.read().decode())
             self.controller.write(("-"+self.address+"\n\r").encode())
             time.sleep(0.2)
             while self.controller.in_waiting > 0:
@@ -465,7 +465,7 @@ class HPump:
             if success:
                 return running
             else:
-                self.logger.append("Failure Connecting to Pump")
+                self.logger.info("Failure Connecting to Pump")
                 raise RuntimeError
 
     def wait_until_stopped(self, timeout=60):
@@ -501,7 +501,7 @@ class HPump:
     def check_direction(self, dirstr="k", resource=pumpserial):
         success = False
         if not HPump.enabled:
-            self.logger.append(self.name+" not enabled")
+            self.logger.info(self.name+" not enabled")
             return
         if self.pc_connect:
             if not resource.is_open:
@@ -514,7 +514,7 @@ class HPump:
                 if dirstr in resource.readline().decode():
                     success = True
             if not success:
-                self.logger.append("Failure Connecting to Pump")
+                self.logger.info("Failure Connecting to Pump")
                 raise RuntimeError
         else:
             if not self.controller.is_open:
@@ -527,13 +527,13 @@ class HPump:
                 if dirstr in self.controller.readline().decode():
                     success = True
             if not success:
-                self.logger.append("Failure Connecting to Pump")
+                self.logger.info("Failure Connecting to Pump")
                 raise RuntimeError
 
     def check_mode(self, modestr="k", resource=pumpserial):
         success = False
         if not HPump.enabled:
-            self.logger.append(self.name+" not enabled")
+            self.logger.info(self.name+" not enabled")
             return
         if self.pc_connect:
             if not resource.is_open:
@@ -546,7 +546,7 @@ class HPump:
                 if modestr in resource.readline().decode():
                     success = True
             if not success:
-                self.logger.append("Failure Connecting to Pump")
+                self.logger.info("Failure Connecting to Pump")
                 raise RuntimeError
         else:
             if not self.controller.is_open:
@@ -559,13 +559,13 @@ class HPump:
                 if modestr in self.controller.readline().decode():
                     success = True
             if not success:
-                self.logger.append("Failure Connecting to Pump")
+                self.logger.info("Failure Connecting to Pump")
                 raise RuntimeError
 
     def check_target_volume(self, resource=pumpserial):
         success = False
         if not HPump.enabled:
-            self.logger.append(self.name+" not enabled")
+            self.logger.info(self.name+" not enabled")
             return
         if self.pc_connect:
             if not resource.is_open:
@@ -593,7 +593,7 @@ class HPump:
                     value = float(answer)
                     success = True
         if not success:
-            self.logger.append("Failure Connecting to Pump")
+            self.logger.info("Failure Connecting to Pump")
             raise RuntimeError
         else:
             return value
@@ -601,7 +601,7 @@ class HPump:
     def check_infuse_rate(self, resource=pumpserial):
         success = False
         if not HPump.enabled:
-            self.logger.append(self.name+" not enabled")
+            self.logger.info(self.name+" not enabled")
             return
         if self.pc_connect:
             if not resource.is_open:
@@ -629,7 +629,7 @@ class HPump:
                     value = float(answer[0:-7])
                     success = True
         if not success:
-            self.logger.append("Failure Connecting to Pump")
+            self.logger.info("Failure Connecting to Pump")
             raise RuntimeError
         else:
             return value
@@ -637,7 +637,7 @@ class HPump:
     def check_refill_rate(self, resource=pumpserial):
         success = False
         if not HPump.enabled:
-            self.logger.append(self.name+" not enabled")
+            self.logger.info(self.name+" not enabled")
             return
         if self.pc_connect:
             if not resource.is_open:
@@ -664,14 +664,14 @@ class HPump:
                     value = float(answer[0:-7])
                     success = True
         if not success:
-            self.logger.append("Failure Connecting to Pump")
+            self.logger.info("Failure Connecting to Pump")
             raise RuntimeError
         else:
             return value
 
     def stop(self, resource=pumpserial):
         if not HPump.enabled:
-            self.logger.append(self.name+" not enabled")
+            self.logger.info(self.name+" not enabled")
             return
         if self.pc_connect:
             if not resource.is_open:
@@ -714,20 +714,20 @@ class Rheodyne:
         self.serial_object.port = port
         self.enabled = True
         self.pc_connect = True
-        self.logger.append(self.name+" port set to "+port)
+        self.logger.info(self.name+" port set to "+port)
 
     def set_to_controller(self, controller):
         self.pc_connect = False
         self.controller = controller
         self.enabled = controller.enabled
-        self.logger.append(self.name+" set to Microntroller")
+        self.logger.info(self.name+" set to Microntroller")
 
     def change_values(self, address, name):
         if not self.name == name:
-            self.logger.append("Changing Name: " + self.name+" to "+name)
+            self.logger.info("Changing Name: " + self.name+" to "+name)
             self.name = name
         if not self.address_I2C == address:
-            self.logger.append("Setting " + self.name+" address:"+str(address))
+            self.logger.info("Setting " + self.name+" address:"+str(address))
             self.address_I2C = address
 
     # """Now the function to actually control de valve."""
@@ -737,10 +737,10 @@ class Rheodyne:
         # in hex format => P##  so 10 P0A
         # Need errror handler to check position is integer and less than valve type
         if attempts > max_attemps:
-            self.logger.append("Error Switching "+self.name)
+            self.logger.info("Error Switching "+self.name)
             raise RuntimeError  # error valve didnt acknowledge
         if not self.enabled:
-            self.logger.append(self.name+" not enabled")
+            self.logger.info(self.name+" not enabled")
             return
         if self.pc_connect:
             if not self.serial_object.is_open:
@@ -750,7 +750,7 @@ class Rheodyne:
             # self.serial_object.close()           #Trying to be polite and leaving the ports closed
 
         elif self.address_I2C == -1:
-            self.logger.append(self.name+"I2C Address not set")
+            self.logger.info(self.name+"I2C Address not set")
             raise ValueError
             return -1
         else:
@@ -763,17 +763,17 @@ class Rheodyne:
         time.sleep(0.1)
         if int(self.statuscheck()) == position:  # pump returns this if command acknowledged
             self.position = position
-            self.logger.append(self.name+" switched to "+str(position))
+            self.logger.info(self.name+" switched to "+str(position))
             return 0    # Valve acknowledged commsnd
         else:
-            self.logger.append("Switching valve %s failed; retrying %i" % (self.name, attempts))
+            self.logger.info("Switching valve %s failed; retrying %i" % (self.name, attempts))
             self.switchvalve(position, attempts+1, max_attemps)
 
     # Todo maybe incorporate status check to confirm valve is in the right position
     def statuscheck(self, iter=0):
         maxiterations = 10
         if not self.enabled:
-            self.logger.append(self.name+" not enabled")
+            self.logger.info(self.name+" not enabled")
             return
 
         if self.pc_connect:
@@ -785,16 +785,16 @@ class Rheodyne:
             ans = self.serial_object.read(2).decode()
             self.serial_object.read()
             while ans not in ["01", "02", "03", "04", "05", "06"]:
-                self.logger.append("Rechecking Valve: iteration " + str(iter+1))
+                self.logger.info("Rechecking Valve: iteration " + str(iter+1))
                 if iter == maxiterations:
-                    self.logger.append("Error Checking Valve Status for "+self.name)
+                    self.logger.info("Error Checking Valve Status for "+self.name)
                     raise RuntimeError
                 time.sleep(0.2)
                 ans = self.statuscheck(iter+1)
             return ans   # returns valve position
             # TODO: add error handlers
         elif self.address_I2C == -1:
-            self.logger.append("Error: I2C Address not set for "+self.name)
+            self.logger.info("Error: I2C Address not set for "+self.name)
             raise ValueError
             return
         else:
@@ -805,9 +805,9 @@ class Rheodyne:
             self.controller.write(("S%03i" % self.address_I2C).encode())
             ans = self.controller.read().decode()  # need to ensure thwt buffer doesnt build up-> if so switch to readln
             while ans not in ["1", "2", "3", "4", "5", "6"]:
-                self.logger.append("Rechecking Valve: iteration " + str(iter+1))
+                self.logger.info("Rechecking Valve: iteration " + str(iter+1))
                 if iter == maxiterations:
-                    self.logger.append("Error Checking Valve Status for "+self.name)
+                    self.logger.info("Error Checking Valve Status for "+self.name)
                     raise RuntimeError
                 time.sleep(0.2)
                 ans = self.statuscheck(iter+1)
@@ -823,7 +823,7 @@ class Rheodyne:
     def seti2caddress(self, address: int):  # Address is in int format
         # Addres needs to be even int
         if not self.enabled:
-            self.logger.append(self.name+" not enabled")
+            self.logger.info(self.name+" not enabled")
             return
         if address % 2 == 0:
             if self.pc_connect:
@@ -876,7 +876,7 @@ class VICI:
         self.PCConnect = True
         self.ControllerKey = ""
         self.serialobject.open()
-        self.logger.append(self.name + " set to port: " + port)
+        self.logger.info(self.name + " set to port: " + port)
 
     def set_to_controller(self, controller):
         if self.serialobject.is_open:
@@ -885,7 +885,7 @@ class VICI:
         self.serialobject = controller
         self.enabled = controller.enabled
         self.ControllerKey = "+"
-        self.logger.append(self.name+" set to Microntroller")
+        self.logger.info(self.name+" set to Microntroller")
 
     def switchvalve(self, position):
         success = False
@@ -895,10 +895,10 @@ class VICI:
             elif position == 1:
                 position = 'B'
             else:
-                self.logger.append("Value not accepted "+position)
+                self.logger.info("Value not accepted "+position)
                 raise ValueError
         if not self.enabled:
-            self.logger.append(self.name+" not set up, switching ignored")
+            self.logger.info(self.name+" not set up, switching ignored")
             return
         if not self.serialobject.is_open:
             self.serialobject.open()
@@ -909,15 +909,15 @@ class VICI:
         time.sleep(0.2)
         while self.serialobject.in_waiting > 0:  # Read in response
             if position in self.serialobject.readline().decode():
-                self.logger.append(self.name+" switched to "+position)
+                self.logger.info(self.name+" switched to "+position)
                 success = True
         if not success:
-            self.logger.append("Error switching "+self.name)
+            self.logger.info("Error switching "+self.name)
             raise RuntimeError
 
     def currentposition(self):
         if not self.enabled:
-            self.logger.append(self.name+" not set up, Query ignored")
+            self.logger.info(self.name+" not set up, Query ignored")
             return
 
         if not self.serialobject.is_open:
@@ -925,13 +925,13 @@ class VICI:
         commandtosend = self.ControllerKey+"CP"+"\r"
         self.serialobject.write(commandtosend.encode())
 
-        self.logger.append(self.name+" Position Query ")
+        self.logger.info(self.name+" Position Query ")
         while self.serial_object.in_waiting > 0:
-            self.logger.append(self.serial_object.readline().decode())
+            self.logger.info(self.serial_object.readline().decode())
 
     def change_values(self, address, name):
         if self.name != name:
-            self.logger.append("Changing Name: "+self.name+" to "+name)
+            self.logger.info("Changing Name: "+self.name+" to "+name)
             self.name = name
 
     def close(self):
