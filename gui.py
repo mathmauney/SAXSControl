@@ -911,23 +911,23 @@ class Main:
         newbuttons = [
          COMPortSelector(self.setup_page, exportselection=0, height=4),
          tk.Button(self.setup_page, text="Set Port", command=lambda: self.instruments[instrument_index].set_port(self.AvailablePorts[int(self.setup_page_buttons[instrument_index][0].curselection()[0])].device)),
-         tk.Label(self.setup_page, text="or",bg=self.label_bg_color),
+         tk.Label(self.setup_page, text="or", bg=self.label_bg_color),
          tk.Button(self.setup_page, text="Send to Controller", command=lambda: self.instruments[instrument_index].set_to_controller(self.controller)),
-         tk.Label(self.setup_page, text="   Pump Address:",bg=self.label_bg_color),
+         tk.Label(self.setup_page, text="   Pump Address:", bg=self.label_bg_color),
          tk.Spinbox(self.setup_page, from_=0, to=100, textvariable=self.setup_page_variables[instrument_index][0]),
-         tk.Label(self.setup_page, text="   Pump Name:",bg=self.label_bg_color),
+         tk.Label(self.setup_page, text="   Pump Name:", bg=self.label_bg_color),
          tk.Entry(self.setup_page, textvariable=self.setup_page_variables[instrument_index][1]),
          tk.Button(self.setup_page, text="Set values", command=lambda: self.instrument_change_values(instrument_index)),
-         tk.Label(self.setup_page, text="Instrument configuration",bg=self.label_bg_color),
+         tk.Label(self.setup_page, text="Instrument configuration", bg=self.label_bg_color),
          tk.OptionMenu(self.setup_page, self.setup_page_variables[instrument_index][2], *self.hardware_config_options),
          tk.Button(self.setup_page, text="Set", command=lambda: self.configure_to_hardware(self.setup_page_variables[instrument_index][2].get(), instrument_index))
          ]
 
         # Pumps share a port-> Dont need extra ones
         if self.NumberofPumps > 1:
-            newbuttons[0] = tk.Label(self.setup_page, text="     ,bg=self.label_bg_color")
-            newbuttons[1] = tk.Label(self.setup_page, text="     ,bg=self.label_bg_color")
-            newbuttons[2] = tk.Label(self.setup_page, text="     ,bg=self.label_bg_color")
+            newbuttons[0] = tk.Label(self.setup_page, text="     , bg=self.label_bg_color")
+            newbuttons[1] = tk.Label(self.setup_page, text="     , bg=self.label_bg_color")
+            newbuttons[2] = tk.Label(self.setup_page, text="     , bg=self.label_bg_color")
 
         self.setup_page_buttons.append(newbuttons)
         for i in range(len(self.setup_page_buttons)):
@@ -961,22 +961,22 @@ class Main:
         newvars[0].set(self.instruments[instrument_index].name+":  ")
         self.manual_page_variables.append(newvars)
         newbuttons = [
-         tk.Label(self.manual_page, textvariable=self.manual_page_variables[instrument_index][0],bg=self.label_bg_color),
+         tk.Label(self.manual_page, textvariable=self.manual_page_variables[instrument_index][0], bg=self.label_bg_color),
          tk.Button(self.manual_page, text="Run", command=lambda: self.manual_queue.put(self.instruments[instrument_index].start_pump)),
          tk.Button(self.manual_page, text="Stop", command=lambda:self.manual_queue.put(self.instruments[instrument_index].stop_pump)),
-         tk.Label(self.manual_page, text="  Infuse Rate:",bg=self.label_bg_color),
+         tk.Label(self.manual_page, text="  Infuse Rate:", bg=self.label_bg_color),
          tk.Spinbox(self.manual_page, from_=0, to=1000, textvariable=self.manual_page_variables[instrument_index][1]),
          tk.Button(self.manual_page, text="Set", command=lambda: self.manual_queue.put((self.instruments[instrument_index].set_infuse_rate, self.manual_page_variables[instrument_index][1].get()))),
-         tk.Label(self.manual_page, text="  Refill Rate:",bg=self.label_bg_color),
+         tk.Label(self.manual_page, text="  Refill Rate:", bg=self.label_bg_color),
          tk.Spinbox(self.manual_page, from_=0, to=1000, textvariable=self.manual_page_variables[instrument_index][2]),
          tk.Button(self.manual_page, text="Set", command=lambda: self.manual_queue.put((self.instruments[instrument_index].set_refill_rate, self.manual_page_variables[instrument_index][2].get()))),
-         tk.Label(self.manual_page, text="  Direction:",bg=self.label_bg_color),
+         tk.Label(self.manual_page, text="  Direction:", bg=self.label_bg_color),
          tk.Button(self.manual_page, text="Infuse", command=lambda: self.manual_queue.put(self.instruments[instrument_index].infuse)),
          tk.Button(self.manual_page, text="Refill", command=lambda: self.manual_queue.put(self.instruments[instrument_index].refill)),
-         tk.Label(self.manual_page, text="Mode",bg=self.label_bg_color),
+         tk.Label(self.manual_page, text="Mode", bg=self.label_bg_color),
          tk.Button(self.manual_page, text="Pump", command=lambda: self.manual_queue.put(self.instruments[instrument_index].set_mode_pump)),
          tk.Button(self.manual_page, text="Vol", command=lambda: self.manual_queue.put(self.instruments[instrument_index].set_mode_vol)),
-         tk.Label(self.manual_page, text="  Target Vol (ml):",bg=self.label_bg_color),
+         tk.Label(self.manual_page, text="  Target Vol (ml):", bg=self.label_bg_color),
          tk.Spinbox(self.manual_page, from_=0, to=1000, textvariable=self.manual_page_variables[instrument_index][3]),
          # tk.Button(self.manual_page, text="Set", command=lambda: self.queue.put((self.instruments[instrument_index].set_target_vol, self.manual_page_variables[instrument_index][3].get())))
          tk.Button(self.manual_page, text="Set", command=lambda: self.manual_queue.put((self.instruments[instrument_index].set_target_vol, self.manual_page_variables[instrument_index][3].get())))
@@ -1006,13 +1006,13 @@ class Main:
         newbuttons = [
          COMPortSelector(self.setup_page, exportselection=0, height=4),
          tk.Button(self.setup_page, text="Set Port", command=lambda: self.instruments[instrument_index].set_port(self.AvailablePorts[int(self.setup_page_buttons[instrument_index][0].curselection()[0])].device)),
-         tk.Label(self.setup_page, text="or",bg=self.label_bg_color),
+         tk.Label(self.setup_page, text="or", bg=self.label_bg_color),
          tk.Button(self.setup_page, text="Send to Controller", command=lambda: self.instruments[instrument_index].set_to_controller(self.controller)),
-         tk.Label(self.setup_page, text="   Type:",bg=self.label_bg_color),
+         tk.Label(self.setup_page, text="   Type:", bg=self.label_bg_color),
          tk.Spinbox(self.setup_page, values=(2, 6), textvariable=self.setup_page_variables[instrument_index][2]),
-         tk.Label(self.setup_page, text="   I2C Address:",bg=self.label_bg_color),
+         tk.Label(self.setup_page, text="   I2C Address:", bg=self.label_bg_color),
          tk.Spinbox(self.setup_page, from_=-1, to=100, textvariable=self.setup_page_variables[instrument_index][0]),
-         tk.Label(self.setup_page, text="   Valve Name:",bg=self.label_bg_color),
+         tk.Label(self.setup_page, text="   Valve Name:", bg=self.label_bg_color),
          tk.Entry(self.setup_page, textvariable=self.setup_page_variables[instrument_index][1]),
          tk.Button(self.setup_page, text="Set values", command=lambda: self.instrument_change_values(instrument_index, True)),
          tk.OptionMenu(self.setup_page, self.setup_page_variables[instrument_index][3], *self.hardware_config_options),
@@ -1035,8 +1035,8 @@ class Main:
         self.manual_page_variables.append(newvars)
 
         newbuttons = [
-         tk.Label(self.manual_page, textvariable=self.manual_page_variables[instrument_index][0],bg=self.label_bg_color),
-         tk.Label(self.manual_page, text="   Position:",bg=self.label_bg_color),
+         tk.Label(self.manual_page, textvariable=self.manual_page_variables[instrument_index][0], bg=self.label_bg_color),
+         tk.Label(self.manual_page, text="   Position:", bg=self.label_bg_color),
          tk.Spinbox(self.manual_page, from_=1, to=self.setup_page_variables[instrument_index][2].get(), textvariable=self.manual_page_variables[instrument_index][1]),
          tk.Button(self.manual_page, text="Change", command=lambda: self.manual_queue.put((self.instruments[instrument_index].switchvalve, self.manual_page_variables[instrument_index][1].get()))),
          ]
@@ -1056,9 +1056,9 @@ class Main:
         newbuttons = [
          COMPortSelector(self.setup_page, exportselection=0, height=4),
          tk.Button(self.setup_page, text="Set Port", command=lambda: self.instruments[instrument_index].set_port(self.AvailablePorts[int(self.setup_page_buttons[instrument_index][0].curselection()[0])].device)),
-         tk.Label(self.setup_page, text="or",bg=self.label_bg_color),
+         tk.Label(self.setup_page, text="or", bg=self.label_bg_color),
          tk.Button(self.setup_page, text="Send to Controller", command=lambda:self.instruments[instrument_index].set_to_controller(self.controller)),
-         tk.Label(self.setup_page, text="   Valve Name:",bg=self.label_bg_color),
+         tk.Label(self.setup_page, text="   Valve Name:", bg=self.label_bg_color),
          tk.Entry(self.setup_page, textvariable=self.setup_page_variables[instrument_index][1]),
          tk.Button(self.setup_page, text="Set values", command=lambda: self.instrument_change_values(instrument_index, False)),
          tk.OptionMenu(self.setup_page, self.setup_page_variables[instrument_index][2], *self.hardware_config_options),
@@ -1080,8 +1080,8 @@ class Main:
         self.manual_page_variables.append(newvars)
 
         newbuttons = [
-         tk.Label(self.manual_page, textvariable=self.manual_page_variables[instrument_index][0],bg=self.label_bg_color),
-         tk.Label(self.manual_page, text="   Position:",bg=self.label_bg_color),
+         tk.Label(self.manual_page, textvariable=self.manual_page_variables[instrument_index][0], bg=self.label_bg_color),
+         tk.Label(self.manual_page, text="   Position:", bg=self.label_bg_color),
          tk.Spinbox(self.manual_page, values=("A", "B"), textvariable=self.manual_page_variables[instrument_index][1]),
          tk.Button(self.manual_page, text="Change", command=lambda: self.manual_queue.put((self.instruments[instrument_index].switchvalve, self.manual_page_variables[instrument_index][1].get()))),
          ]
