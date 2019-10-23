@@ -526,7 +526,9 @@ class ManualControlThread(threading.Thread):
 
     def run(self):
         while self.MainGUI.listen_run_flag.is_set():
-            if not ManualControlQueue.empty():
+            if ManualControlQueue.empty():
+                time.sleep(0.1)
+            else:
                 queue_item = ManualControlQueue.get()
                 if isinstance(queue_item, list):
                     commandList = queue_item

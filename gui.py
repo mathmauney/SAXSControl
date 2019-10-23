@@ -77,9 +77,9 @@ class Main:
             log_height = core_height
 
         # Make it pretty
-        #self.gui_bg_color = "SteelBlue4"
+        self.gui_bg_color = "thistle3"
         #self.gui_bg_color = "lavender"
-        self.gui_bg_color = "deep pink"
+        #self.gui_bg_color = "deep pink"
         #self.gui_bg_color = "steel blue"
 
         self.main_window.configure(bg=self.gui_bg_color)
@@ -94,7 +94,7 @@ class Main:
 
         self.core = ttk.Notebook(self.main_window, width=core_width, height=core_height)
         self.auto_page = tk.Frame(self.core, bg=self.gui_bg_color)
-        self.config_page = tk.Frame(self.core, bg=self.gui_bg_color)
+        self.config_page = tk.Frame(self.core)
         self.manual_page = tk.Frame(self.core, bg=self.gui_bg_color)
         self.setup_page = tk.Frame(self.core, bg=self.gui_bg_color)
         self.elveflow_page = tk.Frame(self.core, bg=self.gui_bg_color)
@@ -104,21 +104,22 @@ class Main:
         # self.instrument_logs = tk.Frame(self.logs)
         self.state_frame = tk.Frame(self.main_window, width=window_width, height=state_height, bg=self.gui_bg_color)
         # Widgets on Main page
-        self.spec_base_directory_label = tk.Label(self.auto_page, text='Spec Base Directory:')
+        spec_width = 20
+        self.spec_base_directory_label = tk.Label(self.auto_page, text='Spec Base Directory:', width=spec_width)
         self.spec_base_directory = tk.StringVar(value='')
-        self.spec_base_directory_box = tk.Entry(self.auto_page, textvariable=self.spec_base_directory)
-        self.spec_sub_directory_label = tk.Label(self.auto_page, text='Spec Subdirectory:')
+        self.spec_base_directory_box = tk.Entry(self.auto_page, textvariable=self.spec_base_directory,  width=spec_width)
+        self.spec_sub_directory_label = tk.Label(self.auto_page, text='Spec Subdirectory:',  width=spec_width)
         self.spec_sub_directory = tk.StringVar(value='')
-        self.spec_sub_directory_box = tk.Entry(self.auto_page, textvariable=self.spec_sub_directory)
-        self.spec_directory_button = tk.Button(self.auto_page, text='Change/Make Directory', command=self.ChangeDirectory)
-        self.spec_filename_label = tk.Label(self.auto_page, text='Filename:')
+        self.spec_sub_directory_box = tk.Entry(self.auto_page, textvariable=self.spec_sub_directory,  width=spec_width)
+        self.spec_directory_button = tk.Button(self.auto_page, text='Change/Make Directory', command=self.ChangeDirectory,  width=spec_width)
+        self.spec_filename_label = tk.Label(self.auto_page, text='Filename:',  width=spec_width)
         self.spec_filename = tk.StringVar(value='')
-        self.spec_filename_box = tk.Entry(self.auto_page, textvariable=self.spec_filename)
-        self.spec_fileno_label = tk.Label(self.auto_page, text='File #:')
+        self.spec_filename_box = tk.Entry(self.auto_page, textvariable=self.spec_filename,  width=spec_width)
+        self.spec_fileno_label = tk.Label(self.auto_page, text='File #:',  width=spec_width)
         self.spec_fileno = tk.IntVar(value=0)
-        self.spec_fileno_box = tk.Entry(self.auto_page, textvariable=self.spec_fileno)
+        self.spec_fileno_box = tk.Entry(self.auto_page, textvariable=self.spec_fileno,  width=spec_width)
         # Auto buttons
-        auto_button_font = 'Arial 18 bold'
+        auto_button_font = 'Arial 20 bold'
         auto_button_width = 10
         self.buffer_sample_buffer_button = tk.Button(self.auto_page, text='Auto Run', command=self.buffer_sample_buffer_command, font=auto_button_font, width=auto_button_width, height=3)
         self.clean_button = tk.Button(self.auto_page, text='Clean/Refill', command=self.clean_and_refill_command, font=auto_button_font, width=auto_button_width, height=3)
@@ -127,6 +128,9 @@ class Main:
         self.clean_only_button = tk.Button(self.auto_page, text='Clean Only', command=self.clean_only_command, font=auto_button_font, width=auto_button_width)
         self.refill_only_button = tk.Button(self.auto_page, text='Refill Only', command=self.refill_only_command, font=auto_button_font, width=auto_button_width)
         self.purge_button = tk.Button(self.auto_page, text='Purge', command=self.purge_command, font=auto_button_font, width=auto_button_width, height=3)
+        self.purge_soap_button = tk.Button(self.auto_page, text='Purge Soap', command=self.purge_soap_command, font=auto_button_font, width=auto_button_width)
+        self.purge_dry_button = tk.Button(self.auto_page, text='Dry Sheath', command=self.purge_dry_command, font=auto_button_font, width=auto_button_width)
+
         # Elveflow Plots
         self.fig_dpi = 96  # this shouldn't matter too much (because we normalize against it) except in how font sizes are handled in the plot
         self.main_tab_fig = plt.Figure(figsize=(core_width*2/3/self.fig_dpi, core_height*3/4/self.fig_dpi), dpi=self.fig_dpi)
@@ -192,6 +196,23 @@ class Main:
         self.air_time = tk.IntVar(value=0)
         self.air_time_box = tk.Spinbox(self.config_page, from_=0, to=1000, textvariable=self.air_time)
 
+        self.purge_possition_label = tk.Label(self.config_page, text="Purge valve possitions:")
+        self.purge_running_label = tk.Label(self.config_page, text="running:")
+        self.purge_running_pos = tk.IntVar(value=0)
+        self.purge_running_box = tk.Spinbox(self.config_page, from_=0, to=100, textvariable=self.purge_running_pos)
+
+        self.purge_water_label = tk.Label(self.config_page, text="Water Purge:")
+        self.purge_water_pos = tk.IntVar(value=0)
+        self.purge_water_box = tk.Spinbox(self.config_page, from_=0, to=100, textvariable=self.purge_water_pos)
+
+        self.purge_soap_label = tk.Label(self.config_page, text="Soap:")
+        self.purge_soap_pos = tk.IntVar(value=0)
+        self.purge_soap_box = tk.Spinbox(self.config_page, from_=0, to=100, textvariable=self.purge_soap_pos)
+
+        self.purge_air_label = tk.Label(self.config_page, text="Air:")
+        self.purge_air_pos = tk.IntVar(value=0)
+        self.purge_air_box = tk.Spinbox(self.config_page, from_=0, to=100, textvariable=self.purge_air_pos)
+
         def _set_elveflow_sourcename(*args):
             self.config['Elveflow']['elveflow_sourcename'] = self.elveflow_sourcename.get()
         self.elveflow_sourcename.trace('w', _set_elveflow_sourcename)
@@ -221,9 +242,10 @@ class Main:
         self.controller = SAXSDrivers.SAXSController(timeout=0.1)
         self.instruments = []
         self.pump = None
+        self.purge_valve = None
         self.NumberofPumps = 0
         # Setup Page
-        self.hardware_config_options = ("Pump", "Oil Valve", "Sample/Buffer Valve", "Loading Valve")
+        self.hardware_config_options = ("Pump", "Oil Valve", "Sample/Buffer Valve", "Loading Valve", "Purge")
         self.AvailablePorts = SAXSDrivers.list_available_ports()
         self.setup_page_buttons = []
         self.setup_page_variables = []
@@ -306,60 +328,72 @@ class Main:
         self.clean_only_button.grid(row=11, column=2)
         self.refill_only_button.grid(row=12, column=2)
         self.purge_button.grid(row=11, column=4, rowspan=2)
+        self.purge_soap_button.grid(row=11, column=5)
+        self.purge_dry_button.grid(row=12, column=5)
         self.canvas.get_tk_widget().grid(row=0, column=2, rowspan=10, columnspan=8, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
         # Manual page
         # Config page
         rowcounter = 0
-        self.save_config_button.grid(row=rowcounter, column=0)
-        self.load_config_button.grid(row=rowcounter, column=1)
+        self.save_config_button.grid(row=rowcounter, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.load_config_button.grid(row=rowcounter, column=1, sticky=tk.W+tk.E+tk.N+tk.S)
         rowcounter += 1
-        self.config_spec_address_label.grid(row=rowcounter, column=0)
-        self.config_spec_address.grid(row=rowcounter, column=1)
-        self.spec_connect_button.grid(row=rowcounter, column=2)
+        self.config_spec_address_label.grid(row=rowcounter, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.config_spec_address.grid(row=rowcounter, column=1, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.spec_connect_button.grid(row=rowcounter, column=2, sticky=tk.W+tk.E+tk.N+tk.S)
         rowcounter += 1
-        self.volumes_label.grid(row=rowcounter, column=0)
-        self.first_buffer_volume_box.grid(row=rowcounter, column=1)
-        self.sample_volume_box.grid(row=rowcounter, column=2)
-        self.last_buffer_volume_box.grid(row=rowcounter, column=3)
+        self.volumes_label.grid(row=rowcounter, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.first_buffer_volume_box.grid(row=rowcounter, column=1, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.sample_volume_box.grid(row=rowcounter, column=2, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.last_buffer_volume_box.grid(row=rowcounter, column=3, sticky=tk.W+tk.E+tk.N+tk.S)
         rowcounter += 1
-        self.sample_flowrate_label.grid(row=rowcounter, column=0)
-        self.sample_flowrate_box.grid(row=rowcounter, column=1)
-        self.oil_refill_flowrate_label.grid(row=rowcounter, column=2)
-        self.oil_refill_flowrate_box.grid(row=rowcounter, column=3)
+        self.sample_flowrate_label.grid(row=rowcounter, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.sample_flowrate_box.grid(row=rowcounter, column=1, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.oil_refill_flowrate_label.grid(row=rowcounter, column=2, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.oil_refill_flowrate_box.grid(row=rowcounter, column=3, sticky=tk.W+tk.E+tk.N+tk.S)
         rowcounter += 1
-        self.oil_valve_names_label.grid(row=rowcounter, column=0)
-        self.set_oil_valve_names_button.grid(row=rowcounter, column=7)
+        self.oil_valve_names_label.grid(row=rowcounter, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.set_oil_valve_names_button.grid(row=rowcounter, column=7, sticky=tk.W+tk.E+tk.N+tk.S)
         for i in range(6):
-            self.oil_valve_name_boxes[i].grid(row=rowcounter, column=i+1)
+            self.oil_valve_name_boxes[i].grid(row=rowcounter, column=i+1, sticky=tk.W+tk.E+tk.N+tk.S)
         rowcounter += 1
-        self.loading_valve_names_label.grid(row=rowcounter, column=0)
-        self.set_loading_valve_names_button.grid(row=rowcounter, column=7)
+        self.loading_valve_names_label.grid(row=rowcounter, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.set_loading_valve_names_button.grid(row=rowcounter, column=7, sticky=tk.W+tk.E+tk.N+tk.S)
         for i in range(6):
-            self.loading_valve_name_boxes[i].grid(row=rowcounter, column=i+1)
+            self.loading_valve_name_boxes[i].grid(row=rowcounter, column=i+1, sticky=tk.W+tk.E+tk.N+tk.S)
         rowcounter += 2
-        self.elveflow_sourcename_label.grid(row=rowcounter, column=0)
-        self.elveflow_sourcename_box.grid(row=rowcounter, column=1)
+        self.elveflow_sourcename_label.grid(row=rowcounter, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.elveflow_sourcename_box.grid(row=rowcounter, column=1, sticky=tk.W+tk.E+tk.N+tk.S)
         rowcounter += 1
-        self.elveflow_sensortypes_label.grid(row=rowcounter, column=0)
+        self.elveflow_sensortypes_label.grid(row=rowcounter, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
         for i in range(4):
-            self.elveflow_sensortypes_optionmenu[i].grid(row=rowcounter, column=i+1)
+            self.elveflow_sensortypes_optionmenu[i].grid(row=rowcounter, column=i+1, sticky=tk.W+tk.E+tk.N+tk.S)
         rowcounter += 1
-        self.elveflow_oil_channel_pressure_label.grid(row=rowcounter, column=0)
-        self.elveflow_oil_channel_box.grid(row=rowcounter, column=1)
-        self.elveflow_oil_pressure_box.grid(row=rowcounter, column=2)
+        self.elveflow_oil_channel_pressure_label.grid(row=rowcounter, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.elveflow_oil_channel_box.grid(row=rowcounter, column=1, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.elveflow_oil_pressure_box.grid(row=rowcounter, column=2, sticky=tk.W+tk.E+tk.N+tk.S)
         rowcounter += 1
-        self.tseries_label.grid(row=rowcounter, column=0)
-        self.tseries_time_box.grid(row=rowcounter, column=1)
-        self.tseries_frames_box.grid(row=rowcounter, column=2)
+        self.tseries_label.grid(row=rowcounter, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.tseries_time_box.grid(row=rowcounter, column=1, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.tseries_frames_box.grid(row=rowcounter, column=2, sticky=tk.W+tk.E+tk.N+tk.S)
         rowcounter += 1
-        self.low_soap_time_label.grid(row=rowcounter, column=0)
-        self.low_soap_time_box.grid(row=rowcounter, column=1)
-        self.high_soap_time_label.grid(row=rowcounter, column=2)
-        self.high_soap_time_box.grid(row=rowcounter, column=3)
-        self.water_time_label.grid(row=rowcounter, column=4)
-        self.water_time_box.grid(row=rowcounter, column=5)
-        self.air_time_label.grid(row=rowcounter, column=6)
-        self.air_time_box.grid(row=rowcounter, column=7)
+        self.low_soap_time_label.grid(row=rowcounter, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.low_soap_time_box.grid(row=rowcounter, column=1, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.high_soap_time_label.grid(row=rowcounter, column=2, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.high_soap_time_box.grid(row=rowcounter, column=3, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.water_time_label.grid(row=rowcounter, column=4, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.water_time_box.grid(row=rowcounter, column=5, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.air_time_label.grid(row=rowcounter, column=6, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.air_time_box.grid(row=rowcounter, column=7, sticky=tk.W+tk.E+tk.N+tk.S)
+        rowcounter += 1
+        self.purge_possition_label.grid(row=rowcounter, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.purge_running_label.grid(row=rowcounter, column=1, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.purge_running_box.grid(row=rowcounter, column=2, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.purge_water_label.grid(row=rowcounter, column=3, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.purge_water_box.grid(row=rowcounter, column=4, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.purge_soap_label.grid(row=rowcounter, column=5, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.purge_soap_box.grid(row=rowcounter, column=6, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.purge_air_label.grid(row=rowcounter, column=7, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.purge_air_box.grid(row=rowcounter, column=8, sticky=tk.W+tk.E+tk.N+tk.S)
         # Setup page
         self.refresh_com_ports.grid(row=0, column=0)
         self.AddPump.grid(row=0, column=2)
@@ -450,11 +484,11 @@ class Main:
             self.set_oil_valve_names()
             self.set_loading_valve_names()
         # Instrument Config
-        for i in range(int(instrument_config.get("n_pumps",0))):
+        for i in range(int(instrument_config.get("n_pumps", 0))):
             field = "Pump"+str(i)
             self.add_pump_set_buttons(int(instrument_config.get(field+"_address", 0)), instrument_config.get(field+"_name", ""), instrument_config.get(field+"_hardware", ""))
 
-        for i in range(int(instrument_config.get("n_rheodyne",0))):
+        for i in range(int(instrument_config.get("n_rheodyne", 0))):
             field = "Rheodyne"+str(i)
             self.AddRheodyneSetButtons(int(instrument_config.get(field+"_address", -1)), instrument_config.get(field+"_name", ""), instrument_config.get(field+"_hardware", ""))
 
@@ -792,7 +826,40 @@ class Main:
         self.queue.put((self.flowpath.valve3.set_auto_position, 0))
 
     def purge_command(self):
-        pass
+        run_position = self.purge_running_pos.get()
+        purge_position = self.purge_water_pos.get()
+        if self.purge_valve.position == purge_position:
+            self.manual_queue.put((self.purge_valve.switchvalve, run_position))
+            self.purge_button.configure(bg="white smoke")
+            self.python_logger.info("Purge stopped")
+        else:
+            self.manual_queue.put((self.purge_valve.switchvalve, purge_position))
+            self.purge_button.configure(bg="green")
+            self.python_logger.info("Purging")
+
+    def purge_soap_command(self):
+        run_position = self.purge_running_pos.get()
+        purge_position = self.purge_soap_pos.get()
+        if self.purge_valve.position == purge_position:
+            self.manual_queue.put((self.purge_valve.switchvalve, run_position))
+            self.purge_soap_button.configure(bg="white smoke")
+            self.python_logger.info("Purge stopped")
+        else:
+            self.manual_queue.put((self.purge_valve.switchvalve, purge_position))
+            self.purge_soap_button.configure(bg="green")
+            self.python_logger.info("Purging soap")
+
+    def purge_dry_command(self):
+        run_position = self.purge_running_pos.get()
+        purge_position = self.purge_air_pos.get()
+        if self.purge_valve.position == purge_position:
+            self.manual_queue.put((self.purge_valve.switchvalve, run_position))
+            self.purge_dry_button.configure(bg="white smoke")
+            self.python_logger.info("Purge stopped")
+        else:
+            self.manual_queue.put((self.purge_valve.switchvalve, purge_position))
+            self.purge_dry_button.configure(bg="green")
+            self.python_logger.info("Purging soap")
 
     def toggle_buttons(self):
         """Toggle certain buttons on and off when they should not be allowed to add to queue."""
@@ -814,15 +881,22 @@ class Main:
         # TODO: Add checks for value type
         if keyword == self.hardware_config_options[0]:
             self.pump = self.instruments[instrument_index]
+            self.python_logger.info("Pump configured to FlowPath")
         elif keyword == self.hardware_config_options[1]:
             self.flowpath.valve2.hardware = self.instruments[instrument_index]
+            self.python_logger.info("Oil valve configured to FlowPath")
         elif keyword == self.hardware_config_options[2]:
             self.flowpath.valve3.hardware = self.instruments[instrument_index]
+            self.python_logger.info("Sample/Buffer valve configured to FlowPath")
         elif keyword == self.hardware_config_options[3]:
             self.flowpath.valve4.hardware = self.instruments[instrument_index]
+            self.python_logger.info("Loading valve configerd to FlowPath")
+        elif keyword == self.hardware_config_options[4]:
+            self.purge_valve = self.instruments[instrument_index]
+            self.python_logger.info("Purge valve configured to FlowPath")
         else:
             raise ValueError
-        self.Instruments[InstrumentIndex].hardware_configuration = keyword
+        self.instruments[instrument_index].hardware_configuration = keyword
 
     def add_pump_set_buttons(self, address=0, name="Pump", hardware=""):
         """Add pump buttons to the setup page."""

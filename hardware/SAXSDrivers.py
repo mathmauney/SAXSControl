@@ -896,7 +896,7 @@ class VICI:
             elif position == 1:
                 position = 'B'
             else:
-                self.logger.info("Value not accepted "+position)
+                self.logger.info("Value not accepted "+str(position))
                 raise ValueError
         if not self.enabled:
             self.logger.info(self.name+" not set up, switching ignored")
