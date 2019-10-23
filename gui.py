@@ -538,6 +538,7 @@ class Main:
 
     def handle_exception(self, exception, value, traceback):
         """Add python exceptions to the GUI log."""
+        self.load_sample_command()
         self.python_logger.exception("Caught exception:")
 
     def save_history(self, filename=None):
