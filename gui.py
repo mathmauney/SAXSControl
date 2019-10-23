@@ -78,6 +78,7 @@ class Main:
 
         # Make it pretty
         self.gui_bg_color = "thistle3"
+        self.label_bg_color = self.gui_bg_color
         #self.gui_bg_color = "lavender"
         #self.gui_bg_color = "deep pink"
         #self.gui_bg_color = "steel blue"
@@ -94,7 +95,7 @@ class Main:
 
         self.core = ttk.Notebook(self.main_window, width=core_width, height=core_height)
         self.auto_page = tk.Frame(self.core, bg=self.gui_bg_color)
-        self.config_page = tk.Frame(self.core)
+        self.config_page = tk.Frame(self.core, bg=self.gui_bg_color)
         self.manual_page = tk.Frame(self.core, bg=self.gui_bg_color)
         self.setup_page = tk.Frame(self.core, bg=self.gui_bg_color)
         self.elveflow_page = tk.Frame(self.core, bg=self.gui_bg_color)
@@ -105,17 +106,17 @@ class Main:
         self.state_frame = tk.Frame(self.main_window, width=window_width, height=state_height, bg=self.gui_bg_color)
         # Widgets on Main page
         spec_width = 20
-        self.spec_base_directory_label = tk.Label(self.auto_page, text='Spec Base Directory:', width=spec_width)
+        self.spec_base_directory_label = tk.Label(self.auto_page, text='Spec Base Directory:', width=spec_width, bg=self.label_bg_color)
         self.spec_base_directory = tk.StringVar(value='')
         self.spec_base_directory_box = tk.Entry(self.auto_page, textvariable=self.spec_base_directory,  width=spec_width)
-        self.spec_sub_directory_label = tk.Label(self.auto_page, text='Spec Subdirectory:',  width=spec_width)
+        self.spec_sub_directory_label = tk.Label(self.auto_page, text='Spec Subdirectory:',  width=spec_width, bg=self.label_bg_color)
         self.spec_sub_directory = tk.StringVar(value='')
         self.spec_sub_directory_box = tk.Entry(self.auto_page, textvariable=self.spec_sub_directory,  width=spec_width)
         self.spec_directory_button = tk.Button(self.auto_page, text='Change/Make Directory', command=self.ChangeDirectory,  width=spec_width)
-        self.spec_filename_label = tk.Label(self.auto_page, text='Filename:',  width=spec_width)
+        self.spec_filename_label = tk.Label(self.auto_page, text='Filename:',  width=spec_width, bg=self.label_bg_color)
         self.spec_filename = tk.StringVar(value='')
         self.spec_filename_box = tk.Entry(self.auto_page, textvariable=self.spec_filename,  width=spec_width)
-        self.spec_fileno_label = tk.Label(self.auto_page, text='File #:',  width=spec_width)
+        self.spec_fileno_label = tk.Label(self.auto_page, text='File #:',  width=spec_width, bg=self.label_bg_color)
         self.spec_fileno = tk.IntVar(value=0)
         self.spec_fileno_box = tk.Entry(self.auto_page, textvariable=self.spec_fileno,  width=spec_width)
         # Auto buttons
@@ -149,26 +150,26 @@ class Main:
         self.load_config_button = tk.Button(self.config_page, text='Load Config', command=self.load_config)
         self.spec_address = tk.StringVar(value='')
         self.config_spec_address = tk.Entry(self.config_page, textvariable=self.spec_address)
-        self.config_spec_address_label = tk.Label(self.config_page, text='SPEC Address')
+        self.config_spec_address_label = tk.Label(self.config_page, text='SPEC Address', bg=self.label_bg_color)
         self.spec_connect_button = tk.Button(self.config_page, text='Connect to SPEC', command=self.connect_to_spec)
-        self.volumes_label = tk.Label(self.config_page, text='Buffer/Sample/Buffer volumes in uL:')
+        self.volumes_label = tk.Label(self.config_page, text='Buffer/Sample/Buffer volumes in uL:', bg=self.label_bg_color)
         self.first_buffer_volume = tk.IntVar(value=25)     # May need ot be a doublevar
         self.first_buffer_volume_box = tk.Entry(self.config_page, textvariable=self.first_buffer_volume)
         self.sample_volume = tk.IntVar(value=25)           # May need ot be a doublevar
         self.sample_volume_box = tk.Entry(self.config_page, textvariable=self.sample_volume)
         self.last_buffer_volume = tk.IntVar(value=25)      # May need ot be a doublevar
         self.last_buffer_volume_box = tk.Entry(self.config_page, textvariable=self.last_buffer_volume)
-        self.sample_flowrate_label = tk.Label(self.config_page, text="Sample-Buffer Infuse flowrate (ul/min)")
+        self.sample_flowrate_label = tk.Label(self.config_page, text="Sample-Buffer Infuse flowrate (ul/min)", bg=self.label_bg_color)
         self.sample_flowrate = tk.DoubleVar(value=10)
         self.sample_flowrate_box = tk.Entry(self.config_page, textvariable=self.sample_flowrate)
-        self.oil_refill_flowrate_label = tk.Label(self.config_page, text="Oil refill rate (ul/min)")
+        self.oil_refill_flowrate_label = tk.Label(self.config_page, text="Oil refill rate (ul/min)", bg=self.label_bg_color)
         self.oil_refill_flowrate = tk.DoubleVar(value=10)
         self.oil_refill_flowrate_box = tk.Entry(self.config_page, textvariable=self.oil_refill_flowrate)
-        self.oil_valve_names_label = tk.Label(self.config_page, text='Oil Valve Hardware Port Names')
+        self.oil_valve_names_label = tk.Label(self.config_page, text='Oil Valve Hardware Port Names', bg=self.label_bg_color)
         self.oil_valve_names = []
         self.oil_valve_name_boxes = []
         self.set_oil_valve_names_button = tk.Button(self.config_page, text='Set Names', command=self.set_oil_valve_names)
-        self.loading_valve_names_label = tk.Label(self.config_page, text='Loading Valve Hardware Port Names')
+        self.loading_valve_names_label = tk.Label(self.config_page, text='Loading Valve Hardware Port Names', bg=self.label_bg_color)
         self.loading_valve_names = []
         self.loading_valve_name_boxes = []
         self.set_loading_valve_names_button = tk.Button(self.config_page, text='Set Names', command=self.set_loading_valve_names)
@@ -176,49 +177,49 @@ class Main:
         self.tseries_time_box = tk.Entry(self.config_page, textvariable=self.tseries_time)
         self.tseries_frames = tk.IntVar(value=0)
         self.tseries_frames_box = tk.Entry(self.config_page, textvariable=self.tseries_frames)
-        self.tseries_label = tk.Label(self.config_page, text='tseries parameters:')
+        self.tseries_label = tk.Label(self.config_page, text='tseries parameters:', bg=self.label_bg_color)
         for i in range(6):
             self.oil_valve_names.append(tk.StringVar(value=''))
             self.oil_valve_name_boxes.append(tk.OptionMenu(self.config_page, self.oil_valve_names[i], ""))
             self.loading_valve_names.append(tk.StringVar(value=''))
             self.loading_valve_name_boxes.append(tk.OptionMenu(self.config_page, self.loading_valve_names[i], ""))
         self.elveflow_sourcename = tk.StringVar()
-        self.low_soap_time_label = tk.Label(self.config_page, text="Low soap time:")
+        self.low_soap_time_label = tk.Label(self.config_page, text="Low soap time:", bg=self.label_bg_color)
         self.low_soap_time = tk.IntVar(value=0)
         self.low_soap_time_box = tk.Spinbox(self.config_page, from_=0, to=1000, textvariable=self.low_soap_time)
-        self.high_soap_time_label = tk.Label(self.config_page, text="High soap time:")
+        self.high_soap_time_label = tk.Label(self.config_page, text="High soap time:", bg=self.label_bg_color)
         self.high_soap_time = tk.IntVar(value=0)
         self.high_soap_time_box = tk.Spinbox(self.config_page, from_=0, to=1000, textvariable=self.high_soap_time)
-        self.water_time_label = tk.Label(self.config_page, text="Water time:")
+        self.water_time_label = tk.Label(self.config_page, text="Water time:", bg=self.label_bg_color)
         self.water_time = tk.IntVar(value=0)
         self.water_time_box = tk.Spinbox(self.config_page, from_=0, to=1000, textvariable=self.water_time)
-        self.air_time_label = tk.Label(self.config_page, text="Air time:")
+        self.air_time_label = tk.Label(self.config_page, text="Air time:", bg=self.label_bg_color)
         self.air_time = tk.IntVar(value=0)
         self.air_time_box = tk.Spinbox(self.config_page, from_=0, to=1000, textvariable=self.air_time)
 
-        self.purge_possition_label = tk.Label(self.config_page, text="Purge valve possitions:")
-        self.purge_running_label = tk.Label(self.config_page, text="running:")
+        self.purge_possition_label = tk.Label(self.config_page, text="Purge valve possitions:", bg=self.label_bg_color)
+        self.purge_running_label = tk.Label(self.config_page, text="running:", bg=self.label_bg_color)
         self.purge_running_pos = tk.IntVar(value=0)
         self.purge_running_box = tk.Spinbox(self.config_page, from_=0, to=100, textvariable=self.purge_running_pos)
 
-        self.purge_water_label = tk.Label(self.config_page, text="Water Purge:")
+        self.purge_water_label = tk.Label(self.config_page, text="Water Purge:", bg=self.label_bg_color)
         self.purge_water_pos = tk.IntVar(value=0)
         self.purge_water_box = tk.Spinbox(self.config_page, from_=0, to=100, textvariable=self.purge_water_pos)
 
-        self.purge_soap_label = tk.Label(self.config_page, text="Soap:")
+        self.purge_soap_label = tk.Label(self.config_page, text="Soap:", bg=self.label_bg_color)
         self.purge_soap_pos = tk.IntVar(value=0)
         self.purge_soap_box = tk.Spinbox(self.config_page, from_=0, to=100, textvariable=self.purge_soap_pos)
 
-        self.purge_air_label = tk.Label(self.config_page, text="Air:")
+        self.purge_air_label = tk.Label(self.config_page, text="Air:", bg=self.label_bg_color)
         self.purge_air_pos = tk.IntVar(value=0)
         self.purge_air_box = tk.Spinbox(self.config_page, from_=0, to=100, textvariable=self.purge_air_pos)
 
         def _set_elveflow_sourcename(*args):
             self.config['Elveflow']['elveflow_sourcename'] = self.elveflow_sourcename.get()
         self.elveflow_sourcename.trace('w', _set_elveflow_sourcename)
-        self.elveflow_sourcename_label = tk.Label(self.config_page, text='Elveflow sourcename')
+        self.elveflow_sourcename_label = tk.Label(self.config_page, text='Elveflow sourcename', bg=self.label_bg_color)
         self.elveflow_sourcename_box = tk.Entry(self.config_page, textvariable=self.elveflow_sourcename)
-        self.elveflow_sensortypes_label = tk.Label(self.config_page, text='Elveflow sensor types')
+        self.elveflow_sensortypes_label = tk.Label(self.config_page, text='Elveflow sensor types', bg=self.label_bg_color)
         self.elveflow_sensortypes = [tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar()]
         self.elveflow_sensortypes_optionmenu = [None, None, None, None]
         for i in range(4):
@@ -231,7 +232,7 @@ class Main:
                     self.elveflow_sensortypes[i].set(item)
                     self.config['Elveflow']['sensor%d_type' % (i+1)] = item
                 self.elveflow_sensortypes_optionmenu[i]['menu'].add_command(label=item, command=_set_elveflow_sensor)
-        self.elveflow_oil_channel_pressure_label = tk.Label(self.config_page, text='Elveflow oil channel, pressure [mbar]')
+        self.elveflow_oil_channel_pressure_label = tk.Label(self.config_page, text='Elveflow oil channel, pressure [mbar]', bg=self.label_bg_color)
         self.elveflow_oil_channel = tk.StringVar()
         self.elveflow_oil_pressure = tk.StringVar()
         self.elveflow_oil_channel_box = tk.Entry(self.config_page, textvariable=self.elveflow_oil_channel)
@@ -910,23 +911,23 @@ class Main:
         newbuttons = [
          COMPortSelector(self.setup_page, exportselection=0, height=4),
          tk.Button(self.setup_page, text="Set Port", command=lambda: self.instruments[instrument_index].set_port(self.AvailablePorts[int(self.setup_page_buttons[instrument_index][0].curselection()[0])].device)),
-         tk.Label(self.setup_page, text="or"),
+         tk.Label(self.setup_page, text="or",bg=self.label_bg_color),
          tk.Button(self.setup_page, text="Send to Controller", command=lambda: self.instruments[instrument_index].set_to_controller(self.controller)),
-         tk.Label(self.setup_page, text="   Pump Address:"),
+         tk.Label(self.setup_page, text="   Pump Address:",bg=self.label_bg_color),
          tk.Spinbox(self.setup_page, from_=0, to=100, textvariable=self.setup_page_variables[instrument_index][0]),
-         tk.Label(self.setup_page, text="   Pump Name:"),
+         tk.Label(self.setup_page, text="   Pump Name:",bg=self.label_bg_color),
          tk.Entry(self.setup_page, textvariable=self.setup_page_variables[instrument_index][1]),
          tk.Button(self.setup_page, text="Set values", command=lambda: self.instrument_change_values(instrument_index)),
-         tk.Label(self.setup_page, text="Instrument configuration"),
+         tk.Label(self.setup_page, text="Instrument configuration",bg=self.label_bg_color),
          tk.OptionMenu(self.setup_page, self.setup_page_variables[instrument_index][2], *self.hardware_config_options),
          tk.Button(self.setup_page, text="Set", command=lambda: self.configure_to_hardware(self.setup_page_variables[instrument_index][2].get(), instrument_index))
          ]
 
         # Pumps share a port-> Dont need extra ones
         if self.NumberofPumps > 1:
-            newbuttons[0] = tk.Label(self.setup_page, text="     ")
-            newbuttons[1] = tk.Label(self.setup_page, text="     ")
-            newbuttons[2] = tk.Label(self.setup_page, text="     ")
+            newbuttons[0] = tk.Label(self.setup_page, text="     ,bg=self.label_bg_color")
+            newbuttons[1] = tk.Label(self.setup_page, text="     ,bg=self.label_bg_color")
+            newbuttons[2] = tk.Label(self.setup_page, text="     ,bg=self.label_bg_color")
 
         self.setup_page_buttons.append(newbuttons)
         for i in range(len(self.setup_page_buttons)):
@@ -960,22 +961,22 @@ class Main:
         newvars[0].set(self.instruments[instrument_index].name+":  ")
         self.manual_page_variables.append(newvars)
         newbuttons = [
-         tk.Label(self.manual_page, textvariable=self.manual_page_variables[instrument_index][0]),
+         tk.Label(self.manual_page, textvariable=self.manual_page_variables[instrument_index][0],bg=self.label_bg_color),
          tk.Button(self.manual_page, text="Run", command=lambda: self.manual_queue.put(self.instruments[instrument_index].start_pump)),
          tk.Button(self.manual_page, text="Stop", command=lambda:self.manual_queue.put(self.instruments[instrument_index].stop_pump)),
-         tk.Label(self.manual_page, text="  Infuse Rate:"),
+         tk.Label(self.manual_page, text="  Infuse Rate:",bg=self.label_bg_color),
          tk.Spinbox(self.manual_page, from_=0, to=1000, textvariable=self.manual_page_variables[instrument_index][1]),
          tk.Button(self.manual_page, text="Set", command=lambda: self.manual_queue.put((self.instruments[instrument_index].set_infuse_rate, self.manual_page_variables[instrument_index][1].get()))),
-         tk.Label(self.manual_page, text="  Refill Rate:"),
+         tk.Label(self.manual_page, text="  Refill Rate:",bg=self.label_bg_color),
          tk.Spinbox(self.manual_page, from_=0, to=1000, textvariable=self.manual_page_variables[instrument_index][2]),
          tk.Button(self.manual_page, text="Set", command=lambda: self.manual_queue.put((self.instruments[instrument_index].set_refill_rate, self.manual_page_variables[instrument_index][2].get()))),
-         tk.Label(self.manual_page, text="  Direction:"),
+         tk.Label(self.manual_page, text="  Direction:",bg=self.label_bg_color),
          tk.Button(self.manual_page, text="Infuse", command=lambda: self.manual_queue.put(self.instruments[instrument_index].infuse)),
          tk.Button(self.manual_page, text="Refill", command=lambda: self.manual_queue.put(self.instruments[instrument_index].refill)),
-         tk.Label(self.manual_page, text="Mode"),
+         tk.Label(self.manual_page, text="Mode",bg=self.label_bg_color),
          tk.Button(self.manual_page, text="Pump", command=lambda: self.manual_queue.put(self.instruments[instrument_index].set_mode_pump)),
          tk.Button(self.manual_page, text="Vol", command=lambda: self.manual_queue.put(self.instruments[instrument_index].set_mode_vol)),
-         tk.Label(self.manual_page, text="  Target Vol (ml):"),
+         tk.Label(self.manual_page, text="  Target Vol (ml):",bg=self.label_bg_color),
          tk.Spinbox(self.manual_page, from_=0, to=1000, textvariable=self.manual_page_variables[instrument_index][3]),
          # tk.Button(self.manual_page, text="Set", command=lambda: self.queue.put((self.instruments[instrument_index].set_target_vol, self.manual_page_variables[instrument_index][3].get())))
          tk.Button(self.manual_page, text="Set", command=lambda: self.manual_queue.put((self.instruments[instrument_index].set_target_vol, self.manual_page_variables[instrument_index][3].get())))
@@ -1005,13 +1006,13 @@ class Main:
         newbuttons = [
          COMPortSelector(self.setup_page, exportselection=0, height=4),
          tk.Button(self.setup_page, text="Set Port", command=lambda: self.instruments[instrument_index].set_port(self.AvailablePorts[int(self.setup_page_buttons[instrument_index][0].curselection()[0])].device)),
-         tk.Label(self.setup_page, text="or"),
+         tk.Label(self.setup_page, text="or",bg=self.label_bg_color),
          tk.Button(self.setup_page, text="Send to Controller", command=lambda: self.instruments[instrument_index].set_to_controller(self.controller)),
-         tk.Label(self.setup_page, text="   Type:"),
+         tk.Label(self.setup_page, text="   Type:",bg=self.label_bg_color),
          tk.Spinbox(self.setup_page, values=(2, 6), textvariable=self.setup_page_variables[instrument_index][2]),
-         tk.Label(self.setup_page, text="   I2C Address:"),
+         tk.Label(self.setup_page, text="   I2C Address:",bg=self.label_bg_color),
          tk.Spinbox(self.setup_page, from_=-1, to=100, textvariable=self.setup_page_variables[instrument_index][0]),
-         tk.Label(self.setup_page, text="   Valve Name:"),
+         tk.Label(self.setup_page, text="   Valve Name:",bg=self.label_bg_color),
          tk.Entry(self.setup_page, textvariable=self.setup_page_variables[instrument_index][1]),
          tk.Button(self.setup_page, text="Set values", command=lambda: self.instrument_change_values(instrument_index, True)),
          tk.OptionMenu(self.setup_page, self.setup_page_variables[instrument_index][3], *self.hardware_config_options),
@@ -1034,8 +1035,8 @@ class Main:
         self.manual_page_variables.append(newvars)
 
         newbuttons = [
-         tk.Label(self.manual_page, textvariable=self.manual_page_variables[instrument_index][0]),
-         tk.Label(self.manual_page, text="   Position:"),
+         tk.Label(self.manual_page, textvariable=self.manual_page_variables[instrument_index][0],bg=self.label_bg_color),
+         tk.Label(self.manual_page, text="   Position:",bg=self.label_bg_color),
          tk.Spinbox(self.manual_page, from_=1, to=self.setup_page_variables[instrument_index][2].get(), textvariable=self.manual_page_variables[instrument_index][1]),
          tk.Button(self.manual_page, text="Change", command=lambda: self.manual_queue.put((self.instruments[instrument_index].switchvalve, self.manual_page_variables[instrument_index][1].get()))),
          ]
@@ -1055,9 +1056,9 @@ class Main:
         newbuttons = [
          COMPortSelector(self.setup_page, exportselection=0, height=4),
          tk.Button(self.setup_page, text="Set Port", command=lambda: self.instruments[instrument_index].set_port(self.AvailablePorts[int(self.setup_page_buttons[instrument_index][0].curselection()[0])].device)),
-         tk.Label(self.setup_page, text="or"),
+         tk.Label(self.setup_page, text="or",bg=self.label_bg_color),
          tk.Button(self.setup_page, text="Send to Controller", command=lambda:self.instruments[instrument_index].set_to_controller(self.controller)),
-         tk.Label(self.setup_page, text="   Valve Name:"),
+         tk.Label(self.setup_page, text="   Valve Name:",bg=self.label_bg_color),
          tk.Entry(self.setup_page, textvariable=self.setup_page_variables[instrument_index][1]),
          tk.Button(self.setup_page, text="Set values", command=lambda: self.instrument_change_values(instrument_index, False)),
          tk.OptionMenu(self.setup_page, self.setup_page_variables[instrument_index][2], *self.hardware_config_options),
@@ -1079,8 +1080,8 @@ class Main:
         self.manual_page_variables.append(newvars)
 
         newbuttons = [
-         tk.Label(self.manual_page, textvariable=self.manual_page_variables[instrument_index][0]),
-         tk.Label(self.manual_page, text="   Position:"),
+         tk.Label(self.manual_page, textvariable=self.manual_page_variables[instrument_index][0],bg=self.label_bg_color),
+         tk.Label(self.manual_page, text="   Position:",bg=self.label_bg_color),
          tk.Spinbox(self.manual_page, values=("A", "B"), textvariable=self.manual_page_variables[instrument_index][1]),
          tk.Button(self.manual_page, text="Change", command=lambda: self.manual_queue.put((self.instruments[instrument_index].switchvalve, self.manual_page_variables[instrument_index][1].get()))),
          ]
