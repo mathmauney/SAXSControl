@@ -432,6 +432,50 @@ class ElveflowHandler_SDK:
         self.reading_thread = threading.Thread(target=start_thread, args=(channel_number, value, interrupt_event, pid_constants))
         self.reading_thread.start()
 
+    def run_volume(self, channel_number, value, interrupt_event=None, pid_constants=None, margin=0.1):
+        """in the calling thread, set the Elveflow flow rate
+        Run a volume PID loop until you are within +/- margin of the target value"""
+        if interrupt_event is None:
+            # if there isn't one already, create a dummy one
+            interrupt_event = threading.Event()
+            interrupt_event.clear()
+        if pid_constants is None:
+            pid_constants = (ElveflowHandler_SDK.VOLUME_KP, ElveflowHandler_SDK.VOLUME_KI, ElveflowHandler_SDK.VOLUME_KD)
+
+        self.errorlogger.debug("STARTING PRESSURE LOOP CHANNEL %s THREAD %s." % (channel_number, threading.current_thread()))
+        pid = PID(*pid_constants, setpoint=value)
+        initial_pressure = c_double()
+        error = Elveflow_SDK.OB1_Get_Press(self.instr_ID.value, c_int32(channel_number), 1, byref(self.calib), byref(initial_pressure), 1000)
+        if error != 0:
+            self.errorlogger.warning('ERROR CODE GETTING PRESSURE %i: %s' % (channel_number, error))
+        # self.errorlogger.debug("INITIAL PRESSURE IS %f" % initial_pressure.value)
+
+        pressure_to_set = value
+        while self.run_flag.is_set() and not interrupt_event.is_set():
+            time.sleep(ElveflowHandler_SDK.PID_SLEEPTIME)
+            get_flowrate = c_double()
+            error = Elveflow_SDK.OB1_Get_Sens_Data(self.instr_ID.value, c_int32(channel_number), 1, byref(get_flowrate))
+            if error != 0:
+                self.errorlogger.warning('ERROR CODE GETTING FLOW RATE %i: %s' % (channel_number, error))
+                # if we have an error reading, don't try to set anything
+            else:
+                if get_flowrate.value > (value - margin) and get_flowrate.value < (value + margin):
+                    #we've reached the end! Just quit.
+                    break
+
+                pressure_to_set = pid(get_flowrate.value) + initial_pressure.value
+
+                if pressure_to_set > 8000:
+                    pressure_to_set = 8000
+                elif pressure_to_set < 0:
+                    pressure_to_set = 0
+
+                error = Elveflow_SDK.OB1_Set_Press(self.instr_ID.value, channel_number, pressure_to_set, byref(self.calib), 1000)
+                if error != 0:
+                    self.errorlogger.warning('ERROR CODE SETTING PRESSURE %i: %s' % (channel_number, error))
+
+        self.errorlogger.debug("DONE WITH FLOW RATE SETTING CHANNEL %s; PRESSURE IS NOW %s" % (channel_number, pressure_to_set))
+
 
 if USE_SDK:
     ElveflowHandler = ElveflowHandler_SDK
