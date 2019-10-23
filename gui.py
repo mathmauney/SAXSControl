@@ -10,15 +10,12 @@ from tkinter import filedialog
 from widgets import FlowPath, ElveflowDisplay, MiscLogger, COMPortSelector, ConsoleUi
 import tkinter.ttk as ttk
 import time
-from hardware import FileIO
 from configparser import ConfigParser
 import logging
-
 import threading
-from hardware import SAXSDrivers
+from hardware import SAXSDrivers, solocomm, FileIO
 import os.path
 import csv
-from hardware import solocomm
 import numpy as np
 import warnings
 import matplotlib
