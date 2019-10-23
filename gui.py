@@ -6,7 +6,7 @@ Alex Mauney
 
 
 import tkinter as tk
-from tkinter import filedialog
+from tkinter import filedialog, messagebox
 from widgets import FlowPath, ElveflowDisplay, MiscLogger, COMPortSelector, ConsoleUi
 import tkinter.ttk as ttk
 import time
@@ -51,6 +51,7 @@ class Main:
             raise NotADirectoryError("%s is not a folder" % ElveflowDisplay.OUTPUT_FOLDER)
 
         self.main_window = window
+        self.oil_refill_flag = False
         self.main_window.report_callback_exception = self.handle_exception
         self.main_window.title('Main Window')
         self.adxIsDone = False
@@ -618,6 +619,13 @@ class Main:
             self.python_logger.error("Elveflow connection not initialized! Please start the connection on the Elveflow tab.")
             return
 
+        if self.oil_refill_flag is False:
+            MsgBox = messagebox.askquestion('Warning', 'Oil may not be full, continue with buffer/sample/buffer?', icon='warning')
+            if MsgBox == 'yes':
+                pass
+            else:
+                return
+
         # before scheduling anything, clear the graph
         self.main_tab_ax1.clear()
         self.main_tab_ax2.clear()
@@ -629,6 +637,7 @@ class Main:
         self.flowpath.set_unlock_state(False)
 
         self.update_graph()
+        self.oil_refill_flag = False
 
         self.queue.put((self.python_logger.info, "Starting to run buffer-sample-buffer"))
         self.queue.put(self.update_graph)
@@ -688,6 +697,7 @@ class Main:
         self.queue.put((self.elveflow_display.start_pressure, elveflow_oil_channel))
 
         self.queue.put((self.python_logger.info, 'Clean and refill done. 完成了！'))
+        self.oil_refill_flag = True
 
     def clean_only_command(self):
         """Clean the buffer and sample loops."""
@@ -753,6 +763,8 @@ class Main:
         self.queue.put((self.elveflow_display.start_pressure, elveflow_oil_channel))
 
         self.queue.put((self.python_logger.info, "Finished refilling syringe"))
+
+        self.oil_refill_flag = True
 
     def load_sample_command(self):
         self.queue.put((self.flowpath.valve4.set_auto_position, "Load"))
