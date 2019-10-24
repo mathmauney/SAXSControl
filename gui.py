@@ -491,7 +491,7 @@ class Main:
 
         for i in range(int(instrument_config.get("n_rheodyne", 0))):
             field = "Rheodyne"+str(i)
-            self.AddRheodyneSetButtons(int(instrument_config.get(field+"_address", -1)), instrument_config.get(field+"_name", ""), instrument_config.get(field+"_hardware", ""))
+            self.add_rheodyne_set_buttons(int(instrument_config.get(field+"_address", -1)), instrument_config.get(field+"_name", ""), instrument_config.get(field+"_hardware", ""))
 
         for i in range(int(instrument_config.get("n_vici", 0))):
             field = "VICI"+str(i)
