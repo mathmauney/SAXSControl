@@ -936,7 +936,7 @@ class Main:
         self.refresh_com_list()
         self.add_pump_control_buttons()
         if hardware != "":
-            self.configure_to_hardware(hardware, InstrumentIndex)
+            self.configure_to_hardware(hardware, instrument_index)
 
     def refresh_dropdown(self, option_menu_list, options_to_put, VariableLocation):
         # Update Values in Config Selector
@@ -1025,7 +1025,7 @@ class Main:
         self.AddRheodyneControlButtons()
         self.refresh_com_list()
         if hardware != "":
-            self.configure_to_hardware(hardware, InstrumentIndex)
+            self.configure_to_hardware(hardware, instrument_index)
         # self.refresh_dropdown()
 
     def AddRheodyneControlButtons(self):
@@ -1071,7 +1071,7 @@ class Main:
         self.AddVICIControlButtons()
         self.refresh_com_list()
         if hardware != "":
-            self.configure_to_hardware(hardware, InstrumentIndex)
+            self.configure_to_hardware(hardware, instrument_index)
 
     def AddVICIControlButtons(self):
         instrument_index = len(self.instruments)-1
