@@ -142,6 +142,8 @@ class HPump:
                 resource.readline()
             resource.write((self.address+"RUN\n\r").encode())
             time.sleep(0.2)
+            if resource.in_waiting == 0:  # give extra time if it hasn't responded
+                time.sleep(0.2)
             while resource.in_waiting > 0:
                 pumpanswer = resource.readline().decode()
                 if self.address+"<" in pumpanswer:
@@ -159,6 +161,8 @@ class HPump:
                 self.controller.readline()
             self.controller.write(("-"+self.address+"RUN\n\r").encode())
             time.sleep(0.2)
+            if self.controller.in_waiting == 0:  # give more time if it hasn't finished
+                time.sleep(0.2)
             while self.controller.in_waiting > 0:
                 pumpanswer = self.controller.readline().decode()
                 if self.address+"<" in pumpanswer:
@@ -185,6 +189,8 @@ class HPump:
                 resource.readline()
             resource.write((self.address+"STP\n\r").encode())
             time.sleep(0.2)
+            if resource.in_waiting == 0:  # give extra time if it hasn't responded
+                time.sleep(0.2)
             while resource.in_waiting > 0:  # Clear Buffer
                 pumpanswer = resource.readline()
                 if self.address+"*" in pumpanswer:
@@ -202,6 +208,8 @@ class HPump:
                 self.controller.readline()
             self.controller.write(("-"+self.address+"STP\n\r").encode())
             time.sleep(0.2)
+            if self.controller.in_waiting == 0:  # give more time if it hasn't finished
+                time.sleep(0.2)
             while self.controller.in_waiting > 0:
                 pumpanswer = self.controller.readline().decode()
                 if self.address+":" in pumpanswer:
@@ -467,7 +475,7 @@ class HPump:
                 return running
             else:
                 self.logger.info("Failure Connecting to Pump")
-                raise RuntimeError
+                # raise RuntimeError Not raising so that if one fails queue isnt dumped
 
     def wait_until_stopped(self, timeout=60):
         currenttime = 0
@@ -908,6 +916,8 @@ class VICI:
             self.serialobject.readline()
         self.serialobject.write(commandtosend.encode())
         time.sleep(0.2)
+        if self.serialobject.in_waiting == 0:  # give extra time
+            time.sleep(0.2)
         while self.serialobject.in_waiting > 0:  # Read in response
             if position in self.serialobject.readline().decode():
                 self.logger.info(self.name+" switched to "+position)
