@@ -22,8 +22,8 @@ from hardware import solocomm
 import numpy as np
 import warnings
 import matplotlib
-from matplotlib import pyplot as plt
 matplotlib.use('TkAgg')
+from matplotlib import pyplot as plt
 matplotlib.rcParams.update({'figure.autolayout': True})
 warnings.filterwarnings("ignore", message="Attempting to set identical bottom==top")
 
@@ -131,7 +131,7 @@ class Main:
         self.purge_button = tk.Button(self.auto_page, text='Purge', command=self.purge_command, font=auto_button_font, width=auto_button_width, height=3)
         self.purge_soap_button = tk.Button(self.auto_page, text='Purge Soap', command=self.purge_soap_command, font=auto_button_font, width=auto_button_width)
         self.purge_dry_button = tk.Button(self.auto_page, text='Dry Sheath', command=self.purge_dry_command, font=auto_button_font, width=auto_button_width)
-
+        self.initialize_sheath_button = tk.Button(self.auto_page, text='Initialize Sheath', command=self.initialize_sheath_command)
         # Elveflow Plots
         self.fig_dpi = 96  # this shouldn't matter too much (because we normalize against it) except in how font sizes are handled in the plot
         self.main_tab_fig = plt.Figure(figsize=(core_width*2/3/self.fig_dpi, core_height*3/4/self.fig_dpi), dpi=self.fig_dpi)
@@ -228,7 +228,6 @@ class Main:
             for item in FileIO.SDK_SENSOR_TYPES:
                 def _set_elveflow_sensor(i=i, item=item):
                     # weird default argument for scoping; not sure if it's needed but whatever, it works; don't touch it
-                    print("GYAAA SETTING CHANNEL %i to %s" % (i+1, item))
                     self.elveflow_sensortypes[i].set(item)
                     self.config['Elveflow']['sensor%d_type' % (i+1)] = item
                 self.elveflow_sensortypes_optionmenu[i]['menu'].add_command(label=item, command=_set_elveflow_sensor)
@@ -237,6 +236,11 @@ class Main:
         self.elveflow_oil_pressure = tk.StringVar()
         self.elveflow_oil_channel_box = tk.Entry(self.config_page, textvariable=self.elveflow_oil_channel)
         self.elveflow_oil_pressure_box = tk.Entry(self.config_page, textvariable=self.elveflow_oil_pressure)
+        self.elveflow_sheath_channel_pressure_label = tk.Label(self.config_page, text='Elveflow sheath channel, volume [µL/min]')
+        self.elveflow_sheath_channel = tk.StringVar()
+        self.elveflow_sheath_volume = tk.StringVar()
+        self.elveflow_sheath_channel_box = tk.Entry(self.config_page, textvariable=self.elveflow_sheath_channel)
+        self.elveflow_sheath_volume_box = tk.Entry(self.config_page, textvariable=self.elveflow_sheath_volume)
 
         # Make Instrument
         self.AvailablePorts = SAXSDrivers.list_available_ports()
@@ -332,6 +336,8 @@ class Main:
         self.purge_soap_button.grid(row=11, column=5)
         self.purge_dry_button.grid(row=12, column=5)
         self.canvas.get_tk_widget().grid(row=0, column=2, rowspan=10, columnspan=8, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
+
+        self.initialize_sheath_button.grid(row=120, column=0) # TODO: make buttons play nice with Josue's buttons
         # Manual page
         # Config page
         rowcounter = 0
@@ -372,6 +378,10 @@ class Main:
         self.elveflow_oil_channel_pressure_label.grid(row=rowcounter, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
         self.elveflow_oil_channel_box.grid(row=rowcounter, column=1, sticky=tk.W+tk.E+tk.N+tk.S)
         self.elveflow_oil_pressure_box.grid(row=rowcounter, column=2, sticky=tk.W+tk.E+tk.N+tk.S)
+        rowcounter += 1
+        self.elveflow_sheath_channel_pressure_label.grid(row=rowcounter, column=0)
+        self.elveflow_sheath_channel_box.grid(row=rowcounter, column=1)
+        self.elveflow_sheath_volume_box.grid(row=rowcounter, column=2)
         rowcounter += 1
         self.tseries_label.grid(row=rowcounter, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
         self.tseries_time_box.grid(row=rowcounter, column=1, sticky=tk.W+tk.E+tk.N+tk.S)
@@ -450,13 +460,15 @@ class Main:
             # Main Config
             self.sucrose = main_config.getboolean('Sucrose', False)
             # Elveflow Config
-            self.elveflow_sourcename.set(elveflow_config['elveflow_sourcename'])
-            self.elveflow_sensortypes[0].set(elveflow_config['sensor1_type'])
-            self.elveflow_sensortypes[1].set(elveflow_config['sensor2_type'])
-            self.elveflow_sensortypes[2].set(elveflow_config['sensor3_type'])
-            self.elveflow_sensortypes[3].set(elveflow_config['sensor4_type'])
-            self.elveflow_oil_channel.set(elveflow_config['elveflow_oil_channel'])
-            self.elveflow_oil_pressure.set(elveflow_config['elveflow_oil_pressure'])
+            self.elveflow_sourcename.set(elveflow_config.get('elveflow_sourcename', b''))
+            self.elveflow_sensortypes[0].set(elveflow_config.get('sensor1_type', 'none'))
+            self.elveflow_sensortypes[1].set(elveflow_config.get('sensor2_type', 'none'))
+            self.elveflow_sensortypes[2].set(elveflow_config.get('sensor3_type', 'none'))
+            self.elveflow_sensortypes[3].set(elveflow_config.get('sensor4_type', 'none'))
+            self.elveflow_oil_channel.set(elveflow_config.get('elveflow_oil_channel', -1))
+            self.elveflow_oil_pressure.set(elveflow_config.get('elveflow_oil_pressure', 0))
+            self.elveflow_sheath_channel.set(elveflow_config.get('elveflow_sheath_channel', -1))
+            self.elveflow_sheath_volume.set(elveflow_config.get('elveflow_sheath_volume', 0))
             # SPEC Config
             self.spec_address.set(spec_config.get('spec_host', ''))
             self.tseries_time.set(spec_config.get('tseries_time', '10'))
@@ -491,7 +503,7 @@ class Main:
 
         for i in range(int(instrument_config.get("n_rheodyne", 0))):
             field = "Rheodyne"+str(i)
-            self.AddRheodyneSetButtons(int(instrument_config.get(field+"_address", -1)), instrument_config.get(field+"_name", ""), instrument_config.get(field+"_hardware", ""))
+            self.add_rheodyne_set_buttons(int(instrument_config.get(field+"_address", -1)), instrument_config.get(field+"_name", ""), instrument_config.get(field+"_hardware", ""))
 
         for i in range(int(instrument_config.get("n_vici", 0))):
             field = "VICI"+str(i)
@@ -518,6 +530,8 @@ class Main:
             elveflow_config['sensor4_type'] = self.elveflow_sensortypes[3].get()
             elveflow_config['elveflow_oil_channel'] = self.elveflow_oil_channel.get()
             elveflow_config['elveflow_oil_pressure'] = self.elveflow_oil_pressure.get()
+            elveflow_config['elveflow_sheath_channel'] = self.elveflow_sheath_channel.get()
+            elveflow_config['elveflow_sheath_volume'] = self.elveflow_sheath_volume.get()
             # SPEC Config
             spec_config['spec_host'] = self.spec_address.get()
             spec_config['tseries_time'] = str(self.tseries_time.get())
@@ -552,7 +566,7 @@ class Main:
             npumps = 0
             nrheodyne = 0
             nvici = 0
-            for instrument in self.Instruments:
+            for instrument in self.instruments:
                 if instrument.instrument_type == "Pump":
                     instrument_config["Pump"+str(npumps)+"_address"] = str(instrument.address)
                     instrument_config["Pump"+str(npumps)+"_name"] = instrument.name
@@ -677,8 +691,9 @@ class Main:
     def buffer_sample_buffer_command(self):
         """Run a buffer-sample-buffer cycle."""
         if self.elveflow_display is None or self.elveflow_display.elveflow_handler is None:
-            self.python_logger.error("Elveflow connection not initialized! Please start the connection on the Elveflow tab.")
-            return
+            # TODO: make us not need to do this twice?
+            self.python_logger.warning("Elveflow connection not initialized! Please start the connection on the Elveflow tab.")
+            raise RuntimeError("Elveflow connection not initialized! Please start the connection on the Elveflow tab.")
 
         # before scheduling anything, clear the graph
         self.main_tab_ax1.clear()
@@ -687,7 +702,7 @@ class Main:
         self.the_line2 = self.main_tab_ax2.plot([], [], color=ElveflowDisplay.COLOR_Y2)[0]
         self.graph_start_time = int(time.time())
         self.graph_end_time = np.inf
-        self.python_logger.info("graph start time: %s" % self.graph_start_time)
+        self.python_logger.debug("main page graph start time: %s" % self.graph_start_time)
         self.flowpath.set_unlock_state(False)
 
         self.update_graph()
@@ -861,6 +876,15 @@ class Main:
             self.manual_queue.put((self.purge_valve.switchvalve, purge_position))
             self.purge_dry_button.configure(bg="green")
             self.python_logger.info("Purging soap")
+
+    def initialize_sheath_command(self):
+        # TODO: make this a toggle button instead
+        elveflow_sheath_channel = int(self.elveflow_sheath_channel.get())
+        elveflow_sheath_volume = float(self.elveflow_sheath_volume.get())
+        # TODO: graph this?
+        self.queue.put((self.python_logger.info, "Starting to set sheath flow to %s µL/min..." % elveflow_sheath_volume))
+        self.queue.put((self.elveflow_display.run_volume, elveflow_sheath_channel, elveflow_sheath_volume))
+        self.queue.put((self.python_logger.info, "Done setting sheath flow to %s µL/min" % elveflow_sheath_volume))
 
     def toggle_buttons(self):
         """Toggle certain buttons on and off when they should not be allowed to add to queue."""
