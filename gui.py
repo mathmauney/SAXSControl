@@ -496,7 +496,7 @@ class Main:
             npumps = 0
             nrheodyne = 0
             nvici = 0
-            for instrument in self.Instruments:
+            for instrument in self.instruments:
                 if instrument.instrument_type == "Pump":
                     instrument_config["Pump"+str(npumps)+"_address"] = str(instrument.address)
                     instrument_config["Pump"+str(npumps)+"_name"] = instrument.name
@@ -792,7 +792,7 @@ class Main:
             self.flowpath.valve4.hardware = self.instruments[instrument_index]
         else:
             raise ValueError
-        self.Instruments[InstrumentIndex].hardware_configuration = keyword
+        self.instruments[InstrumentIndex].hardware_configuration = keyword
 
     def add_pump_set_buttons(self, address=0, name="Pump", hardware=""):
         """Add pump buttons to the setup page."""
