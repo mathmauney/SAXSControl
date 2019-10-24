@@ -9,9 +9,9 @@ import time
 import os.path
 import warnings
 import matplotlib
+matplotlib.use('TkAgg')
 from matplotlib import pyplot as plt
 
-matplotlib.use('TkAgg')
 warnings.filterwarnings("ignore", message="Attempting to set identical bottom==top")
 warnings.filterwarnings("ignore", message="Attempting to set identical left==right")
 
@@ -63,7 +63,7 @@ class ElveflowDisplay(tk.Canvas):
         self.done_shutting_down = False
 
         self.starttime = int(time.time())
-        self.errorlogger.info("start time is %d" % self.starttime)
+        self.errorlogger.debug("start time is %d" % self.starttime)
 
         self.run_flag = threading.Event()
         self.save_flag = threading.Event()
@@ -324,13 +324,13 @@ class ElveflowDisplay(tk.Canvas):
             self.saveFile = open(os.path.join(ElveflowDisplay.OUTPUT_FOLDER, self.saveFileName_var.get() + self.saveFileNameSuffix_var.get()), 'a', encoding="utf-8", newline='')
             self.saveFileWriter = csv.writer(self.saveFile)
             self.saveFileWriter.writerow(self.elveflow_handler.header)
-            self.errorlogger.info('started saving to %s' % self.saveFile.name)
+            self.errorlogger.debug('started saving to %s' % self.saveFile.name)
         else:
             self.errorlogger.error('cannot start saving (header is unknown). Try again in a moment')
 
     def stop_saving(self, shutdown=False):
         if self.save_flag.is_set():
-            self.errorlogger.info('stopped saving')
+            self.errorlogger.debug('stopped saving')
         self.save_flag.clear()
         if FileIO.USE_SDK and not shutdown:
             self.stopSaving_button.config(state=tk.DISABLED)
@@ -412,7 +412,7 @@ class ElveflowDisplay(tk.Canvas):
             if isPressure:
                 pressure_to_set = int(float(pressureValue.get()))
                 pressureValue.set(str(pressure_to_set))
-                self.elveflow_handler.set_pressure_loop(channel, pressure_to_set, interruptEvent=self.setPressureStop_flag[i],
+                self.elveflow_handler.set_pressure_loop(channel, pressure_to_set, interrupt_event=self.setPressureStop_flag[i],
                                                         on_finish=lambda: self.pressureSettingActive_var[i].set(False))
             else:  # volume control
                 if self.elveflow_config['sensor%i_type' % i] == "none":
@@ -439,7 +439,7 @@ class ElveflowDisplay(tk.Canvas):
                     self.kd_var.set("0.0")
                 flowrate_to_set = int(float(pressureValue.get()))
                 pressureValue.set(str(flowrate_to_set))
-                self.elveflow_handler.set_volume_loop(channel, flowrate_to_set, interruptEvent=self.setPressureStop_flag[i], pid_constants=(kp, ki, kd))
+                self.elveflow_handler.set_volume_loop(channel, flowrate_to_set, interrupt_event=self.setPressureStop_flag[i], pid_constants=(kp, ki, kd))
         except ValueError:
             self.errorlogger.error("unknown value for channel %i (pressure value is %r)" % (channel, pressureValue.get()))
             pressureValue.set("")
@@ -454,6 +454,43 @@ class ElveflowDisplay(tk.Canvas):
             self.setPressureStop_flag[i].set()
         except AttributeError:
             pass
+
+    def run_volume(self, channel=1, target=0, margin=0.1):
+        """run a volume PID loop until you are within +/- margin of the target.
+
+        Unlike start_pressure(isPressure=False), this stops when it reaches the
+        target and blocks until then.
+        """
+        i = channel - 1
+        pressureValue = self.pressureValue_var[i]
+        self.setPressureStop_flag[i] = threading.Event()
+        self.setPressureStop_flag[i].clear()
+
+        if self.elveflow_config['sensor%i_type' % i] == "none":
+            self.errorlogger.error("Channel %d flow meter is not turned on" % channel)
+            self.pressureSettingActive_var[i].set(False)
+            return
+        try:
+            kp = float(self.kp_var.get())
+            self.kp_var.set(str(kp))
+        except ValueError:
+            kp = 0
+            self.kp_var.set("0.0")
+        try:
+            ki = float(self.ki_var.get())
+            self.ki_var.set(str(ki))
+        except ValueError:
+            ki = 0
+            self.ki_var.set("0.0")
+        try:
+            kd = float(self.kd_var.get())
+            self.kd_var.set(str(kd))
+        except ValueError:
+            kd = 0
+            self.kd_var.set("0.0")
+        self.pressureValue_var[i].set(target)
+        pressureValue.set(str(target))
+        self.elveflow_handler.run_volume(channel, target, interrupt_event=self.setPressureStop_flag[i], pid_constants=(kp, ki, kd), margin=0.1)
 
     def set_axis_limits(self):
         for i, x in enumerate(self.axisLimits_var):
