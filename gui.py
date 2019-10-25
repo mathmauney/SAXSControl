@@ -131,7 +131,7 @@ class Main:
         self.purge_button = tk.Button(self.auto_page, text='Purge', command=self.purge_command, font=auto_button_font, width=auto_button_width, height=3)
         self.purge_soap_button = tk.Button(self.auto_page, text='Purge Soap', command=self.purge_soap_command, font=auto_button_font, width=auto_button_width)
         self.purge_dry_button = tk.Button(self.auto_page, text='Dry Sheath', command=self.purge_dry_command, font=auto_button_font, width=auto_button_width)
-        self.initialize_sheath_button = tk.Button(self.auto_page, text='Initialize Sheath', command=self.initialize_sheath_command)
+        self.initialize_sheath_button = tk.Button(self.auto_page, text='Initialize Sheath', command=self.initialize_sheath_command, font=auto_button_font, width=auto_button_width)
         # Elveflow Plots
         self.fig_dpi = 96  # this shouldn't matter too much (because we normalize against it) except in how font sizes are handled in the plot
         self.main_tab_fig = plt.Figure(figsize=(core_width*2/3/self.fig_dpi, core_height*3/4/self.fig_dpi), dpi=self.fig_dpi)
@@ -236,7 +236,7 @@ class Main:
         self.elveflow_oil_pressure = tk.StringVar()
         self.elveflow_oil_channel_box = tk.Entry(self.config_page, textvariable=self.elveflow_oil_channel)
         self.elveflow_oil_pressure_box = tk.Entry(self.config_page, textvariable=self.elveflow_oil_pressure)
-        self.elveflow_sheath_channel_pressure_label = tk.Label(self.config_page, text='Elveflow sheath channel, volume [µL/min]')
+        self.elveflow_sheath_channel_pressure_label = tk.Label(self.config_page, text='Elveflow sheath channel, volume [µL/min]', bg=self.label_bg_color)
         self.elveflow_sheath_channel = tk.StringVar()
         self.elveflow_sheath_volume = tk.StringVar()
         self.elveflow_sheath_channel_box = tk.Entry(self.config_page, textvariable=self.elveflow_sheath_channel)
@@ -337,7 +337,7 @@ class Main:
         self.purge_dry_button.grid(row=12, column=5)
         self.canvas.get_tk_widget().grid(row=0, column=2, rowspan=10, columnspan=8, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
 
-        self.initialize_sheath_button.grid(row=120, column=0) # TODO: make buttons play nice with Josue's buttons
+        self.initialize_sheath_button.grid(row=8, column=0, columnspan=2, sticky=tk.W+tk.E+tk.N+tk.S)  # TODO: make buttons play nice with Josue's buttons
         # Manual page
         # Config page
         rowcounter = 0
@@ -379,9 +379,9 @@ class Main:
         self.elveflow_oil_channel_box.grid(row=rowcounter, column=1, sticky=tk.W+tk.E+tk.N+tk.S)
         self.elveflow_oil_pressure_box.grid(row=rowcounter, column=2, sticky=tk.W+tk.E+tk.N+tk.S)
         rowcounter += 1
-        self.elveflow_sheath_channel_pressure_label.grid(row=rowcounter, column=0)
-        self.elveflow_sheath_channel_box.grid(row=rowcounter, column=1)
-        self.elveflow_sheath_volume_box.grid(row=rowcounter, column=2)
+        self.elveflow_sheath_channel_pressure_label.grid(row=rowcounter, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.elveflow_sheath_channel_box.grid(row=rowcounter, column=1, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.elveflow_sheath_volume_box.grid(row=rowcounter, column=2, sticky=tk.W+tk.E+tk.N+tk.S)
         rowcounter += 1
         self.tseries_label.grid(row=rowcounter, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
         self.tseries_time_box.grid(row=rowcounter, column=1, sticky=tk.W+tk.E+tk.N+tk.S)
