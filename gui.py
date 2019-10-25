@@ -49,7 +49,7 @@ class Main:
             raise FileNotFoundError("%s folder not found" % ElveflowDisplay.OUTPUT_FOLDER)
         elif not os.path.isdir(ElveflowDisplay.OUTPUT_FOLDER):
             raise NotADirectoryError("%s is not a folder" % ElveflowDisplay.OUTPUT_FOLDER)
-
+        self._lock = threading.RLock()
         self.main_window = window
         self.main_window.report_callback_exception = self.handle_exception
         self.main_window.title('Main Window')
@@ -925,7 +925,7 @@ class Main:
 
     def add_pump_set_buttons(self, address=0, name="Pump", hardware=""):
         """Add pump buttons to the setup page."""
-        self.instruments.append(SAXSDrivers.HPump(logger=self.python_logger, name=name, address=address, hardware_configuration=hardware))
+        self.instruments.append(SAXSDrivers.HPump(logger=self.python_logger, name=name, address=address, hardware_configuration=hardware, lock=self._lock))
         self.NumberofPumps += 1
         instrument_index = len(self.instruments)-1
         self.python_logger.info("Added pump")
@@ -1022,7 +1022,7 @@ class Main:
                 button[0].updatelist(SAXSDrivers.list_available_ports(self.AvailablePorts))
 
     def add_rheodyne_set_buttons(self, address=-1, name="Rheodyne", hardware=""):
-        self.instruments.append(SAXSDrivers.Rheodyne(logger=self.python_logger, address_I2C=address, name=name, hardware_configuration=hardware))
+        self.instruments.append(SAXSDrivers.Rheodyne(logger=self.python_logger, address_I2C=address, name=name, hardware_configuration=hardware, lock=self._lock))
         instrument_index = len(self.instruments)-1
         newvars = [tk.IntVar(value=address), tk.StringVar(value=name), tk.IntVar(value=2), tk.StringVar(value=hardware)]
         self.setup_page_variables.append(newvars)
@@ -1072,7 +1072,7 @@ class Main:
                 self.manual_page_buttons[i][y].grid(row=i, column=y)
 
     def AddVICISetButtons(self, name="VICI", hardware=""):
-        self.instruments.append(SAXSDrivers.VICI(logger=self.python_logger, name=name, hardware_configuration=hardware))
+        self.instruments.append(SAXSDrivers.VICI(logger=self.python_logger, name=name, hardware_configuration=hardware, lock=self._lock))
         instrument_index = len(self.instruments)-1
         newvars = [tk.IntVar(value=-1), tk.StringVar(value=name), tk.StringVar(value=hardware)]
         self.setup_page_variables.append(newvars)

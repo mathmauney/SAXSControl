@@ -23,6 +23,7 @@ adxAnswerQueue = ClosableQueue.CQueue()
 logger = logging.getLogger('python')
 
 
+
 class CommException(Exception):
     def __init__(self, value):
         self.parameter = value
@@ -517,6 +518,9 @@ class ControlThread(threading.Thread):
             self.cleanUpAfterAbort()
 
 class ManualControlThread(threading.Thread):
+    """ Class for separate thread. This allows to send manual commands while the main queue is excecuting.
+     Since this thread is intended for device comminications all of the commands excecuted on them are locked.
+     This is to prevent race conditions with the main thread. Communications can bottleneck in the Microntroller"""
 
     def __init__(self, MainGUI):
 
