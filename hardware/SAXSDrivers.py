@@ -497,11 +497,12 @@ class HPump:
                     return True
                     # raise RuntimeError Not raising so that if one fails queue isnt dumped
 
-    def wait_until_stopped(self, timeout=60):
+    def wait_until_stopped(self, timeout=60, command_while_waiting=lambda *_: None):
         currenttime = 0
         while self.is_running() and currenttime < timeout:
-            time.sleep(0.2)
-            currenttime += 0.2
+            time.sleep(0.1)
+            currenttime += 0.1
+            command_while_waiting()
 
     def infuse_volume(self, volume, rate):
         self.infuse()
