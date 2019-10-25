@@ -716,7 +716,7 @@ class Main:
         self.queue.put((self.flowpath.valve3.set_auto_position, 0))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Run"))
         self.queue.put((self.pump.infuse_volume, self.first_buffer_volume.get()/1000, self.sample_flowrate.get()))
-        self.queue.put((self.pump.wait_until_stopped, 2*self.first_buffer_volume.get()/self.sample_flowrate.get()*60))
+        self.queue.put((self.pump.wait_until_stopped, 2*self.first_buffer_volume.get()/self.sample_flowrate.get()*60, self.update_graph))
 
         self.queue.put(self.graph_vline)
         self.queue.put(self.update_graph)
@@ -725,7 +725,7 @@ class Main:
         self.queue.put((self.flowpath.valve3.set_auto_position, 1))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Run"))
         self.queue.put((self.pump.infuse_volume, self.sample_volume.get()/1000, self.sample_flowrate.get()))
-        self.queue.put((self.pump.wait_until_stopped, 2*self.sample_volume.get()/self.sample_flowrate.get()*60))
+        self.queue.put((self.pump.wait_until_stopped, 2*self.sample_volume.get()/self.sample_flowrate.get()*60, self.update_graph))
 
         self.queue.put(self.graph_vline)
         self.queue.put(self.update_graph)
@@ -734,7 +734,7 @@ class Main:
         self.queue.put((self.flowpath.valve3.set_auto_position, 0))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Run"))
         self.queue.put((self.pump.infuse_volume, self.last_buffer_volume.get()/1000, self.sample_flowrate.get()))
-        self.queue.put((self.pump.wait_until_stopped, 2*self.last_buffer_volume.get()/self.sample_flowrate.get()*60))
+        self.queue.put((self.pump.wait_until_stopped, 2*self.last_buffer_volume.get()/self.sample_flowrate.get()*60, self.update_graph))
 
         self.queue.put(self.elveflow_display.stop_saving)
         self.queue.put(self.update_graph)
