@@ -190,7 +190,7 @@ class FlowPath(tk.Canvas):
                 pass
             self.canvas.itemconfig(self.circles[0], fill=self.right_color, outline=self.right_color)
             self.canvas.itemconfig(self.circles[3], fill=self.left_color, outline=self.left_color)
-            if self.position == 1:
+            if self.position == 0:
                 self.arc1 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=120, extent=60, fill=self.left_color, outline=self.left_color)
                 self.arc2 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=0, extent=60, fill=self.right_color, outline=self.right_color)
                 self.canvas.tag_lower(self.arc1)
@@ -201,7 +201,7 @@ class FlowPath(tk.Canvas):
                 self.canvas.itemconfig(self.circles[4], fill=self.left_color, outline=self.left_color)
                 self.canvas.itemconfig(self.circles[5], fill=self.right_color, outline=self.right_color)
                 self.canvas.itemconfig(self.circles[3], fill=self.left_color, outline=self.left_color)
-            elif self.position == 0:
+            elif self.position == 1:
                 self.arc1 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=180, extent=60, fill=self.left_color, outline=self.left_color)
                 self.arc2 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=300, extent=60, fill=self.right_color, outline=self.right_color)
                 self.canvas.tag_lower(self.arc1)
