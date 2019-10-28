@@ -474,9 +474,9 @@ class HPump:
                     try:
                         answer = self.controller.readline()
                         answer = answer.decode()
-                    except e:
+                    except:
                         self.logger.debug(repr(answer))
-                        raise e
+                        raise RuntimeError
                     if self.address in answer:
                         if "<" in answer:
                             running = True

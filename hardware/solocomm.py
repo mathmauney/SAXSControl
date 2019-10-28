@@ -406,7 +406,7 @@ class ControlThread(threading.Thread):
         """Clear queue and reset threads."""
 
         self.abortProcess = False
-
+        self.MainGUI.stop_instruments()
         controlQueueEmpty = controlQueue.empty()
 
         while controlQueueEmpty is False:
@@ -417,6 +417,7 @@ class ControlThread(threading.Thread):
                 controlQueueEmpty = controlQueue.empty()
             except queue.Empty:
                 controlQueueEmpty = True
+
 
     def setupSpecExposureCommands(self, command):
         param = command[1].split()[1].split(',')
@@ -580,7 +581,7 @@ class ManualControlThread(threading.Thread):
                 controlQueueEmpty = True
 
     def abort(self):
-        logger.warning("Queue Aborted")
+        logger.warning("Manual Thread Aborted")
         if self.MainGUI.queue_busy:
             self.abortProcess = True
 

@@ -50,6 +50,7 @@ class Main:
         elif not os.path.isdir(ElveflowDisplay.OUTPUT_FOLDER):
             raise NotADirectoryError("%s is not a folder" % ElveflowDisplay.OUTPUT_FOLDER)
         self._lock = threading.RLock()
+        self.python_logger = logging.getLogger("python")
         self.main_window = window
         self.main_window.report_callback_exception = self.handle_exception
         self.main_window.title('Main Window')
@@ -272,7 +273,9 @@ class Main:
 
         #
         # Flow setup frames
-        self.load_config(filename='config.ini', preload=True)
+        self.sucrose = False
+
+
         if self.sucrose:
             self.flowpath = FlowPath(self.state_frame, self, sucrose=True, bg=self.gui_bg_color)
         else:
@@ -292,7 +295,7 @@ class Main:
         self.listen_run_flag.set()
         # self.listen_thread = threading.Thread(target=self.listen)
         # self.listen_thread.start()
-        self.load_config(filename='config.ini')
+        #self.load_config(filename='config.ini')
         self.connect_to_spec()
         self.start_manual_thread()
         self.elveflow_display.start()
@@ -424,18 +427,40 @@ class Main:
         # SPEC Log
         # self.instrument_logger.grid(row=0, column=0, sticky='NSEW')
         # Should logger definition be in draw function?
-        self.python_logger = logging.getLogger("python")
+
         self.python_logger.setLevel(logging.DEBUG)
         self.user_logger_gui.pass_logger(self.python_logger)
         self.advanced_logger_gui.pass_logger(self.python_logger)
         self.python_logger.addHandler(file_handler)  # logging to a file
         self.controller.logger = self.python_logger  # Pass the logger to the controller
+        self.load_config(filename='config.ini', preload=False)
 
     def stop(self):
         """Stop all running widgets."""
         with self.queue.mutex:
             self.queue.queue.clear()
+        self.stop_instruments()
+
+    def stop_instruments(self):
         SAXSDrivers.InstrumentTerminateFunction(self.instruments)
+        # Nesting the commands so that if one fails the rest still complete
+        try:
+            self.flowpath.valve4.set_auto_position("Load")
+        except:
+            pass
+        finally:
+            try:
+                self.flowpath.valve2.set_auto_position("Waste")
+            except:
+                pass
+            finally:
+                try:
+                    self.flowpath.valve3.set_auto_position(1)
+                except:
+                    pass
+
+
+            self.load_buffer_command()
         # Add Elveflow stop if we use it for non-pressure
 
     def load_config(self, filename=None, preload=False):
@@ -614,7 +639,6 @@ class Main:
 
     def handle_exception(self, exception, value, traceback):
         """Add python exceptions to the GUI log."""
-        self.load_sample_command()
         self.python_logger.exception("Caught exception:")
 
     def save_history(self, filename=None):
@@ -950,9 +974,9 @@ class Main:
 
         # Pumps share a port-> Dont need extra ones
         if self.NumberofPumps > 1:
-            newbuttons[0] = tk.Label(self.setup_page, text="     , bg=self.label_bg_color")
-            newbuttons[1] = tk.Label(self.setup_page, text="     , bg=self.label_bg_color")
-            newbuttons[2] = tk.Label(self.setup_page, text="     , bg=self.label_bg_color")
+            newbuttons[0] = tk.Label(self.setup_page, text=""    , bg=self.label_bg_color)
+            newbuttons[1] = tk.Label(self.setup_page, text=""    , bg=self.label_bg_color)
+            newbuttons[2] = tk.Label(self.setup_page, text=""    , bg=self.label_bg_color)
 
         self.setup_page_buttons.append(newbuttons)
         for i in range(len(self.setup_page_buttons)):
