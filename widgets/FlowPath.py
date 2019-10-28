@@ -127,7 +127,7 @@ class FlowPath(tk.Canvas):
             elif self.canvas.is_unlocked and position is not '':
                 hardware_pos = self.hardware_names.index(position)+1
                 self.hardware.switchvalve(hardware_pos)
-                self.position = position
+                self.set_position(position)
 
         def set_auto_position(self, position):    # TODO: Add in actual valve switching
             """Change the valve position after being clicked both visually and physically."""
@@ -136,7 +136,7 @@ class FlowPath(tk.Canvas):
             elif position is not '':
                 hardware_pos = self.hardware_names.index(position)+1
                 self.hardware.switchvalve(hardware_pos)
-                self.position = position
+                self.set_position(position)
 
         def name_position(self, position, name):
             """Define the name for a hardware port position."""
@@ -190,7 +190,7 @@ class FlowPath(tk.Canvas):
                 pass
             self.canvas.itemconfig(self.circles[0], fill=self.right_color, outline=self.right_color)
             self.canvas.itemconfig(self.circles[3], fill=self.left_color, outline=self.left_color)
-            if self.position == 1:
+            if self.position == 0:
                 self.arc1 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=120, extent=60, fill=self.left_color, outline=self.left_color)
                 self.arc2 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=0, extent=60, fill=self.right_color, outline=self.right_color)
                 self.canvas.tag_lower(self.arc1)
@@ -201,7 +201,7 @@ class FlowPath(tk.Canvas):
                 self.canvas.itemconfig(self.circles[4], fill=self.left_color, outline=self.left_color)
                 self.canvas.itemconfig(self.circles[5], fill=self.right_color, outline=self.right_color)
                 self.canvas.itemconfig(self.circles[3], fill=self.left_color, outline=self.left_color)
-            elif self.position == 0:
+            elif self.position == 1:
                 self.arc1 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=180, extent=60, fill=self.left_color, outline=self.left_color)
                 self.arc2 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=300, extent=60, fill=self.right_color, outline=self.right_color)
                 self.canvas.tag_lower(self.arc1)
@@ -340,6 +340,14 @@ class FlowPath(tk.Canvas):
             elif self.hardware is None:
                 self.assign_to_hardware()
             elif self.canvas.is_unlocked:
+                self.hardware.switchvalve(position)
+                self.set_position(position)
+
+        def set_auto_position(self, position):    # TODO: Add in actual valve switching
+            """Change the valve position after being clicked both visually and physically."""
+            if self.hardware is None:
+                raise ValueError
+            else:
                 self.hardware.switchvalve(position)
                 self.set_position(position)
 
@@ -536,7 +544,7 @@ class FlowPath(tk.Canvas):
         x_avg = math.floor((x0 + x1) / 2)
         self.waste_line = self.create_fluid_line('y', x_avg, y0, -50, color='grey30')
         self.valve2.connect(self.waste_line, 5)
-        self.waste_text = self.create_text(x_avg+10, 10, anchor='se', text='Waste', fill='white', angle=90, font=("Helvetica", 12))
+        self.waste_text = self.create_text(x_avg+10, 10, anchor='se', text='Waste', fill='black', angle=90, font=("Helvetica", 12))
         self.tag_raise(self.waste_text)
         # From Valve 2 to Valve 3
         x0, y0, x1, y1 = self.coords(self.valve3.circles[3])
