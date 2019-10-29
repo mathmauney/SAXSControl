@@ -407,9 +407,9 @@ class Main:
         self.purge_air_box.grid(row=rowcounter, column=8, sticky=tk.W+tk.E+tk.N+tk.S)
         # Setup page
         self.refresh_com_ports.grid(row=0, column=0)
-        self.AddPump.grid(row=0, column=2)
-        self.AddRheodyne.grid(row=0, column=3)
-        self.AddVICI.grid(row=0, column=4)
+        self.AddPump.grid(row=0, column=1)
+        self.AddRheodyne.grid(row=0, column=2)
+        self.AddVICI.grid(row=0, column=3)
         self.ControllerCOM.grid(row=1, column=0)
         self.ControllerSet.grid(row=1, column=2)
         self.I2CScanButton.grid(row=1, column=3)
@@ -497,6 +497,13 @@ class Main:
             self.set_oil_valve_names()
             self.set_loading_valve_names()
         # Instrument Config
+        # Clear existing devices
+        self.Instruments = []
+        self.manual_page_buttons = []
+        self.manual_page_variables = []
+        self.setup_page_buttons = []
+        self.setup_page_variables = []
+        self.NumberofPumps = 0
         for i in range(int(instrument_config.get("n_pumps", 0))):
             field = "Pump"+str(i)
             self.add_pump_set_buttons(int(instrument_config.get(field+"_address", 0)), instrument_config.get(field+"_name", ""), instrument_config.get(field+"_hardware", ""))
@@ -935,7 +942,6 @@ class Main:
         newbuttons = [
          COMPortSelector(self.setup_page, exportselection=0, height=4),
          tk.Button(self.setup_page, text="Set Port", command=lambda: self.instruments[instrument_index].set_port(self.AvailablePorts[int(self.setup_page_buttons[instrument_index][0].curselection()[0])].device)),
-         tk.Label(self.setup_page, text="or", bg=self.label_bg_color),
          tk.Button(self.setup_page, text="Send to Controller", command=lambda: self.instruments[instrument_index].set_to_controller(self.controller)),
          tk.Label(self.setup_page, text="   Pump Address:", bg=self.label_bg_color),
          tk.Spinbox(self.setup_page, from_=0, to=100, textvariable=self.setup_page_variables[instrument_index][0]),
@@ -949,9 +955,9 @@ class Main:
 
         # Pumps share a port-> Dont need extra ones
         if self.NumberofPumps > 1:
-            newbuttons[0] = tk.Label(self.setup_page, text="     , bg=self.label_bg_color")
-            newbuttons[1] = tk.Label(self.setup_page, text="     , bg=self.label_bg_color")
-            newbuttons[2] = tk.Label(self.setup_page, text="     , bg=self.label_bg_color")
+            newbuttons[0] = tk.Label(self.setup_page, text="", bg=self.label_bg_color)
+            newbuttons[1] = tk.Label(self.setup_page, text="", bg=self.label_bg_color)
+            newbuttons[2] = tk.Label(self.setup_page, text="", bg=self.label_bg_color)
 
         self.setup_page_buttons.append(newbuttons)
         for i in range(len(self.setup_page_buttons)):
@@ -1030,7 +1036,6 @@ class Main:
         newbuttons = [
          COMPortSelector(self.setup_page, exportselection=0, height=4),
          tk.Button(self.setup_page, text="Set Port", command=lambda: self.instruments[instrument_index].set_port(self.AvailablePorts[int(self.setup_page_buttons[instrument_index][0].curselection()[0])].device)),
-         tk.Label(self.setup_page, text="or", bg=self.label_bg_color),
          tk.Button(self.setup_page, text="Send to Controller", command=lambda: self.instruments[instrument_index].set_to_controller(self.controller)),
          tk.Label(self.setup_page, text="   Type:", bg=self.label_bg_color),
          tk.Spinbox(self.setup_page, values=(2, 6), textvariable=self.setup_page_variables[instrument_index][2]),
@@ -1080,7 +1085,6 @@ class Main:
         newbuttons = [
          COMPortSelector(self.setup_page, exportselection=0, height=4),
          tk.Button(self.setup_page, text="Set Port", command=lambda: self.instruments[instrument_index].set_port(self.AvailablePorts[int(self.setup_page_buttons[instrument_index][0].curselection()[0])].device)),
-         tk.Label(self.setup_page, text="or", bg=self.label_bg_color),
          tk.Button(self.setup_page, text="Send to Controller", command=lambda:self.instruments[instrument_index].set_to_controller(self.controller)),
          tk.Label(self.setup_page, text="   Valve Name:", bg=self.label_bg_color),
          tk.Entry(self.setup_page, textvariable=self.setup_page_variables[instrument_index][1]),
