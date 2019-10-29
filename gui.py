@@ -444,23 +444,23 @@ class Main:
         SAXSDrivers.InstrumentTerminateFunction(self.instruments)
         # Nesting the commands so that if one fails the rest still complete
         for instrument in self.instruments:
-            if instrument.instrument_type == "Pump":
+            if instrument.enabled and instrument.instrument_type == "Pump":
                 if instrument.is_running():
                     return
 
         try:
             self.flowpath.valve4.set_auto_position("Load")
-        except RuntimeError:
+        except:
             pass
         finally:
             try:
                 self.flowpath.valve2.set_auto_position("Waste")
-            except RuntimeError:
+            except:
                 pass
             finally:
                 try:
                     self.flowpath.valve3.set_auto_position(1)
-                except RuntimeError:
+                except:
                     pass
 
         # Add Elveflow stop if we use it for non-pressure
