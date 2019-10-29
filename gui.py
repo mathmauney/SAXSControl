@@ -437,30 +437,32 @@ class Main:
 
     def stop(self):
         """Stop all running widgets."""
-        with self.queue.mutex:
-            self.queue.queue.clear()
+        self.solo_controller.abortProcess = True
         self.stop_instruments()
 
     def stop_instruments(self):
         SAXSDrivers.InstrumentTerminateFunction(self.instruments)
         # Nesting the commands so that if one fails the rest still complete
+        for instrument in self.instruments:
+            if instrument.instrument_type == "Pump":
+                if instrument.is_running():
+                    return
+
         try:
             self.flowpath.valve4.set_auto_position("Load")
-        except:
+        except RuntimeError:
             pass
         finally:
             try:
                 self.flowpath.valve2.set_auto_position("Waste")
-            except:
+            except RuntimeError:
                 pass
             finally:
                 try:
                     self.flowpath.valve3.set_auto_position(1)
-                except:
+                except RuntimeError:
                     pass
 
-
-            self.load_buffer_command()
         # Add Elveflow stop if we use it for non-pressure
 
     def load_config(self, filename=None, preload=False):
@@ -679,9 +681,12 @@ class Main:
         self.main_tab_ax1.set_ylabel(data_y1_label_var, fontsize=14, color=ElveflowDisplay.COLOR_Y1)
         self.main_tab_ax2.set_ylabel(data_y2_label_var, fontsize=14, color=ElveflowDisplay.COLOR_Y2)
         try:
-            data_x = np.array([elt[data_x_label_var] for elt in self.elveflow_display.data])
-            data_y1 = np.array([elt[data_y1_label_var] for elt in self.elveflow_display.data])
-            data_y2 = np.array([elt[data_y2_label_var] for elt in self.elveflow_display.data])
+            # read it once to avoid a race condition here when reading from
+            # self.elveflow_display.data at the same time as it gets data from the machine
+            elveflow_display_data = self.elveflow_display.data
+            data_x = np.array([elt[data_x_label_var] for elt in elveflow_display_data])
+            data_y1 = np.array([elt[data_y1_label_var] for elt in elveflow_display_data])
+            data_y2 = np.array([elt[data_y2_label_var] for elt in elveflow_display_data])
 
             data_x_viable = (data_x >= self.graph_start_time)  # & (data_x < self.graph_end_time)
             data_x = data_x[data_x_viable]
@@ -741,7 +746,7 @@ class Main:
         self.queue.put((self.flowpath.valve3.set_auto_position, 0))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Run"))
         self.queue.put((self.pump.infuse_volume, self.first_buffer_volume.get()/1000, self.sample_flowrate.get()))
-        self.queue.put((self.pump.wait_until_stopped, 2*self.first_buffer_volume.get()/self.sample_flowrate.get()*60, self.update_graph))
+        self.queue.put((self.pump.wait_until_stopped, self.first_buffer_volume.get()/self.sample_flowrate.get()*60, self.update_graph))
 
         self.queue.put(self.graph_vline)
         self.queue.put(self.update_graph)
@@ -750,7 +755,7 @@ class Main:
         self.queue.put((self.flowpath.valve3.set_auto_position, 1))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Run"))
         self.queue.put((self.pump.infuse_volume, self.sample_volume.get()/1000, self.sample_flowrate.get()))
-        self.queue.put((self.pump.wait_until_stopped, 2*self.sample_volume.get()/self.sample_flowrate.get()*60, self.update_graph))
+        self.queue.put((self.pump.wait_until_stopped, self.sample_volume.get()/self.sample_flowrate.get()*60, self.update_graph))
 
         self.queue.put(self.graph_vline)
         self.queue.put(self.update_graph)
@@ -759,7 +764,7 @@ class Main:
         self.queue.put((self.flowpath.valve3.set_auto_position, 0))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Run"))
         self.queue.put((self.pump.infuse_volume, self.last_buffer_volume.get()/1000, self.sample_flowrate.get()))
-        self.queue.put((self.pump.wait_until_stopped, 2*self.last_buffer_volume.get()/self.sample_flowrate.get()*60, self.update_graph))
+        self.queue.put((self.pump.wait_until_stopped, self.last_buffer_volume.get()/self.sample_flowrate.get()*60, self.update_graph))
 
         self.queue.put(self.elveflow_display.stop_saving)
         self.queue.put(self.update_graph)
