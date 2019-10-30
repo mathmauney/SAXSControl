@@ -931,9 +931,9 @@ class Main:
         elveflow_sheath_channel = int(self.elveflow_sheath_channel.get())
         elveflow_sheath_volume = float(self.elveflow_sheath_volume.get())
         # TODO: graph this?
-        self.queue.put((self.python_logger.info, "Starting to set sheath flow to %s µL/min..." % elveflow_sheath_volume))
-        self.queue.put((self.elveflow_display.run_volume, elveflow_sheath_channel, elveflow_sheath_volume))
-        self.queue.put((self.python_logger.info, "Done setting sheath flow to %s µL/min" % elveflow_sheath_volume))
+        self.manual_queue.put((self.python_logger.info, "Starting to set sheath flow to %s µL/min..." % elveflow_sheath_volume))
+        self.manual_queue.put((self.elveflow_display.run_volume, elveflow_sheath_channel, elveflow_sheath_volume))
+        self.manual_queue.put((self.python_logger.info, "Done setting sheath flow to %s µL/min" % elveflow_sheath_volume))
 
     def toggle_buttons(self):
         """Toggle certain buttons on and off when they should not be allowed to add to queue."""
