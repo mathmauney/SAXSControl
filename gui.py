@@ -13,6 +13,7 @@ import time
 from hardware import FileIO
 from configparser import ConfigParser
 import logging
+import winsound
 
 import threading
 from hardware import SAXSDrivers
@@ -804,6 +805,12 @@ class Main:
         self.queue.put((self.elveflow_display.start_pressure, elveflow_oil_channel))
 
         self.queue.put((self.python_logger.info, 'Clean and refill done. 完成了！'))
+        self.queue.put(self.set_refill_flag_true)
+        self.queue.put(self.play_done_soud)
+
+    def set_refill_flag_true(self):
+        """def this_this_dumb - This function is so that the flag setting is done in the queue.
+        This way it if it fails the flag isn't reset"""
         self.oil_refill_flag = True
 
     def clean_only_command(self):
@@ -942,6 +949,11 @@ class Main:
         else:
             for button in buttons:
                 button['state'] = 'normal'
+    def play_done_soud(self):
+        duration = 300
+        notes = [392, 494, 587, 740, 783]
+        for note in notes:
+            winsound.Beep(note,duration)
 
     def configure_to_hardware(self, keyword, instrument_index):
         """Assign an instrument to the software version of it."""
