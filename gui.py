@@ -498,7 +498,7 @@ class Main:
             self.set_loading_valve_names()
         # Instrument Config
         # Clear existing devices
-        self.Instruments = []
+        self.instruments = []
         self.manual_page_buttons = []
         self.manual_page_variables = []
         self.setup_page_buttons = []
@@ -912,20 +912,35 @@ class Main:
         """Assign an instrument to the software version of it."""
         # TODO: Add checks for value type
         if keyword == self.hardware_config_options[0]:
-            self.pump = self.instruments[instrument_index]
-            self.python_logger.info("Pump configured to FlowPath")
+            if self.instruments[instrument_index].instrument_type == "Pump":
+                self.pump = self.instruments[instrument_index]
+                self.python_logger.info("Pump configured to FlowPath")
+            else:
+                self.python_logger.info("Invalid configuration for type " + self.instruments[instrument_index].instrument_type)
         elif keyword == self.hardware_config_options[1]:
-            self.flowpath.valve2.hardware = self.instruments[instrument_index]
-            self.python_logger.info("Oil valve configured to FlowPath")
+            if self.instruments[instrument_index].instrument_type == "Rheodyne":
+                self.flowpath.valve2.hardware = self.instruments[instrument_index]
+                self.python_logger.info("Oil valve configured to FlowPath")
+            else:
+                self.python_logger.info("Invalid configuration for type: " + self.instruments[instrument_index].instrument_type)
         elif keyword == self.hardware_config_options[2]:
-            self.flowpath.valve3.hardware = self.instruments[instrument_index]
-            self.python_logger.info("Sample/Buffer valve configured to FlowPath")
+            if self.instruments[instrument_index].instrument_type == "VICI":
+                self.flowpath.valve3.hardware = self.instruments[instrument_index]
+                self.python_logger.info("Sample/Buffer valve configured to FlowPath")
+            else:
+                self.python_logger.info("Invalid configuration for type: " + self.instruments[instrument_index].instrument_type)
         elif keyword == self.hardware_config_options[3]:
-            self.flowpath.valve4.hardware = self.instruments[instrument_index]
-            self.python_logger.info("Loading valve configerd to FlowPath")
+            if self.instruments[instrument_index].instrument_type == "Rheodyne":
+                self.flowpath.valve4.hardware = self.instruments[instrument_index]
+                self.python_logger.info("Loading valve configerd to FlowPath")
+            else:
+                self.python_logger.info("Invalid configuration for type: " + self.instruments[instrument_index].instrument_type)
         elif keyword == self.hardware_config_options[4]:
-            self.purge_valve = self.instruments[instrument_index]
-            self.python_logger.info("Purge valve configured to FlowPath")
+            if self.instruments[instrument_index].instrument_type == "Rheodyne":
+                self.purge_valve = self.instruments[instrument_index]
+                self.python_logger.info("Purge valve configured to FlowPath")
+            else:
+                self.python_logger.info("Invalid configuration for type: " + self.instruments[instrument_index].instrument_type)
         else:
             raise ValueError
         self.instruments[instrument_index].hardware_configuration = keyword
