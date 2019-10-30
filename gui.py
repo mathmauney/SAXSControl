@@ -133,17 +133,24 @@ class Main:
         self.config_spec_address = tk.Entry(self.config_page, textvariable=self.spec_address)
         self.config_spec_address_label = tk.Label(self.config_page, text='SPEC Address')
         self.spec_connect_button = tk.Button(self.config_page, text='Connect to SPEC', command=self.connect_to_spec)
-        self.volumes_label = tk.Label(self.config_page, text='Buffer/Sample/Buffer volumes in uL:')
-        self.first_buffer_volume = tk.IntVar(value=25)     # May need ot be a doublevar
+        self.volumes_label = tk.Label(self.config_page, text='Buffer/Sample/Buffer volumes in µL:')
+        self.first_buffer_volume = tk.IntVar(value=25)     # May need to be a doublevar
         self.first_buffer_volume_box = tk.Entry(self.config_page, textvariable=self.first_buffer_volume)
-        self.sample_volume = tk.IntVar(value=25)           # May need ot be a doublevar
+        self.sample_volume = tk.IntVar(value=25)           # May need to be a doublevar
         self.sample_volume_box = tk.Entry(self.config_page, textvariable=self.sample_volume)
-        self.last_buffer_volume = tk.IntVar(value=25)      # May need ot be a doublevar
+        self.last_buffer_volume = tk.IntVar(value=25)      # May need to be a doublevar
         self.last_buffer_volume_box = tk.Entry(self.config_page, textvariable=self.last_buffer_volume)
-        self.sample_flowrate_label = tk.Label(self.config_page, text="Sample-Buffer Infuse flowrate (ul/min)")
+        self.eq_volumes_label = tk.Label(self.config_page, text='B/S/B equilibration volumes in µL:')
+        self.first_buffer_eq_volume = tk.IntVar(value=25)     # May need to be a doublevar
+        self.first_buffer_eq_volume_box = tk.Entry(self.config_page, textvariable=self.first_buffer_eq_volume)
+        self.sample_eq_volume = tk.IntVar(value=25)           # May need to be a doublevar
+        self.sample_eq_volume_box = tk.Entry(self.config_page, textvariable=self.sample_eq_volume)
+        self.last_buffer_eq_volume = tk.IntVar(value=25)      # May need to be a doublevar
+        self.last_buffer_eq_volume_box = tk.Entry(self.config_page, textvariable=self.last_buffer_eq_volume)
+        self.sample_flowrate_label = tk.Label(self.config_page, text="Sample-Buffer Infuse flowrate (µL/min)")
         self.sample_flowrate = tk.DoubleVar(value=10)
         self.sample_flowrate_box = tk.Entry(self.config_page, textvariable=self.sample_flowrate)
-        self.oil_refill_flowrate_label = tk.Label(self.config_page, text="Oil refill rate (ul/min)")
+        self.oil_refill_flowrate_label = tk.Label(self.config_page, text="Oil refill rate (µL/min)")
         self.oil_refill_flowrate = tk.DoubleVar(value=10)
         self.oil_refill_flowrate_box = tk.Entry(self.config_page, textvariable=self.oil_refill_flowrate)
         self.oil_valve_names_label = tk.Label(self.config_page, text='Oil Valve Hardware Port Names')
@@ -310,6 +317,11 @@ class Main:
         self.sample_volume_box.grid(row=rowcounter, column=2)
         self.last_buffer_volume_box.grid(row=rowcounter, column=3)
         rowcounter += 1
+        self.eq_volumes_label.grid(row=rowcounter, column=0)
+        self.first_buffer_eq_volume_box.grid(row=rowcounter, column=1)
+        self.sample_eq_volume_box.grid(row=rowcounter, column=2)
+        self.last_buffer_eq_volume_box.grid(row=rowcounter, column=3)
+        rowcounter += 1
         self.sample_flowrate_label.grid(row=rowcounter, column=0)
         self.sample_flowrate_box.grid(row=rowcounter, column=1)
         self.oil_refill_flowrate_label.grid(row=rowcounter, column=2)
@@ -428,6 +440,9 @@ class Main:
             self.first_buffer_volume.set(run_config.get('buffer1_vol', 25))
             self.sample_volume.set(run_config.get('sample_vol', 25))
             self.last_buffer_volume.set(run_config.get('buffer2_vol', 25))
+            self.first_buffer_eq_volume.set(run_config.get('buffer1_eq_vol', 0))
+            self.sample_eq_volume.set(run_config.get('sample_eq_vol', 0))
+            self.last_buffer_eq_volume.set(run_config.get('buffer2_eq_vol', 0))
             self.low_soap_time.set(run_config.get('low_soap_time', 0))
             self.high_soap_time.set(run_config.get('high_soap_time', 0))
             self.water_time.set(run_config.get('water_time', 0))
@@ -489,6 +504,9 @@ class Main:
             run_config['buffer1_vol'] = str(self.first_buffer_volume.get())
             run_config['sample_vol'] = str(self.sample_volume.get())
             run_config['buffer2_vol'] = str(self.last_buffer_volume.get())
+            run_config['buffer1_eq_vol'] = str(self.first_buffer_eq_volume.get())
+            run_config['sample_eq_vol'] = str(self.sample_eq_volume.get())
+            run_config['buffer2_eq_vol'] = str(self.last_buffer_eq_volume.get())
             run_config['low_soap_time'] = str(self.low_soap_time.get())
             run_config['high_soap_time'] = str(self.high_soap_time.get())
             run_config['water_time'] = str(self.water_time.get())
@@ -623,9 +641,9 @@ class Main:
 
         self.canvas.draw()  # may need the stupid hack from widgets.py
 
-    def graph_vline(self):
+    def graph_vline(self, color='k'):
         """Add a vertical line to the graph."""
-        self.main_tab_ax1.axvline(int(time.time() - self.elveflow_display.starttime), color='k', linewidth=5)
+        self.main_tab_ax1.axvline(int(time.time() - self.elveflow_display.starttime), color=color, linewidth=5)
 
     def buffer_sample_buffer_command(self):
         """Run a buffer-sample-buffer cycle."""
@@ -650,30 +668,40 @@ class Main:
         self.queue.put(self.update_graph)
         self.queue.put(self.elveflow_display.start_saving)
 
+        # prebuffer
         self.queue.put((self.python_logger.info, "Starting to run pre-buffer"))
         self.queue.put((self.flowpath.valve2.set_auto_position, "Run"))
         self.queue.put((self.flowpath.valve3.set_auto_position, 0))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Run"))
         self.queue.put((self.pump.infuse_volume, self.first_buffer_volume.get()/1000, self.sample_flowrate.get()))
-        self.queue.put((self.pump.wait_until_stopped, 2*self.first_buffer_volume.get()/self.sample_flowrate.get()*60))
+        self.queue.put((self.pump.wait_until_stopped, self.first_buffer_eq_volume.get()/self.sample_flowrate.get()*60)) # wait some amount of time until stable
+        self.queue.put((self.graph_vline, 'chartreuse'))
+        self.run_tseries(postfix="pre")
+        self.queue.put((self.pump.wait_until_stopped, self.first_buffer_volume.get()/self.sample_flowrate.get()*60)) # wait the remaining amount of time
 
+        # sample
         self.queue.put(self.graph_vline)
-        self.queue.put(self.update_graph)
         self.queue.put((self.python_logger.info, "Starting to run sample"))
         self.queue.put((self.flowpath.valve2.set_auto_position, "Run"))
         self.queue.put((self.flowpath.valve3.set_auto_position, 1))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Run"))
         self.queue.put((self.pump.infuse_volume, self.sample_volume.get()/1000, self.sample_flowrate.get()))
-        self.queue.put((self.pump.wait_until_stopped, 2*self.sample_volume.get()/self.sample_flowrate.get()*60))
+        self.queue.put((self.pump.wait_until_stopped, self.sample_eq_volume.get()/self.sample_flowrate.get()*60)) # wait some amount of time until stable
+        self.queue.put((self.graph_vline, 'chartreuse'))
+        self.run_tseries(postfix="sample")
+        self.queue.put((self.pump.wait_until_stopped, self.sample_volume.get()/self.sample_flowrate.get()*60))
 
+        # postbuffer
         self.queue.put(self.graph_vline)
-        self.queue.put(self.update_graph)
         self.queue.put((self.python_logger.info, "Starting to run post-buffer"))
         self.queue.put((self.flowpath.valve2.set_auto_position, "Run"))
         self.queue.put((self.flowpath.valve3.set_auto_position, 0))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Run"))
         self.queue.put((self.pump.infuse_volume, self.last_buffer_volume.get()/1000, self.sample_flowrate.get()))
-        self.queue.put((self.pump.wait_until_stopped, 2*self.last_buffer_volume.get()/self.sample_flowrate.get()*60))
+        self.queue.put((self.pump.wait_until_stopped, self.last_buffer_eq_volume.get()/self.sample_flowrate.get()*60)) # wait some amount of time until stable
+        self.queue.put((self.graph_vline, 'chartreuse'))
+        self.run_tseries(postfix="post")
+        self.queue.put((self.pump.wait_until_stopped, self.last_buffer_volume.get()/self.sample_flowrate.get()*60))
 
         self.queue.put(self.elveflow_display.stop_saving)
         self.queue.put(self.update_graph)
