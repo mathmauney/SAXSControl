@@ -14,6 +14,7 @@ from hardware import FileIO
 from configparser import ConfigParser
 import logging
 import winsound
+import random
 
 import threading
 from hardware import SAXSDrivers
@@ -986,9 +987,18 @@ class Main:
             for button in buttons:
                 button['state'] = 'normal'
     def play_done_sound(self):
-        duration = 300
-        notes = [392, 494, 587, 740, 783]
-        for note in notes:
+        possible_songs = [
+                [(392, 300),(494, 300),(587, 300),(740, 300),(783, 600)], # major 7 arpeggio
+                [(330, 250),(440, 750),(554, 250),(659, 750),(440, 250),(415, 750),(554, 250),(659, 750)], # 月亮代表我的心
+                [(659, 150),(659, 300),(659, 300),(523, 150),(659, 300),(784, 600),(392, 600)], # Mario
+                [(784, 150),(740, 150),(622, 150),(440, 150),(415, 150),(659, 150),(831, 150),(1047, 150)], # Zelda
+                [(880, 400),(784, 200),(698, 400),(784, 200),(880, 400),(932, 200),(1047, 600),(880, 200),(784, 200),(698, 200),(659, 400),(587, 200),(659, 400),(698, 200),(523, 600)], # Do You Hear the People Sing?
+                [(523, 200),(659, 400),(659, 200),(659, 200),(587, 200),(659, 200),(698, 600),(659, 400),(659, 200),(587, 400),(587, 200),(587, 200),(523, 200),(587, 200),(659, 600),(523, 600)], # For He's a Jolly Good Fellow
+                [(415, 150),(311, 150),(415, 150),(523, 150),(415, 150),(523, 150),(622, 450),(523, 300),(415, 150),(554, 450),(523, 300),(466, 150),(415, 450),(466, 450),(415, 450)], # Kid Icarus Underworld
+                [(831, 600),(932, 200),(1047, 600),(932, 200),(831, 400),(698, 400),(698, 400),(622, 400)] # Cornell Alma Mater
+            ]
+        notes = random.choice(possible_songs)
+        for (note, duration) in notes:
             winsound.Beep(note,duration)
 
     def configure_to_hardware(self, keyword, instrument_index):
