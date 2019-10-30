@@ -37,7 +37,7 @@ class SAXSController(serial.Serial):
         self.logger = logger
         self.enabled = False
 
-    def set_port(self, port):
+    def set_port(self, port, instrument_list=[]):
         """Set the serial port."""
         if self.is_open:
             self.close()
@@ -45,6 +45,9 @@ class SAXSController(serial.Serial):
         self.open()
         self.enabled = True
         self.logger.info("Controller set to port "+port)
+        for instrument in instrument_list:
+            if instrument.pc_connect == False:
+                instrument.set_to_controller(self)
 
     def scan_i2c(self):
         """Scan I2C line."""

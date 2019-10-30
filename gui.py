@@ -262,7 +262,7 @@ class Main:
         self.AddRheodyne = tk.Button(self.setup_page, text="Add Rheodyne", command=lambda: self.add_rheodyne_set_buttons())
         self.AddVICI = tk.Button(self.setup_page, text="Add VICI Valve", command=lambda: self.AddVICISetButtons())
         self.ControllerCOM = COMPortSelector(self.setup_page, exportselection=0, height=3)
-        self.ControllerSet = tk.Button(self.setup_page, text="Set Microntroller", command=lambda: self.controller.set_port(self.AvailablePorts[int(self.ControllerCOM.curselection()[0])].device))
+        self.ControllerSet = tk.Button(self.setup_page, text="Set Microntroller", command=lambda: self.controller.set_port(self.AvailablePorts[int(self.ControllerCOM.curselection()[0])].device, self.instruments))
         self.I2CScanButton = tk.Button(self.setup_page, text="Scan I2C line", command=lambda: self.controller.scan_i2c())
 
         # logs
@@ -535,15 +535,15 @@ class Main:
         self.NumberofPumps = 0
         for i in range(int(instrument_config.get("n_pumps", 0))):
             field = "Pump"+str(i)
-            self.add_pump_set_buttons(int(instrument_config.get(field+"_address", 0)), instrument_config.get(field+"_name", ""), instrument_config.get(field+"_hardware", ""))
+            self.add_pump_set_buttons(int(instrument_config.get(field+"_address", 0)), instrument_config.get(field+"_name", ""), instrument_config.get(field+"_hardware", ""), pc_connect=instrument_config.getboolean(field+"_pc_connect", True))
 
         for i in range(int(instrument_config.get("n_rheodyne", 0))):
             field = "Rheodyne"+str(i)
-            self.add_rheodyne_set_buttons(int(instrument_config.get(field+"_address", -1)), instrument_config.get(field+"_name", ""), instrument_config.get(field+"_hardware", ""))
+            self.add_rheodyne_set_buttons(int(instrument_config.get(field+"_address", -1)), instrument_config.get(field+"_name", ""), instrument_config.get(field+"_hardware", ""), pc_connect=instrument_config.getboolean(field+"_pc_connect", True))
 
         for i in range(int(instrument_config.get("n_vici", 0))):
             field = "VICI"+str(i)
-            self.AddVICISetButtons(instrument_config.get(field+"_name", ''), instrument_config.get(field+"_hardware", ""))
+            self.AddVICISetButtons(instrument_config.get(field+"_name", ''), instrument_config.get(field+"_hardware", ""), pc_connect=instrument_config.getboolean(field+"_pc_connect", True))
 
     def save_config(self):
         """Save a config.ini file."""
@@ -607,15 +607,18 @@ class Main:
                     instrument_config["Pump"+str(npumps)+"_address"] = str(instrument.address)
                     instrument_config["Pump"+str(npumps)+"_name"] = instrument.name
                     instrument_config["Pump"+str(npumps)+"_hardware"] = instrument.hardware_configuration
+                    instrument_config["Pump"+str(npumps)+"_pc_connect"] = str(instrument.pc_connect)
                     npumps += 1
                 if instrument.instrument_type == "Rheodyne":
                     instrument_config["Rheodyne"+str(nrheodyne)+"_address"] = str(instrument.address_I2C)
                     instrument_config["Rheodyne"+str(nrheodyne)+"_name"] = instrument.name
                     instrument_config["Rheodyne"+str(nrheodyne)+"_hardware"] = instrument.hardware_configuration
+                    instrument_config["Rheodyne"+str(nrheodyne)+"_pc_connect"] = str(instrument.pc_connect)
                     nrheodyne += 1
                 if instrument.instrument_type == "VICI":
                     instrument_config["VICI"+str(nvici)+"_name"] = instrument.name
                     instrument_config["VICI"+str(nvici)+"_hardware"] = instrument.hardware_configuration
+                    instrument_config["VICI"+str(nvici)+"_pc_connect"] = str(instrument.pc_connect)
                     nvici += 1
             instrument_config["n_pumps"] = str(npumps)
             instrument_config["n_rheodyne"] = str(nrheodyne)
@@ -999,9 +1002,9 @@ class Main:
             raise ValueError
         self.instruments[instrument_index].hardware_configuration = keyword
 
-    def add_pump_set_buttons(self, address=0, name="Pump", hardware=""):
+    def add_pump_set_buttons(self, address=0, name="Pump", hardware="", pc_connect = True):
         """Add pump buttons to the setup page."""
-        self.instruments.append(SAXSDrivers.HPump(logger=self.python_logger, name=name, address=address, hardware_configuration=hardware, lock=self._lock))
+        self.instruments.append(SAXSDrivers.HPump(logger=self.python_logger, name=name, address=address, hardware_configuration=hardware, lock=self._lock, pc_connect=pc_connect))
         self.NumberofPumps += 1
         instrument_index = len(self.instruments)-1
         self.python_logger.info("Added pump")
@@ -1096,8 +1099,8 @@ class Main:
             if isinstance(button[0], COMPortSelector):
                 button[0].updatelist(SAXSDrivers.list_available_ports(self.AvailablePorts))
 
-    def add_rheodyne_set_buttons(self, address=-1, name="Rheodyne", hardware=""):
-        self.instruments.append(SAXSDrivers.Rheodyne(logger=self.python_logger, address_I2C=address, name=name, hardware_configuration=hardware, lock=self._lock))
+    def add_rheodyne_set_buttons(self, address=-1, name="Rheodyne", hardware="", pc_connect=True):
+        self.instruments.append(SAXSDrivers.Rheodyne(logger=self.python_logger, address_I2C=address, name=name, hardware_configuration=hardware, lock=self._lock, pc_connect=pc_connect))
         instrument_index = len(self.instruments)-1
         newvars = [tk.IntVar(value=address), tk.StringVar(value=name), tk.IntVar(value=2), tk.StringVar(value=hardware)]
         self.setup_page_variables.append(newvars)
@@ -1145,8 +1148,8 @@ class Main:
             for y in range(len(self.manual_page_buttons[i])):
                 self.manual_page_buttons[i][y].grid(row=i, column=y)
 
-    def AddVICISetButtons(self, name="VICI", hardware=""):
-        self.instruments.append(SAXSDrivers.VICI(logger=self.python_logger, name=name, hardware_configuration=hardware, lock=self._lock))
+    def AddVICISetButtons(self, name="VICI", hardware="", pc_connect=True):
+        self.instruments.append(SAXSDrivers.VICI(logger=self.python_logger, name=name, hardware_configuration=hardware, lock=self._lock, pc_connect=pc_connect))
         instrument_index = len(self.instruments)-1
         newvars = [tk.IntVar(value=-1), tk.StringVar(value=name), tk.StringVar(value=hardware)]
         self.setup_page_variables.append(newvars)
