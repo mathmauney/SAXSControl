@@ -361,6 +361,7 @@ class FlowPath(tk.Canvas):
             width = kwargs.get('width', 150)
             height = kwargs.get('height', 50)
             self.canvas.create_rectangle(x, y, x+width, y+height, fill="grey", outline="grey", tag=self.name)
+            self.text = self.canvas.create_text(x+width/2, y+height/2, text=self.name, fill='white', font=("Helvetica", 12))
             self.max = self.canvas.create_rectangle(x+border, y+border, x+width-border, y+height-border, fill=self.background, outline=self.background, tag=self.name)
             self.level = self.canvas.create_rectangle(x+border, y+border, x+border, y+height-border, fill=self.background, outline=self.background, tag=self.name)
 
@@ -382,6 +383,7 @@ class FlowPath(tk.Canvas):
                 self.canvas.itemconfig(self.level, fill=self.color, outline=self.color)
             if percent == 100:
                 self.propagate_fluid(self.opposite[self.orientation], self.color)
+            self.canvas.tag_raise(self.text)
 
         def connect(self, object_, position):
             if isinstance(object_, tuple):
@@ -452,11 +454,12 @@ class FlowPath(tk.Canvas):
         self.lock = self.Lock(self, 10, 10)
         self.tag_bind('lock', '<Button-1>', lambda event: self.lock_popup())
         # Set colors
-        self.water_color = 'SteelBlue1'
-        self.air_color = 'CadetBlue1'
-        self.soap_color = 'OliveDrab1'
-        self.sample_color = 'red'
-        self.buffer_color = 'cyan'
+        self.water_color = 'DodgerBlue4'
+        self.air_color = 'RoyalBlue2'
+        self.soap_color = 'SpringGreen4'
+        self.sample_color = 'orange red'
+        self.buffer_color = 'maroon4'
+        self.sheath_color = 'goldenrod3'
         self.empty_color = 'grey30'
         # Add Elements
         self.draw_pumps()
@@ -467,27 +470,27 @@ class FlowPath(tk.Canvas):
         # Scale for computers smaller than 1800 log_width
         scale = self.frame.winfo_screenwidth()/1920
         self.scale("all", 0, 0, scale, scale)
-        self.config(width=1800*scale, height=400*scale)
+        self.config(width=1250*scale, height=400*scale)
 
     def draw_pumps(self):
         """Draw the pumps."""
         self.pump1 = self.FluidLevel(self, 0, 75, height=50, color='black', orientation='right', name='pump1')
-        self.pump1 = self.FluidLevel(self, 0, 275, height=50, color='black', orientation='right', name='pump2')
+        self.pump2 = self.FluidLevel(self, 0, 275, height=50, color='black', orientation='right', name='pump2')
 
     def draw_valves(self):
         """Draw the valves."""
         row1_y = 100
         row2_y = 300
-        self.valve1 = self.InjectionValve(self, 300, row1_y, 'valve1')
-        self.valve2 = self.SelectionValve(self, 700, row1_y, 'valve2')
+        #self.valve1 = self.InjectionValve(self, 300, row1_y, 'valve1')
+        self.valve2 = self.SelectionValve(self, 300, row1_y, 'valve2')
         self.valve2.gui_names[5] = 'Waste'
-        self.valve2.gui_names[4] = 'Run'
-        self.valve2.propagation[4] = True
-        self.valve2.colors[4] = 'black'
-        self.valve3 = self.SampleValve(self, 1100, row1_y, 'valve3')
+        self.valve2.gui_names[3] = 'Run'
+        self.valve2.propagation[3] = True
+        self.valve2.colors[3] = 'black'
+        self.valve3 = self.SampleValve(self, 700, row1_y, 'valve3')
         self.valve3.right_color = self.empty_color
         self.valve3.left_color = self.empty_color
-        self.valve4 = self.SelectionValve(self, 1500, row1_y, 'valve4', angle_off=30)
+        self.valve4 = self.SelectionValve(self, 1100, row1_y, 'valve4', angle_off=30)
         self.valve4.gui_names[5] = 'Run'
         self.valve4.gui_names[0] = 'Load'
         self.valve4.colors[0] = self.buffer_color
@@ -500,37 +503,38 @@ class FlowPath(tk.Canvas):
         self.valve4.gui_names[4] = 'Air'
         self.valve4.colors[4] = self.air_color
         self.valve4.propagation = [True, True, True, True, True, False, True]
-        self.valve5 = self.SelectionValve(self, 700, row2_y, 'valve5')
-        self.valve6 = self.SampleValve(self, 1100, row2_y, 'valve6')
-        self.valve7 = self.SelectionValve(self, 1500, row2_y, 'valve7')
+        self.valve6 = self.SelectionValve(self, 300, row2_y, 'valve5')
+        self.valve6.gui_names[5] = 'Waste'
+        self.valve6.gui_names[3] = 'Run'
+        self.valve6.propagation[3] = True
+        self.valve6.colors[3] = 'black'
+        self.valve7 = self.SampleValve(self, 700, row2_y, 'valve6')
+        self.valve8 = self.SelectionValve(self, 1100, row2_y, 'valve7', angle_off=30)
+        self.valve8.gui_names[5] = 'Run'
+        self.valve8.gui_names[0] = 'Load'
+        self.valve8.colors[0] = self.sheath_color
+        self.valve8.gui_names[1] = 'Low Flow Soap'
+        self.valve8.colors[1] = self.soap_color
+        self.valve8.gui_names[2] = 'High Flow Soap'
+        self.valve8.colors[2] = self.soap_color
+        self.valve8.gui_names[3] = 'Water'
+        self.valve8.colors[3] = self.water_color
+        self.valve8.gui_names[4] = 'Air'
+        self.valve8.colors[4] = self.air_color
+        self.valve8.propagation = [True, True, True, True, True, False, True]
 
     def draw_loops(self):
         """Draw the sample and buffer loops."""
-        self.sample_loop = self.FluidLevel(self, 1025, 0, height=30, color=self.empty_color, background='black', orientation='right', border=0)
-        self.buffer_loop = self.FluidLevel(self, 1025, 170, height=30, color=self.empty_color, background='black', orientation='right', border=0)
+        self.sample_loop = self.FluidLevel(self, 625, 0, height=30, color=self.empty_color, background='black', orientation='right', border=0, name='Sample')
+        self.buffer_loop = self.FluidLevel(self, 625, 170, height=30, color=self.empty_color, background='black', orientation='right', border=0, name='Buffer')
+        self.sheath_loop = self.FluidLevel(self, 625, 370, height=30, color=self.empty_color, background='black', orientation='right', border=0, name='Sheath')
 
     def draw_fluid_lines(self):
         """Draw the fluid lines and set associate them with the correct valves."""
         # Line from syringe to valve 1
         self.syringe_line = self.create_fluid_line('x', 150, 100, 110, color='black')
         self.tag_lower(self.syringe_line)
-        self.valve1.connect(self.syringe_line, 3)
-        # From Valve 1 to Valve 2
-        x0, y0, x1, y1 = self.coords(self.valve1.circles[4])
-        x_avg = math.floor((x0 + x1) / 2)
-        self.oil_line1 = self.create_fluid_line('y', x_avg, y0, -30, color='black')
-        self.oil_line2 = self.create_fluid_line('x', x_avg, y0-30, 400, color='black')
-        self.oil_line3 = self.create_fluid_line('y', x_avg+400, y0-30, 30, color='black')
-        self.valve1.connect(self.oil_line1, 4)
-        self.valve1.connect(self.oil_line2, 4)
-        self.valve1.connect(self.oil_line3, 4)
-        # From Valve 1 to Refill Oil
-        x0, y0, x1, y1 = self.coords(self.valve1.circles[2])
-        x_avg = math.floor((x0 + x1) / 2)
-        self.oil_refill_line = self.create_fluid_line('y', x_avg, y1, 50, color='black')
-        self.valve1.connect(self.oil_refill_line, 2)
-        self.oil_text = self.create_text(x_avg+10, y1+55, anchor='sw', text='Refill', fill='white', angle=90, font=("Helvetica", 12))
-        self.tag_raise(self.oil_text)
+        self.valve2.connect(self.syringe_line, 3)
         # From Valve 2 to Waste
         x0, y0, x1, y1 = self.coords(self.valve2.circles[5])
         x_avg = math.floor((x0 + x1) / 2)
@@ -615,33 +619,120 @@ class FlowPath(tk.Canvas):
         x0, y0, x1, y1 = self.coords(self.valve4.circles[4])
         x_avg = math.floor((x0 + x1) / 2)
         self.air_line = self.create_fluid_line('y', x_avg, y0, -50, color=self.air_color)
-        self.air_text = self.create_text(x_avg+10, 10, anchor='se', text='Air', fill='black', angle=90, font=("Helvetica", 12))
+        self.air_text = self.create_text(x_avg+10, 10, anchor='se', text='Air', fill='white', angle=90, font=("Helvetica", 12))
         self.tag_raise(self.air_text)
         x0, y0, x1, y1 = self.coords(self.valve4.circles[3])
         x_avg = math.floor((x0 + x1) / 2)
         self.water_line = self.create_fluid_line('y', x_avg, y0, -100, color=self.water_color)
-        self.water_text = self.create_text(x_avg+10, 10, anchor='se', text='Water', fill='black', angle=90, font=("Helvetica", 12))
+        self.water_text = self.create_text(x_avg+10, 10, anchor='se', text='Water', fill='white', angle=90, font=("Helvetica", 12))
         self.tag_raise(self.water_text)
         x0, y0, x1, y1 = self.coords(self.valve4.circles[1])
         x_avg = math.floor((x0 + x1) / 2)
         self.low_soap_line = self.create_fluid_line('y', x_avg, y1, 50, color=self.soap_color)
-        self.low_soap_text = self.create_text(x_avg+10, y1+60, anchor='sw', text='Low Soap', fill='black', angle=90, font=("Helvetica", 10))
+        self.low_soap_text = self.create_text(x_avg+10, y1+60, anchor='sw', text='Low Soap', fill='white', angle=90, font=("Helvetica", 10))
         self.tag_raise(self.low_soap_text)
         x0, y0, x1, y1 = self.coords(self.valve4.circles[2])
         x_avg = math.floor((x0 + x1) / 2)
         self.high_soap_line = self.create_fluid_line('y', x_avg, y1, 65, color=self.soap_color)
-        self.high_soap_text = self.create_text(x_avg+10, y1+75, anchor='sw', text='High Soap', fill='black', angle=90, font=("Helvetica", 10))
+        self.high_soap_text = self.create_text(x_avg+10, y1+75, anchor='sw', text='High Soap', fill='white', angle=90, font=("Helvetica", 10))
         self.tag_raise(self.high_soap_text)
+        # =======================================================================
+        # Line from syringe to valve 6
+        self.syringe_line_2 = self.create_fluid_line('x', 150, 300, 110, color='black')
+        self.tag_lower(self.syringe_line_2)
+        self.valve6.connect(self.syringe_line_2, 3)
+        # From Valve 6 to Waste
+        x0, y0, x1, y1 = self.coords(self.valve6.circles[5])
+        x_avg = math.floor((x0 + x1) / 2)
+        self.waste_line_2 = self.create_fluid_line('y', x_avg, y0, -50, color='grey30')
+        self.valve6.connect(self.waste_line_2, 5)
+        self.waste_text_2 = self.create_text(x_avg+10, 210, anchor='se', text='Waste', fill='white', angle=90, font=("Helvetica", 12))
+        self.tag_raise(self.waste_text_2)
+        # From Valve 6 to Valve 7
+        x0, y0, x1, y1 = self.coords(self.valve7.circles[3])
+        y_avg = math.floor((y0 + y1) / 2)
+        self.line_6to7 = self.create_fluid_line('x', x0, y_avg, -300)
+        self.valve6.connect(self.line_6to7, 'center')
+        self.valve6.connect((self.valve7, 3), 'center')
+        self.valve7.connect(self.line_6to7, 3)
+        self.valve7.connect((self.valve6, 'center'), 3)
+        # From Valve 7 to sheath loop
+        x0, y0, x1, y1 = self.coords(self.valve7.circles[2])
+        y_avg = math.floor((y0 + y1) / 2)
+        self.sheath_line_1 = self.create_fluid_line('x', x0, y_avg, -40)
+        self.sheath_line_2 = self.create_fluid_line('y', x0-40, y_avg, 40)
+        self.valve7.connect(self.sheath_line_1, 2)
+        self.valve7.connect(self.sheath_line_2, 2)
+        self.valve7.connect((self.sheath_loop, 'left'), 2)
+        self.sheath_loop.connect(self.sheath_line_1, 'left')
+        self.sheath_loop.connect(self.sheath_line_2, 'left')
+        self.sheath_loop.connect((self.valve7, 2), 'left')
+        x0, y0, x1, y1 = self.coords(self.valve7.circles[1])
+        y_avg = math.floor((y0 + y1) / 2)
+        self.sheath_line_4 = self.create_fluid_line('x', x1, y_avg, 40)
+        self.sheath_line_3 = self.create_fluid_line('y', x1+40, y_avg, 40)
+        self.valve7.connect(self.sheath_line_3, 1)
+        self.valve7.connect(self.sheath_line_4, 1)
+        self.valve7.connect((self.sheath_loop, 'right'), 1)
+        self.sheath_loop.connect(self.sheath_line_3, 'right')
+        self.sheath_loop.connect(self.sheath_line_4, 'right')
+        self.sheath_loop.connect((self.valve7, 1), 'right')
+        self.tag_lower(self.sheath_line_2)
+        self.tag_lower(self.sheath_line_3)
+        # From Valve 7 to Valve 8
+        x0, y0, x1, y1 = self.coords(self.valve7.circles[0])
+        y_avg = math.floor((y0 + y1) / 2)
+        self.line_7to8 = self.create_fluid_line('x', x1, y_avg, 300)
+        self.valve7.connect(self.line_7to8, 0)
+        self.valve8.connect(self.line_7to8, 'center')
+        self.valve8.connect((self.valve7, 0), 'center')
+        # From Valve 8 to Cell
+        x0, y0, x1, y1 = self.coords(self.valve8.circles[5])
+        y_avg = math.floor((y0 + y1) / 2)
+        self.cell_line_2 = self.create_fluid_line('x', x1, y_avg, 100)
+        self.valve8.connect(self.cell_line_2, 5)
+        self.cell_text_2 = self.create_text(x1+100, y_avg+10, anchor='se', text='To Cell', fill='white', font=("Helvetica", 12))
+        # From Valve 8 to Load
+        x0, y0, x1, y1 = self.coords(self.valve8.circles[0])
+        y_avg = math.floor((y0 + y1) / 2)
+        self.load_line_2 = self.create_fluid_line('x', x1, y_avg, 100, color=self.sheath_color)
+        self.valve8.connect(self.load_line_2, 0)
+        self.load_text_2 = self.create_text(x1+100, y_avg+10, anchor='se', text='From Load', fill='white', font=("Helvetica", 12))
+        # From Valve 8 to cleaning
+        x0, y0, x1, y1 = self.coords(self.valve8.circles[4])
+        x_avg = math.floor((x0 + x1) / 2)
+        self.air_line_2 = self.create_fluid_line('y', x_avg, y0, -50, color=self.air_color)
+        self.air_text_2 = self.create_text(x_avg+10, 210, anchor='se', text='Air', fill='white', angle=90, font=("Helvetica", 12))
+        self.tag_raise(self.air_text_2)
+        x0, y0, x1, y1 = self.coords(self.valve8.circles[3])
+        x_avg = math.floor((x0 + x1) / 2)
+        self.water_line_2 = self.create_fluid_line('y', x_avg, y0, -100, color=self.water_color)
+        self.water_text_2 = self.create_text(x_avg+10, 210, anchor='se', text='Water', fill='white', angle=90, font=("Helvetica", 12))
+        self.tag_raise(self.water_text_2)
+        x0, y0, x1, y1 = self.coords(self.valve8.circles[1])
+        x_avg = math.floor((x0 + x1) / 2)
+        self.low_soap_line_2 = self.create_fluid_line('y', x_avg, y1, 50, color=self.soap_color)
+        self.low_soap_text_2 = self.create_text(x_avg+10, y1+60, anchor='sw', text='Low Soap', fill='white', angle=90, font=("Helvetica", 10))
+        self.tag_raise(self.low_soap_text_2)
+        x0, y0, x1, y1 = self.coords(self.valve8.circles[2])
+        x_avg = math.floor((x0 + x1) / 2)
+        self.high_soap_line_2 = self.create_fluid_line('y', x_avg, y1, 65, color=self.soap_color)
+        self.high_soap_text_2 = self.create_text(x_avg+10, y1+75, anchor='sw', text='High Soap', fill='white', angle=90, font=("Helvetica", 10))
+        self.tag_raise(self.high_soap_text_2)
 
     def initialize(self):
         """Set initial levels, colors, and valve positions."""
-        self.pump1.update(25)
+        self.pump1.update(100)
+        self.pump2.update(100)
         self.sample_loop.update(100)
         self.buffer_loop.update(100)
-        self.valve1.set_position(0, color1='black')
+        #self.valve1.set_position(0, color1='black')
         self.valve2.set_position(5)
         self.valve3.set_position(1)
-        self.valve4.set_position(1)
+        self.valve4.set_position('Load')
+        self.valve6.set_position(5)
+        self.valve7.set_position(0)
+        self.valve8.set_position('Load')
 
     def create_circle(self, x, y, r, **kwargs):
         """Draw a circle by center and radius."""
@@ -703,3 +794,11 @@ class FlowPath(tk.Canvas):
             ok_button.grid(row=1, column=0)
             cancel_button = tk.Button(win, text="Cancel", command=win.destroy)
             cancel_button.grid(row=1, column=1)
+
+
+if __name__ == "__main__":
+    window = tk.Tk()
+    window.instruments = None
+    window.flowpath = FlowPath(window, window)
+    window.flowpath.grid(row=0, column=0)
+    window.mainloop()
