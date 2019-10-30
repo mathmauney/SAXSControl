@@ -150,7 +150,7 @@ class FlowPath(tk.Canvas):
                 raise ValueError(str(name) + ' not in known valve names: ' + str(self.gui_names))
             self.hardware_names[position] = name
 
-        def propagate_fluid(self, port, fluid_color):
+        def propagate_fluid(self, port, fluid_color, require_pos=None):
             if isinstance(self.position, str):
                 position = self.gui_names.index(self.position)
             else:
@@ -165,6 +165,8 @@ class FlowPath(tk.Canvas):
                     valve.propagate_fluid(port2, fluid_color)
             elif port == 6:
                 if self.position == -1:
+                    return
+                if require_pos is not None and self.position != require_pos:
                     return
                 self.set_position(self.position, fluid_color)
                 for line in self.fluid_lines[position]:
@@ -226,7 +228,7 @@ class FlowPath(tk.Canvas):
                 if self.connected_input is not None and self.input_colors[self.position] is not None:
                     self.connected_input[0].colors[self.connected_input[1]] = self.input_colors[self.position]
                     self.connected_input[0].propagate_fluid(self.connected_input[1], self.input_colors[self.position])
-                    self.connected_input[0].propagate_fluid(6, self.input_colors[self.position])
+                    self.connected_input[0].propagate_fluid(6, self.input_colors[self.position], self.connected_input[1])
 
         def set_manual_position(self, position):    # TODO: Add in actual valve switching
             """Change the valve position after being clicked both visually and physically."""
