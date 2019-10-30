@@ -15,11 +15,13 @@ soloSoftCommandQueue = ClosableQueue.CQueue()
 soloSoftAnswerQueue = ClosableQueue.CQueue()
 
 controlQueue = ClosableQueue.CQueue()
+ManualControlQueue = ClosableQueue.CQueue()
 
 adxCommandQueue = ClosableQueue.CQueue()
 adxAnswerQueue = ClosableQueue.CQueue()
 
 logger = logging.getLogger('python')
+
 
 
 class CommException(Exception):
@@ -404,7 +406,6 @@ class ControlThread(threading.Thread):
         """Clear queue and reset threads."""
 
         self.abortProcess = False
-
         controlQueueEmpty = controlQueue.empty()
 
         while controlQueueEmpty is False:
@@ -415,6 +416,7 @@ class ControlThread(threading.Thread):
                 controlQueueEmpty = controlQueue.empty()
             except queue.Empty:
                 controlQueueEmpty = True
+        self.MainGUI.stop_instruments()
 
     def setupSpecExposureCommands(self, command):
         param = command[1].split()[1].split(',')
@@ -515,6 +517,75 @@ class ControlThread(threading.Thread):
             self.ADXComm.abort()
             self.cleanUpAfterAbort()
 
+class ManualControlThread(threading.Thread):
+    """ Class for separate thread. This allows to send manual commands while the main queue is excecuting.
+     Since this thread is intended for device comminications all of the commands excecuted on them are locked.
+     This is to prevent race conditions with the main thread. Communications can bottleneck in the Microntroller"""
+
+    def __init__(self, MainGUI):
+
+        threading.Thread.__init__(self)
+        self.MainGUI = MainGUI
+        self.abortProcess = False
+
+    def run(self):
+        while self.MainGUI.listen_run_flag.is_set():
+            if ManualControlQueue.empty():
+                time.sleep(0.1)
+            else:
+                queue_item = ManualControlQueue.get()
+                if isinstance(queue_item, list):
+                    commandList = queue_item
+                    if len(commandList) == 1 and (commandList[0][1] == 'SAFETYCHECK' or commandList[0][0] == 'G'):
+                        pass
+                    else:
+                        self.MainGUI.queue_busy = True
+                        # self.MainGUI.toggle_buttons()
+                elif not self.MainGUI.queue_busy:
+                    self.MainGUI.queue_busy = True
+                    # self.MainGUI.toggle_buttons()
+
+                if isinstance(queue_item, tuple):
+                    try:
+                        queue_item[0](*queue_item[1:])
+                    except:
+                        logger.exception("Caught exception in tuple queue item:")
+                        self.abort()
+                        pass
+                elif callable(queue_item):
+                    try:
+                        queue_item()
+                    except:
+                        logger.exception("Caught exception in tuple queue item:")
+                        self.abort()
+                        pass
+
+                if self.abortProcess:
+                    self.cleanUpAfterAbort()
+
+    def cleanUpAfterAbort(self):
+        """Clear queue and reset threads."""
+
+        self.abortProcess = False
+
+        controlQueueEmpty = ManualControlQueue.empty()
+
+        while controlQueueEmpty is False:
+            try:
+                tst = ManualControlQueue.get(timeout=3)
+                logger.debug('Queue cleaned ' + repr(tst))
+                ManualControlQueue.task_done()
+                controlQueueEmpty = ManualControlQueue.empty()
+            except queue.Empty:
+                controlQueueEmpty = True
+
+    def abort(self):
+        logger.warning("Manual Thread Aborted")
+        if self.MainGUI.queue_busy:
+            self.abortProcess = True
+
+        else:
+            self.cleanUpAfterAbort()
 
 if __name__ == "__main__":
 
