@@ -683,7 +683,7 @@ class Main:
         try:
             # read it once to avoid a race condition here when reading from
             # self.elveflow_display.data at the same time as it gets data from the machine
-            elveflow_display_data = self.elveflow_display.data
+            elveflow_display_data = self.elveflow_display.data.copy()
             data_x = np.array([elt[data_x_label_var] for elt in elveflow_display_data])
             data_y1 = np.array([elt[data_y1_label_var] for elt in elveflow_display_data])
             data_y2 = np.array([elt[data_y2_label_var] for elt in elveflow_display_data])
