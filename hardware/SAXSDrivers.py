@@ -98,6 +98,7 @@ class HPump:
         self.instrument_type = "Pump"
         self.hardware_configuration = hardware_configuration
         self._lock = lock
+        HPump.enabled = False
         # add init for syringe dismeter,flowrate, Direction etc
 
     # function to initialize ports
@@ -910,7 +911,7 @@ class VICI:
         self.serialobject = self.serialobjectPC
         self.serialobject.port = port
         self.enabled = True
-        self.PCConnect = True
+        self.pc_connect = True
         self.ControllerKey = ""
         self.serialobject.open()
         self.logger.info(self.name + " set to port: " + port)
@@ -918,7 +919,7 @@ class VICI:
     def set_to_controller(self, controller):
         if self.serialobject.is_open:
             self.serialobject.close()
-        self.PCConnect = False
+        self.pc_connect = False
         self.serialobject = controller
         self.enabled = controller.enabled
         self.ControllerKey = "+"
