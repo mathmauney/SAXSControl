@@ -15,6 +15,7 @@ from configparser import ConfigParser
 import logging
 import winsound
 
+
 import threading
 from hardware import SAXSDrivers
 import os.path
@@ -806,7 +807,7 @@ class Main:
 
         self.queue.put((self.python_logger.info, 'Clean and refill done. 完成了！'))
         self.queue.put(self.set_refill_flag_true)
-        self.queue.put(self.play_done_soud)
+        self.queue.put(self.play_from_file)
 
     def set_refill_flag_true(self):
         """def this_this_dumb - This function is so that the flag setting is done in the queue.
@@ -949,11 +950,15 @@ class Main:
         else:
             for button in buttons:
                 button['state'] = 'normal'
+
     def play_done_soud(self):
         duration = 300
         notes = [392, 494, 587, 740, 783]
         for note in notes:
-            winsound.Beep(note,duration)
+            winsound.Beep(note, duration)
+
+    def play_from_file(self):
+        winsound.PlaySound("img/AND HIS NAME IS JOHN CENA.wav", winsound.SND_ASYNC)
 
     def configure_to_hardware(self, keyword, instrument_index):
         """Assign an instrument to the software version of it."""
