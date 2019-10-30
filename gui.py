@@ -6,13 +6,14 @@ Alex Mauney
 
 
 import tkinter as tk
-from tkinter import filedialog
+from tkinter import filedialog, messagebox
 from widgets import FlowPath, ElveflowDisplay, MiscLogger, COMPortSelector, ConsoleUi
 import tkinter.ttk as ttk
 import time
 from hardware import FileIO
 from configparser import ConfigParser
 import logging
+import winsound
 
 import threading
 from hardware import SAXSDrivers
@@ -50,7 +51,9 @@ class Main:
         elif not os.path.isdir(ElveflowDisplay.OUTPUT_FOLDER):
             raise NotADirectoryError("%s is not a folder" % ElveflowDisplay.OUTPUT_FOLDER)
         self._lock = threading.RLock()
+        self.python_logger = logging.getLogger("python")
         self.main_window = window
+        self.oil_refill_flag = False
         self.main_window.report_callback_exception = self.handle_exception
         self.main_window.title('Main Window')
         self.adxIsDone = False
@@ -272,7 +275,9 @@ class Main:
 
         #
         # Flow setup frames
-        self.load_config(filename='config.ini', preload=True)
+        self.sucrose = False
+
+
         if self.sucrose:
             self.flowpath = FlowPath(self.state_frame, self, sucrose=True, bg=self.gui_bg_color)
         else:
@@ -292,7 +297,7 @@ class Main:
         self.listen_run_flag.set()
         # self.listen_thread = threading.Thread(target=self.listen)
         # self.listen_thread.start()
-        self.load_config(filename='config.ini')
+        #self.load_config(filename='config.ini')
         self.connect_to_spec()
         self.start_manual_thread()
         self.elveflow_display.start()
@@ -424,18 +429,42 @@ class Main:
         # SPEC Log
         # self.instrument_logger.grid(row=0, column=0, sticky='NSEW')
         # Should logger definition be in draw function?
-        self.python_logger = logging.getLogger("python")
+
         self.python_logger.setLevel(logging.DEBUG)
         self.user_logger_gui.pass_logger(self.python_logger)
         self.advanced_logger_gui.pass_logger(self.python_logger)
         self.python_logger.addHandler(file_handler)  # logging to a file
         self.controller.logger = self.python_logger  # Pass the logger to the controller
+        self.load_config(filename='config.ini', preload=False)
 
     def stop(self):
         """Stop all running widgets."""
-        with self.queue.mutex:
-            self.queue.queue.clear()
+        self.solo_controller.abortProcess = True
+        self.stop_instruments()
+
+    def stop_instruments(self):
         SAXSDrivers.InstrumentTerminateFunction(self.instruments)
+        # Nesting the commands so that if one fails the rest still complete
+        for instrument in self.instruments:
+            if instrument.enabled and instrument.instrument_type == "Pump":
+                if instrument.is_running():
+                    return
+
+        try:
+            self.flowpath.valve4.set_auto_position("Load")
+        except:
+            pass
+        finally:
+            try:
+                self.flowpath.valve2.set_auto_position("Waste")
+            except:
+                pass
+            finally:
+                try:
+                    self.flowpath.valve3.set_auto_position(1)
+                except:
+                    pass
+
         # Add Elveflow stop if we use it for non-pressure
 
     def load_config(self, filename=None, preload=False):
@@ -661,9 +690,12 @@ class Main:
         self.main_tab_ax1.set_ylabel(data_y1_label_var, fontsize=14, color=ElveflowDisplay.COLOR_Y1)
         self.main_tab_ax2.set_ylabel(data_y2_label_var, fontsize=14, color=ElveflowDisplay.COLOR_Y2)
         try:
-            data_x = np.array([elt[data_x_label_var] for elt in self.elveflow_display.data])
-            data_y1 = np.array([elt[data_y1_label_var] for elt in self.elveflow_display.data])
-            data_y2 = np.array([elt[data_y2_label_var] for elt in self.elveflow_display.data])
+            # read it once to avoid a race condition here when reading from
+            # self.elveflow_display.data at the same time as it gets data from the machine
+            elveflow_display_data = self.elveflow_display.data.copy()
+            data_x = np.array([elt[data_x_label_var] for elt in elveflow_display_data])
+            data_y1 = np.array([elt[data_y1_label_var] for elt in elveflow_display_data])
+            data_y2 = np.array([elt[data_y2_label_var] for elt in elveflow_display_data])
 
             data_x_viable = (data_x >= self.graph_start_time)  # & (data_x < self.graph_end_time)
             data_x = data_x[data_x_viable]
@@ -702,6 +734,13 @@ class Main:
             self.python_logger.warning("Elveflow connection not initialized! Please start the connection on the Elveflow tab.")
             raise RuntimeError("Elveflow connection not initialized! Please start the connection on the Elveflow tab.")
 
+        if self.oil_refill_flag is False:
+            MsgBox = messagebox.askquestion('Warning', 'Oil may not be full, continue with buffer/sample/buffer?', icon='warning')
+            if MsgBox == 'yes':
+                pass
+            else:
+                return
+
         # before scheduling anything, clear the graph
         self.main_tab_ax1.clear()
         self.main_tab_ax2.clear()
@@ -713,6 +752,7 @@ class Main:
         self.flowpath.set_unlock_state(False)
 
         self.update_graph()
+        self.oil_refill_flag = False
 
         self.queue.put((self.python_logger.info, "Starting to run buffer-sample-buffer"))
         self.queue.put(self.update_graph)
@@ -723,7 +763,7 @@ class Main:
         self.queue.put((self.flowpath.valve3.set_auto_position, 0))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Run"))
         self.queue.put((self.pump.infuse_volume, self.first_buffer_volume.get()/1000, self.sample_flowrate.get()))
-        self.queue.put((self.pump.wait_until_stopped, 2*self.first_buffer_volume.get()/self.sample_flowrate.get()*60, self.update_graph))
+        self.queue.put((self.pump.wait_until_stopped, self.first_buffer_volume.get()/self.sample_flowrate.get()*60, self.update_graph))
 
         self.queue.put(self.graph_vline)
         self.queue.put(self.update_graph)
@@ -732,7 +772,7 @@ class Main:
         self.queue.put((self.flowpath.valve3.set_auto_position, 1))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Run"))
         self.queue.put((self.pump.infuse_volume, self.sample_volume.get()/1000, self.sample_flowrate.get()))
-        self.queue.put((self.pump.wait_until_stopped, 2*self.sample_volume.get()/self.sample_flowrate.get()*60, self.update_graph))
+        self.queue.put((self.pump.wait_until_stopped, self.sample_volume.get()/self.sample_flowrate.get()*60, self.update_graph))
 
         self.queue.put(self.graph_vline)
         self.queue.put(self.update_graph)
@@ -741,7 +781,7 @@ class Main:
         self.queue.put((self.flowpath.valve3.set_auto_position, 0))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Run"))
         self.queue.put((self.pump.infuse_volume, self.last_buffer_volume.get()/1000, self.sample_flowrate.get()))
-        self.queue.put((self.pump.wait_until_stopped, 2*self.last_buffer_volume.get()/self.sample_flowrate.get()*60, self.update_graph))
+        self.queue.put((self.pump.wait_until_stopped, self.last_buffer_volume.get()/self.sample_flowrate.get()*60, self.update_graph))
 
         self.queue.put(self.elveflow_display.stop_saving)
         self.queue.put(self.update_graph)
@@ -772,6 +812,13 @@ class Main:
         self.queue.put((self.elveflow_display.start_pressure, elveflow_oil_channel))
 
         self.queue.put((self.python_logger.info, 'Clean and refill done. 完成了！'))
+        self.queue.put(self.set_refill_flag_true)
+        self.queue.put(self.play_done_soud)
+
+    def set_refill_flag_true(self):
+        """def this_this_dumb - This function is so that the flag setting is done in the queue.
+        This way it if it fails the flag isn't reset"""
+        self.oil_refill_flag = True
 
     def clean_only_command(self):
         """Clean the buffer and sample loops."""
@@ -838,6 +885,8 @@ class Main:
 
         self.queue.put((self.python_logger.info, "Finished refilling syringe"))
 
+        self.oil_refill_flag = True
+
     def load_sample_command(self):
         self.queue.put((self.flowpath.valve4.set_auto_position, "Load"))
         self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
@@ -889,9 +938,9 @@ class Main:
         elveflow_sheath_channel = int(self.elveflow_sheath_channel.get())
         elveflow_sheath_volume = float(self.elveflow_sheath_volume.get())
         # TODO: graph this?
-        self.queue.put((self.python_logger.info, "Starting to set sheath flow to %s µL/min..." % elveflow_sheath_volume))
-        self.queue.put((self.elveflow_display.run_volume, elveflow_sheath_channel, elveflow_sheath_volume))
-        self.queue.put((self.python_logger.info, "Done setting sheath flow to %s µL/min" % elveflow_sheath_volume))
+        self.manual_queue.put((self.python_logger.info, "Starting to set sheath flow to %s µL/min..." % elveflow_sheath_volume))
+        self.manual_queue.put((self.elveflow_display.run_volume, elveflow_sheath_channel, elveflow_sheath_volume))
+        self.manual_queue.put((self.python_logger.info, "Done setting sheath flow to %s µL/min" % elveflow_sheath_volume))
 
     def toggle_buttons(self):
         """Toggle certain buttons on and off when they should not be allowed to add to queue."""
@@ -907,6 +956,11 @@ class Main:
         else:
             for button in buttons:
                 button['state'] = 'normal'
+    def play_done_soud(self):
+        duration = 300
+        notes = [392, 494, 587, 740, 783]
+        for note in notes:
+            winsound.Beep(note,duration)
 
     def configure_to_hardware(self, keyword, instrument_index):
         """Assign an instrument to the software version of it."""
