@@ -164,6 +164,8 @@ class FlowPath(tk.Canvas):
                 for (valve, port2) in self.connected_valves[6]:
                     valve.propagate_fluid(port2, fluid_color)
             elif port == 6:
+                if self.position == -1:
+                    return
                 self.set_position(self.position, fluid_color)
                 for line in self.fluid_lines[position]:
                     self.canvas.itemconfig(line, fill=self.color, outline=self.color)
@@ -176,6 +178,8 @@ class FlowPath(tk.Canvas):
             self.inner_circle = self.canvas.create_circle(x, y, self.offset-self.small_radius, fill='dimgray', outline='dimgray', tag=self.name)
             self.right_color = 'grey30'
             self.left_color = 'grey30'
+            self.input_colors = [None, None]
+            self.connected_input = None
             self.canvas.tag_bind(name, '<Button-1>', lambda event: self.set_manual_position(self.position+1))
 
         def set_position(self, position, **kwargs):
@@ -219,6 +223,10 @@ class FlowPath(tk.Canvas):
                     self.propagate_fluid(0, self.right_color)
                 if self.propagation[3] is True:
                     self.propagate_fluid(3, self.left_color)
+                if self.connected_input is not None and self.input_colors[self.position] is not None:
+                    self.connected_input[0].colors[self.connected_input[1]] = self.input_colors[self.position]
+                    self.connected_input[0].propagate_fluid(self.connected_input[1], self.input_colors[self.position])
+                    self.connected_input[0].propagate_fluid(6, self.input_colors[self.position])
 
         def set_manual_position(self, position):    # TODO: Add in actual valve switching
             """Change the valve position after being clicked both visually and physically."""
@@ -242,9 +250,9 @@ class FlowPath(tk.Canvas):
             if port == 0 or port == 3:
                 self.propagation = [False, False, False, False, False, False]
                 self.propagation[port] = True
-            if self.position == 1:
+            if self.position == 0:
                 pairs = [5, None, None, 4, 3, 0]
-            elif self.position == 0:
+            elif self.position == 1:
                 pairs = [1, 0, 3, 2, None, None]
             else:
                 return
@@ -489,7 +497,6 @@ class FlowPath(tk.Canvas):
         """Draw the valves."""
         row1_y = 100
         row2_y = 300
-        #self.valve1 = self.InjectionValve(self, 300, row1_y, 'valve1')
         self.valve2 = self.SelectionValve(self, 300, row1_y, 'valve2')
         self.valve2.gui_names[5] = 'Waste'
         self.valve2.gui_names[3] = 'Run'
@@ -498,6 +505,7 @@ class FlowPath(tk.Canvas):
         self.valve3 = self.SampleValve(self, 700, row1_y, 'valve3')
         self.valve3.right_color = self.empty_color
         self.valve3.left_color = self.empty_color
+        self.valve3.input_colors = [self.buffer_color, self.sample_color]
         self.valve4 = self.SelectionValve(self, 1100, row1_y, 'valve4', angle_off=30)
         self.valve4.gui_names[5] = 'Run'
         self.valve4.gui_names[0] = 'Load'
@@ -521,14 +529,14 @@ class FlowPath(tk.Canvas):
         self.valve8.gui_names[5] = 'Run'
         self.valve8.gui_names[0] = 'Load'
         self.valve8.colors[0] = self.sheath_color
-        self.valve8.gui_names[1] = 'Low Flow Soap'
-        self.valve8.colors[1] = self.soap_color
-        self.valve8.gui_names[2] = 'High Flow Soap'
-        self.valve8.colors[2] = self.soap_color
-        self.valve8.gui_names[3] = 'Water'
-        self.valve8.colors[3] = self.water_color
-        self.valve8.gui_names[4] = 'Air'
-        self.valve8.colors[4] = self.air_color
+        self.valve8.gui_names[3] = 'Low Flow Soap'
+        self.valve8.colors[3] = self.soap_color
+        self.valve8.gui_names[4] = 'High Flow Soap'
+        self.valve8.colors[4] = self.soap_color
+        self.valve8.gui_names[2] = 'Water'
+        self.valve8.colors[2] = self.water_color
+        self.valve8.gui_names[1] = 'Air'
+        self.valve8.colors[1] = self.air_color
         self.valve8.propagation = [True, True, True, True, True, False, True]
 
     def draw_loops(self):
@@ -623,6 +631,7 @@ class FlowPath(tk.Canvas):
         self.load_line = self.create_fluid_line('x', x1, y_avg, 100, color=self.buffer_color)
         self.valve4.connect(self.load_line, 0)
         self.load_text = self.create_text(x1+100, y_avg+10, anchor='se', text='From Load', fill='white', font=("Helvetica", 12))
+        self.valve3.connected_input = (self.valve4, 0)
         # From Valve 4 to cleaning
         x0, y0, x1, y1 = self.coords(self.valve4.circles[4])
         x_avg = math.floor((x0 + x1) / 2)
@@ -637,13 +646,13 @@ class FlowPath(tk.Canvas):
         x0, y0, x1, y1 = self.coords(self.valve4.circles[1])
         x_avg = math.floor((x0 + x1) / 2)
         self.low_soap_line = self.create_fluid_line('y', x_avg, y1, 50, color=self.soap_color)
-        self.low_soap_text = self.create_text(x_avg+10, y1+60, anchor='sw', text='Low Soap', fill='white', angle=90, font=("Helvetica", 10))
+        self.low_soap_text = self.create_text(x_avg+10, y1+90, anchor='sw', text='Low Soap', fill='white', angle=90, font=("Helvetica", 10))
         self.tag_raise(self.low_soap_text)
         x0, y0, x1, y1 = self.coords(self.valve4.circles[2])
         x_avg = math.floor((x0 + x1) / 2)
-        self.high_soap_line = self.create_fluid_line('y', x_avg, y1, 65, color=self.soap_color)
-        self.high_soap_text = self.create_text(x_avg+10, y1+75, anchor='sw', text='High Soap', fill='white', angle=90, font=("Helvetica", 10))
-        self.tag_raise(self.high_soap_text)
+        self.high_soap_line = self.create_fluid_line('y', x_avg, y1, 75, color=self.soap_color)
+        self.high_soap_text = self.create_text(x_avg+10, y1+105, anchor='sw', text='High Soap', fill='white', angle=90, font=("Helvetica", 10))
+
         # =======================================================================
         # Line from syringe to valve 6
         self.syringe_line_2 = self.create_fluid_line('x', 150, 300, 110, color='black')
@@ -709,24 +718,22 @@ class FlowPath(tk.Canvas):
         # From Valve 8 to cleaning
         x0, y0, x1, y1 = self.coords(self.valve8.circles[4])
         x_avg = math.floor((x0 + x1) / 2)
-        self.air_line_2 = self.create_fluid_line('y', x_avg, y0, -50, color=self.air_color)
-        self.air_text_2 = self.create_text(x_avg+10, 210, anchor='se', text='Air', fill='white', angle=90, font=("Helvetica", 12))
-        self.tag_raise(self.air_text_2)
+        self.low_soap_line_2 = self.create_fluid_line('y', x_avg, y0, -50, color=self.soap_color)
         x0, y0, x1, y1 = self.coords(self.valve8.circles[3])
         x_avg = math.floor((x0 + x1) / 2)
-        self.water_line_2 = self.create_fluid_line('y', x_avg, y0, -100, color=self.water_color)
-        self.water_text_2 = self.create_text(x_avg+10, 210, anchor='se', text='Water', fill='white', angle=90, font=("Helvetica", 12))
-        self.tag_raise(self.water_text_2)
+        self.high_soap_line_2 = self.create_fluid_line('y', x_avg, y0, -60, color=self.soap_color)
         x0, y0, x1, y1 = self.coords(self.valve8.circles[1])
         x_avg = math.floor((x0 + x1) / 2)
-        self.low_soap_line_2 = self.create_fluid_line('y', x_avg, y1, 50, color=self.soap_color)
-        self.low_soap_text_2 = self.create_text(x_avg+10, y1+60, anchor='sw', text='Low Soap', fill='white', angle=90, font=("Helvetica", 10))
-        self.tag_raise(self.low_soap_text_2)
+        self.air_line_2 = self.create_fluid_line('y', x_avg, y1, 50, color=self.air_color)
+        self.air_text_2 = self.create_text(x_avg+10, y1+60, anchor='sw', text='Air', fill='white', angle=90, font=("Helvetica", 10))
+        self.tag_raise(self.air_text_2)
         x0, y0, x1, y1 = self.coords(self.valve8.circles[2])
         x_avg = math.floor((x0 + x1) / 2)
-        self.high_soap_line_2 = self.create_fluid_line('y', x_avg, y1, 65, color=self.soap_color)
-        self.high_soap_text_2 = self.create_text(x_avg+10, y1+75, anchor='sw', text='High Soap', fill='white', angle=90, font=("Helvetica", 10))
-        self.tag_raise(self.high_soap_text_2)
+        self.water_line_2 = self.create_fluid_line('y', x_avg, y1, 65, color=self.water_color)
+        self.water_text_2 = self.create_text(x_avg+10, y1+75, anchor='sw', text='Water', fill='white', angle=90, font=("Helvetica", 10))
+        self.tag_raise(self.water_text_2)
+        self.tag_raise(self.high_soap_text)
+        self.tag_raise(self.low_soap_text)
 
     def initialize(self):
         """Set initial levels, colors, and valve positions."""
@@ -737,9 +744,10 @@ class FlowPath(tk.Canvas):
         #self.valve1.set_position(0, color1='black')
         self.valve2.set_position(5)
         self.valve3.set_position(1)
+
         self.valve4.set_position('Load')
         self.valve6.set_position(5)
-        self.valve7.set_position(0)
+        self.valve7.set_position(1)
         self.valve8.set_position('Load')
 
     def create_circle(self, x, y, r, **kwargs):
