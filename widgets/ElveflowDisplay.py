@@ -68,7 +68,7 @@ class ElveflowDisplay(tk.Canvas):
         self.starttime = int(time.time())
         self.errorlogger.debug("start time is %d" % self.starttime)
 
-        self.run_flag_lock = threading.RLock() # to make shutdown not hang. Reentrant so that I don't have to think as hard
+        self.exit_lock = threading.Lock() # to make shutdown not hang.
         self.run_flag = threading.Event()
         self.save_flag = threading.Event()
         self.saveFileNameSuffix_var.set("_%d.csv" % time.time())
@@ -190,15 +190,13 @@ class ElveflowDisplay(tk.Canvas):
         self.canvas.get_tk_widget().grid(row=0, column=0, rowspan=rowcounter, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
 
         self._initialize_variables()
-        with self.run_flag_lock:
-            self.run_flag.set()
+        self.run_flag.set()
 
     def _initialize_variables(self):
         """create or reset all the internal variables"""
         self.elveflow_handler = None
         self.data = []
-        with self.run_flag_lock:
-            self.run_flag.clear()
+        self.run_flag.clear()
         self.save_flag.clear()
         self.the_line1 = self.ax1.plot([], [], color=ElveflowDisplay.COLOR_Y1)[0]
         self.the_line2 = self.ax2.plot([], [], color=ElveflowDisplay.COLOR_Y2)[0]
@@ -276,15 +274,15 @@ class ElveflowDisplay(tk.Canvas):
         self.data_y3_label_var.set(ElveflowDisplay.DEFAULT_Y3_LABEL)
         self.elveflow_handler.start(getheader_handler=self.populate_dropdowns)
 
-        with self.run_flag_lock:
-            self.run_flag.set()  # reset in preparation for if we start up the connection again
+        self.run_flag.set()  # reset in preparation for if we start up the connection again
         def pollElveflowThread(run_flag, save_flag):
             print("STARTING DISPLAY THREAD %s" % threading.current_thread())
             try:
                 while True:
-                    with self.run_flag_lock:
+                    with self.exit_lock:
                         if not run_flag.is_set():
                             # simulate `while run_flag.is_set()` but protected by a lock
+                            # really only useful during closedown
                             break
                         new_data = self.elveflow_handler.fetchAll()
                         self.data.extend(new_data)
@@ -334,11 +332,9 @@ class ElveflowDisplay(tk.Canvas):
                 self.done_shutting_down = True
 
             # only clear the run flag after setting the started_shutting_down flag
-            with self.run_flag_lock:
-                self.run_flag.clear()
+            self.run_flag.clear()
         else:
-            with self.run_flag_lock:
-                self.run_flag.clear()
+            self.run_flag.clear()
             self._initialize_variables()
 
     def start_saving(self):
@@ -369,19 +365,6 @@ class ElveflowDisplay(tk.Canvas):
             self.saveFile.close()
 
     def update_plot(self):
-        # if not self.run_flag.is_set():
-        #     return
-        #     # This is something that shouldn't ever need to be used, but data_x_label_var.get()
-        #     # fails when quitting the whole GUI - not even throwing an error, but just hanging.
-        #     # So double-check here and abandon the rest of this function if we are quitting
-        #     #
-        #     # Technically, there's still the race condition that we check this flag, and then before we make it
-        #     # to the next line, the flag gets cleared by another thread. But you know what? Failing to exit is not
-        #     # the worst of our worries when making this GUI. This extra check makes it much less likely that such
-        #     # a race condition happens, even if it's still possible
-        # Now this should be covered by the run_flag_lock?
-        # Precondition you must hold the lock when you want to call this function
-
         data_x_label_var = self.data_x_label_var.get()
         data_y1_label_var = self.data_y1_label_var.get()
         data_y2_label_var = self.data_y2_label_var.get()
@@ -535,8 +518,7 @@ class ElveflowDisplay(tk.Canvas):
             except ValueError:
                 x.set("")
                 self.axisLimits_numbers[i] = None
-        with self.run_flag_lock:
-            self.update_plot()
+        self.update_plot() # just, like, don't do this and also close the program at the same time
 
 class Toggle(tk.Label):
     # https://www.reddit.com/r/learnpython/comments/7sx953/how_to_add_a_toggle_switch_in_tkinter/

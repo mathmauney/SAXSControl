@@ -695,7 +695,7 @@ class Main:
 
     def exit_(self):
         """Exit the GUI and stop all running things."""
-        with self.elveflow_display.run_flag_lock:
+        with self.elveflow_display.exit_lock:
             # the first thing we do is grab the lock to stop the elveflow display
             # from being able to update. There is still a race condition in that the Display
             # Thread could steal the lock after exit_ starts but before it can execute
