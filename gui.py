@@ -141,7 +141,6 @@ class Main:
         self.main_tab_ax1 = self.main_tab_fig.add_subplot(111)
         self.main_tab_ax2 = self.main_tab_ax1.twinx()
         self.main_tab_ax3 = self.main_tab_ax1.twinx()
-        self.main_tab_ax3.spines["right"].set_position(("outward", 60)) # offset second right axis
         self.graph_start_time = 0
         self.graph_end_time = np.inf
         self.canvas = matplotlib.backends.backend_tkagg.FigureCanvasTkAgg(self.main_tab_fig, self.auto_page)
@@ -703,7 +702,7 @@ class Main:
             data_x = np.array([elt[data_x_label_var] for elt in elveflow_display_data])
             data_y1 = np.array([elt[data_y1_label_var] for elt in elveflow_display_data])
             data_y2 = np.array([elt[data_y2_label_var] for elt in elveflow_display_data])
-            data_y3 = np.array([elt[data_y2_label_var] for elt in elveflow_display_data])
+            data_y3 = np.array([elt[data_y3_label_var] for elt in elveflow_display_data])
 
             data_x_viable = (data_x >= self.graph_start_time)  # & (data_x < self.graph_end_time)
             data_x = data_x[data_x_viable]
@@ -720,13 +719,15 @@ class Main:
             if data_y3_label_var == self.elveflow_display.elveflow_handler.header[0]:
                 data_y3 -= self.elveflow_display.starttime
 
-            extremes = [np.nanmin(data_x), np.nanmax(data_x), np.nanmin(data_y1), np.nanmax(data_y1), np.nanmin(data_y2), np.nanmax(data_y2), np.nanmin(data_y3), np.nanmax(data_y3)]
+            extremes = [np.nanmin(data_x), np.nanmax(data_x), np.nanmin(data_y1), np.nanmax(data_y1),
+                np.nanmin(data_y2), np.nanmax(data_y2), np.nanmin(data_y3), np.nanmax(data_y3)]
             if len(data_x) > 0:
                 self.the_line1.set_data(data_x, data_y1)
                 self.the_line2.set_data(data_x, data_y2)
                 self.the_line3.set_data(data_x, data_y3)
         except (ValueError, KeyError):
-            extremes = [*self.main_tab_ax1.get_xlim(), *self.main_tab_ax1.get_ylim(), *self.main_tab_ax2.get_ylim(), *self.main_tab_ax3.get_ylim()]
+            extremes = [*self.main_tab_ax1.get_xlim(), *self.main_tab_ax1.get_ylim(),
+                *self.main_tab_ax2.get_ylim(), *self.main_tab_ax3.get_ylim()]
         if extremes[1] - extremes[0] == 0:
             extremes[1] += 1
         if extremes[3] - extremes[2] == 0:
@@ -765,8 +766,11 @@ class Main:
         # before scheduling anything, clear the graph
         self.main_tab_ax1.clear()
         self.main_tab_ax2.clear()
+        self.main_tab_ax3.clear()
+        self.main_tab_ax3.spines["right"].set_position(("outward", 60)) # offset second right axis
         self.the_line1 = self.main_tab_ax1.plot([], [], color=ElveflowDisplay.COLOR_Y1)[0]
         self.the_line2 = self.main_tab_ax2.plot([], [], color=ElveflowDisplay.COLOR_Y2)[0]
+        self.the_line3 = self.main_tab_ax3.plot([], [], color=ElveflowDisplay.COLOR_Y3)[0]
         self.graph_start_time = int(time.time())
         self.graph_end_time = np.inf
         self.python_logger.debug("main page graph start time: %s" % self.graph_start_time)
