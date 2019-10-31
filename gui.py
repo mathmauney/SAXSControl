@@ -140,6 +140,8 @@ class Main:
         self.main_tab_fig = plt.Figure(figsize=(core_width*2/3/self.fig_dpi, core_height*3/4/self.fig_dpi), dpi=self.fig_dpi)
         self.main_tab_ax1 = self.main_tab_fig.add_subplot(111)
         self.main_tab_ax2 = self.main_tab_ax1.twinx()
+        self.main_tab_ax3 = self.main_tab_ax1.twinx()
+        self.main_tab_ax3.spines["right"].set_position(("outward", 60)) # offset second right axis
         self.graph_start_time = 0
         self.graph_end_time = np.inf
         self.canvas = matplotlib.backends.backend_tkagg.FigureCanvasTkAgg(self.main_tab_fig, self.auto_page)
@@ -689,9 +691,11 @@ class Main:
         data_x_label_var = self.elveflow_display.data_x_label_var.get()
         data_y1_label_var = self.elveflow_display.data_y1_label_var.get()
         data_y2_label_var = self.elveflow_display.data_y2_label_var.get()
+        data_y3_label_var = self.elveflow_display.data_y3_label_var.get()
         self.main_tab_ax1.set_xlabel(data_x_label_var, fontsize=14)
         self.main_tab_ax1.set_ylabel(data_y1_label_var, fontsize=14, color=ElveflowDisplay.COLOR_Y1)
         self.main_tab_ax2.set_ylabel(data_y2_label_var, fontsize=14, color=ElveflowDisplay.COLOR_Y2)
+        self.main_tab_ax3.set_ylabel(data_y3_label_var, fontsize=14, color=ElveflowDisplay.COLOR_Y3)
         try:
             # read it once to avoid a race condition here when reading from
             # self.elveflow_display.data at the same time as it gets data from the machine
@@ -699,11 +703,13 @@ class Main:
             data_x = np.array([elt[data_x_label_var] for elt in elveflow_display_data])
             data_y1 = np.array([elt[data_y1_label_var] for elt in elveflow_display_data])
             data_y2 = np.array([elt[data_y2_label_var] for elt in elveflow_display_data])
+            data_y3 = np.array([elt[data_y2_label_var] for elt in elveflow_display_data])
 
             data_x_viable = (data_x >= self.graph_start_time)  # & (data_x < self.graph_end_time)
             data_x = data_x[data_x_viable]
             data_y1 = data_y1[data_x_viable]
             data_y2 = data_y2[data_x_viable]
+            data_y3 = data_y3[data_x_viable]
 
             if data_x_label_var == self.elveflow_display.elveflow_handler.header[0]:
                 data_x -= self.elveflow_display.starttime
@@ -711,18 +717,30 @@ class Main:
                 data_y1 -= self.elveflow_display.starttime
             if data_y2_label_var == self.elveflow_display.elveflow_handler.header[0]:
                 data_y2 -= self.elveflow_display.starttime
+            if data_y3_label_var == self.elveflow_display.elveflow_handler.header[0]:
+                data_y3 -= self.elveflow_display.starttime
 
-            extremes = [np.nanmin(data_x), np.nanmax(data_x), np.nanmin(data_y1), np.nanmax(data_y1), np.nanmin(data_y2), np.nanmax(data_y2)]
+            extremes = [np.nanmin(data_x), np.nanmax(data_x), np.nanmin(data_y1), np.nanmax(data_y1), np.nanmin(data_y2), np.nanmax(data_y2), np.nanmin(data_y3), np.nanmax(data_y3)]
             if len(data_x) > 0:
                 self.the_line1.set_data(data_x, data_y1)
                 self.the_line2.set_data(data_x, data_y2)
+                self.the_line3.set_data(data_x, data_y3)
         except (ValueError, KeyError):
-            extremes = [*self.main_tab_ax1.get_xlim(), *self.main_tab_ax1.get_ylim(), *self.main_tab_ax2.get_ylim()]
+            extremes = [*self.main_tab_ax1.get_xlim(), *self.main_tab_ax1.get_ylim(), *self.main_tab_ax2.get_ylim(), *self.main_tab_ax3.get_ylim()]
+        if extremes[1] - extremes[0] == 0:
+            extremes[1] += 1
+        if extremes[3] - extremes[2] == 0:
+            extremes[3] += 1
+        if extremes[5] - extremes[4] == 0:
+            extremes[5] += 1
+        if extremes[7] - extremes[6] == 0:
+            extremes[7] += 1
         limits = [item if item is not None else extremes[i]
                   for (i, item) in enumerate(self.elveflow_display.axisLimits_numbers)]
         self.main_tab_ax1.set_xlim(*extremes[0:2])
         self.main_tab_ax1.set_ylim(*limits[2:4])
         self.main_tab_ax2.set_ylim(*limits[4:6])
+        self.main_tab_ax3.set_ylim(*limits[6:8])
 
         self.canvas.draw()  # may need the stupid hack from widgets.py
 

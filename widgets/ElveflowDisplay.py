@@ -409,13 +409,13 @@ class ElveflowDisplay(tk.Canvas):
                 self.the_line3.set_data(data_x, data_y3)
         except (ValueError, KeyError):
             extremes = [*self.ax1.get_xlim(), *self.ax1.get_ylim(), *self.ax2.get_ylim(), *self.ax3.get_ylim()]
-        if extremes[1]-extremes[0] == 0:
+        if extremes[1] - extremes[0] == 0:
             extremes[1] += 1
-        if extremes[3]-extremes[2] == 0:
+        if extremes[3] - extremes[2] == 0:
             extremes[3] += 1
-        if extremes[5]-extremes[4] == 0:
+        if extremes[5] - extremes[4] == 0:
             extremes[5] += 1
-        if extremes[7]-extremes[6] == 0:
+        if extremes[7] - extremes[6] == 0:
             extremes[7] += 1
 
         limits = [item if item is not None else extremes[i]
