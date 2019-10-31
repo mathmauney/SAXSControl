@@ -501,6 +501,14 @@ class HPump:
                     return True
                     # raise RuntimeError Not raising so that if one fails queue isnt dumped
 
+    def wait_until_time(self, wait_time, command_while_waiting=lambda *_: None):
+        currenttime = time.time()
+        endtime = currenttime + wait_time
+        while self.is_running() and time.time() < endtime:
+            time.sleep(0.1)
+            command_while_waiting()
+
+
     def wait_until_stopped(self, timeout=60, command_while_waiting=lambda *_: None):
         currenttime = 0
         while self.is_running() and currenttime < timeout:
