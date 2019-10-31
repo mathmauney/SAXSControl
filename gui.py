@@ -684,11 +684,16 @@ class Main:
 
     def exit_(self):
         """Exit the GUI and stop all running things."""
-        print("STARTING EXIT PROCEDURE")
-        self.stop()
-        self.elveflow_display.stop(shutdown=True)
-        # if self.SPEC_Connection.run_flag.is_set():
-        #    self.SPEC_Connection.stop()
+        with self.elveflow_display.run_flag_lock:
+            # the first thing we do is grab the lock to stop the elveflow display
+            # from being able to update. There is still a race condition in that the Display
+            # Thread could steal the lock after exit_ starts but before it can execute
+            # even its first line of code. But hopefully that doesn't happen often
+            print("STARTING EXIT PROCEDURE")
+            self.stop()
+            self.elveflow_display.stop(shutdown=True)
+            # now that we've finished telling it to shut down, we can release the lock and
+            # let the elveflow display run again
         if self.listen_run_flag.is_set():
             self.listen_run_flag.clear()
         print("WAITING FOR OTHER THREADS TO SHUT DOWN...")
@@ -753,7 +758,11 @@ class Main:
             self.python_logger.warning("Elveflow connection not initialized! Please start the connection on the Elveflow tab.")
             raise RuntimeError("Elveflow connection not initialized! Please start the connection on the Elveflow tab.")
 
-        if self.oil_refill_flag is False:
+        if not self.is_filename_safe():
+            tk.messagebox.showinfo('Error', 'Filename is blank or contains invalid characters. \nThese include: %s (includes spaces).' % (self.illegal_chars))
+            return
+
+        if not self.oil_refill_flag:
             MsgBox = messagebox.askquestion('Warning', 'Oil may not be full, continue with buffer/sample/buffer?', icon='warning')
             if MsgBox == 'yes':
                 pass
@@ -783,7 +792,7 @@ class Main:
         self.queue.put((self.flowpath.valve3.set_auto_position, 0))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Run"))
         self.queue.put((self.pump.infuse_volume, self.first_buffer_volume.get()/1000, self.sample_flowrate.get()))
-        self.queue.put((self.python_logger.debug, f'Thinggy is like this: {self.first_buffer_eq_volume.get()/self.sample_flowrate.get()*60}'))
+        self.queue.put((self.python_logger.debug, f'Calculated equilibration time: {self.first_buffer_eq_volume.get()/self.sample_flowrate.get()*60}'))
         self.queue.put((self.pump.wait_until_time, self.first_buffer_eq_volume.get()/self.sample_flowrate.get()*60, self.update_graph)) # wait some amount of time until stable
         self.queue.put((self.graph_vline, 'chartreuse'))
         self.run_tseries(postfix="pre")
@@ -796,6 +805,7 @@ class Main:
         self.queue.put((self.flowpath.valve3.set_auto_position, 1))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Run"))
         self.queue.put((self.pump.infuse_volume, self.sample_volume.get()/1000, self.sample_flowrate.get()))
+        self.queue.put((self.python_logger.debug, f'Calculated equilibration time: {self.first_buffer_eq_volume.get()/self.sample_flowrate.get()*60}'))
         self.queue.put((self.pump.wait_until_time, self.sample_eq_volume.get()/self.sample_flowrate.get()*60, self.update_graph)) # wait some amount of time until stable
         self.queue.put((self.graph_vline, 'chartreuse'))
         self.run_tseries(postfix="sample")
@@ -808,6 +818,7 @@ class Main:
         self.queue.put((self.flowpath.valve3.set_auto_position, 0))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Run"))
         self.queue.put((self.pump.infuse_volume, self.last_buffer_volume.get()/1000, self.sample_flowrate.get()))
+        self.queue.put((self.python_logger.debug, f'Calculated equilibration time: {self.first_buffer_eq_volume.get()/self.sample_flowrate.get()*60}'))
         self.queue.put((self.pump.wait_until_time, self.last_buffer_eq_volume.get()/self.sample_flowrate.get()*60, self.update_graph)) # wait some amount of time until stable
         self.queue.put((self.graph_vline, 'chartreuse'))
         self.run_tseries(postfix="post")
@@ -1222,11 +1233,11 @@ class Main:
 
         for eachChar in SubDirectory:
             if eachChar in self.illegal_chars:
-                tk.messagebox.showinfo("Error", 'Directory name contains invalid characters. \nThese include: %s (includes spaces).' % (self.illegal_chars), 'Invalid Input')
+                tk.messagebox.showinfo("Error", 'Directory name contains invalid characters. \nThese include: %s (includes spaces).' % (self.illegal_chars))
                 return (False)
 
         if '//' in SubDirectory:
-            tk.messagebox.showinfo("Error", 'Directory path is invalid. Please check path. \nHint: subdirectory name contains "//".', 'Invalid Input')
+            tk.messagebox.showinfo("Error", 'Directory path is invalid. Please check path. \nHint: subdirectory name contains "//".')
             return (False)
 
         if SubDirectory != "":
@@ -1295,6 +1306,16 @@ class Main:
                 solocomm.controlQueue.put([('G', 'ADXDONE_OK')])
         pass
 
+    def is_filename_safe(self):
+        """returns whether or not the tseries filename is existent and properly formatted."""
+        filename = self.spec_filename.get().strip()
+        for eachChar in filename:
+            if eachChar in self.illegal_chars:
+                return False
+        if filename == '':
+            return False
+        return True
+
     def run_tseries(self, postfix=None):
         """Run a tseries."""
         # Input Sanitation
@@ -1307,18 +1328,12 @@ class Main:
                 raise ValueError
 
         except ValueError:
-            tk.messagebox.showinfo('Error', 'Exposure time, number of frames or filenumber is invalid.', 'Invalid Input')
+            tk.messagebox.showinfo('Error', 'Exposure time, number of frames or filenumber is invalid.')
             return
 
         filename = self.spec_filename.get().strip()
-
-        for eachChar in filename:
-            if eachChar in self.illegal_chars:
-                tk.messagebox.showinfo('Error', 'Filename contains invalid characters. \nThese include: %s (includes spaces).' % (self.illegal_chars), 'Invalid Input')
-                return
-
-        if filename == '':
-            tk.messagebox.showinfo('Error', 'File must have a name. Invalid Input')
+        if not self.is_filename_safe():
+            tk.messagebox.showinfo('Error', 'Filename is blank or contains invalid characters. \nThese include: %s (includes spaces).' % (self.illegal_chars))
             return
 
         changedir, directory = self.ChangeDirectory()

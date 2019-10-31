@@ -65,7 +65,7 @@ class ElveflowDisplay(tk.Canvas):
         self.starttime = int(time.time())
         self.errorlogger.debug("start time is %d" % self.starttime)
 
-        self.run_flag_lock = threading.Lock() # to make shutdown not hang
+        self.run_flag_lock = threading.RLock() # to make shutdown not hang. Reentrant so that I don't have to think as hard
         self.run_flag = threading.Event()
         self.save_flag = threading.Event()
         self.saveFileNameSuffix_var.set("_%d.csv" % time.time())
@@ -270,19 +270,14 @@ class ElveflowDisplay(tk.Canvas):
                         if not run_flag.is_set():
                             # simulate `while run_flag.is_set()` but protected by a lock
                             break
-                        print("Why, hello there! Here in the display thread %s, I see the run flag as %s" % (threading.current_thread(), run_flag.is_set()) )
                         new_data = self.elveflow_handler.fetchAll()
                         self.data.extend(new_data)
-                        print("Now, I wish to update the plot. Here in the display thread %s, I see the run flag as %s" % (threading.current_thread(), run_flag.is_set()) )
                         self.update_plot()
                     if save_flag.is_set():
                         for dict_ in new_data:
                             self.saveFileWriter.writerow([str(dict_[key]) for key in self.elveflow_handler.header])
-                    print("I'm awfully tired and am about to sleep. Here in the display thread %s, I see the run flag as %s" % (threading.current_thread(), run_flag.is_set()) )
                     time.sleep(ElveflowDisplay.POLLING_PERIOD)
-                    print("Hmm. Here in the display thread %s, I see the run flag as %s" % (threading.current_thread(), run_flag.is_set()) )
             finally:
-                print("In FINALLY block of display thread, %s" % threading.current_thread())
                 if self.started_shutting_down:
                     self.done_shutting_down = True
                 else:
@@ -325,7 +320,6 @@ class ElveflowDisplay(tk.Canvas):
             # only clear the run flag after setting the started_shutting_down flag
             with self.run_flag_lock:
                 self.run_flag.clear()
-            print("Do not blame me. I am Ferdinand von Aegir, %s, and I have already set the run flag of the display thread to %s" % (threading.current_thread(), self.run_flag.is_set()))
         else:
             with self.run_flag_lock:
                 self.run_flag.clear()
