@@ -37,7 +37,7 @@ class SAXSController(serial.Serial):
         self.logger = logger
         self.enabled = False
 
-    def set_port(self, port):
+    def set_port(self, port, instrument_list=[]):
         """Set the serial port."""
         if self.is_open:
             self.close()
@@ -45,6 +45,9 @@ class SAXSController(serial.Serial):
         self.open()
         self.enabled = True
         self.logger.info("Controller set to port "+port)
+        for instrument in instrument_list:
+            if instrument.pc_connect == False:
+                instrument.set_to_controller(self)
 
     def scan_i2c(self):
         """Scan I2C line."""
@@ -95,6 +98,7 @@ class HPump:
         self.instrument_type = "Pump"
         self.hardware_configuration = hardware_configuration
         self._lock = lock
+        HPump.enabled = False
         # add init for syringe dismeter,flowrate, Direction etc
 
     # function to initialize ports
@@ -915,7 +919,7 @@ class VICI:
         self.serialobject = self.serialobjectPC
         self.serialobject.port = port
         self.enabled = True
-        self.PCConnect = True
+        self.pc_connect = True
         self.ControllerKey = ""
         self.serialobject.open()
         self.logger.info(self.name + " set to port: " + port)
@@ -923,7 +927,7 @@ class VICI:
     def set_to_controller(self, controller):
         if self.serialobject.is_open:
             self.serialobject.close()
-        self.PCConnect = False
+        self.pc_connect = False
         self.serialobject = controller
         self.enabled = controller.enabled
         self.ControllerKey = "+"

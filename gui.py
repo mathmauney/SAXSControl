@@ -141,6 +141,7 @@ class Main:
         self.main_tab_fig = plt.Figure(figsize=(core_width*2/3/self.fig_dpi, core_height*3/4/self.fig_dpi), dpi=self.fig_dpi)
         self.main_tab_ax1 = self.main_tab_fig.add_subplot(111)
         self.main_tab_ax2 = self.main_tab_ax1.twinx()
+        self.main_tab_ax3 = self.main_tab_ax1.twinx()
         self.graph_start_time = 0
         self.graph_end_time = np.inf
         self.canvas = matplotlib.backends.backend_tkagg.FigureCanvasTkAgg(self.main_tab_fig, self.auto_page)
@@ -270,7 +271,7 @@ class Main:
         self.AddRheodyne = tk.Button(self.setup_page, text="Add Rheodyne", command=lambda: self.add_rheodyne_set_buttons())
         self.AddVICI = tk.Button(self.setup_page, text="Add VICI Valve", command=lambda: self.AddVICISetButtons())
         self.ControllerCOM = COMPortSelector(self.setup_page, exportselection=0, height=3)
-        self.ControllerSet = tk.Button(self.setup_page, text="Set Microntroller", command=lambda: self.controller.set_port(self.AvailablePorts[int(self.ControllerCOM.curselection()[0])].device))
+        self.ControllerSet = tk.Button(self.setup_page, text="Set Microntroller", command=lambda: self.controller.set_port(self.AvailablePorts[int(self.ControllerCOM.curselection()[0])].device, self.instruments))
         self.I2CScanButton = tk.Button(self.setup_page, text="Scan I2C line", command=lambda: self.controller.scan_i2c())
 
         # logs
@@ -425,9 +426,9 @@ class Main:
         self.purge_air_box.grid(row=rowcounter, column=8, sticky=tk.W+tk.E+tk.N+tk.S)
         # Setup page
         self.refresh_com_ports.grid(row=0, column=0)
-        self.AddPump.grid(row=0, column=2)
-        self.AddRheodyne.grid(row=0, column=3)
-        self.AddVICI.grid(row=0, column=4)
+        self.AddPump.grid(row=0, column=1)
+        self.AddRheodyne.grid(row=0, column=2)
+        self.AddVICI.grid(row=0, column=3)
         self.ControllerCOM.grid(row=1, column=0)
         self.ControllerSet.grid(row=1, column=2)
         self.I2CScanButton.grid(row=1, column=3)
@@ -548,17 +549,24 @@ class Main:
             except Exception as e:
                 self.python_logger.warning("Something went wrong when restarting the Elveflow")
         # Instrument Config
+        # Clear existing devices
+        self.instruments = []
+        self.manual_page_buttons = []
+        self.manual_page_variables = []
+        self.setup_page_buttons = []
+        self.setup_page_variables = []
+        self.NumberofPumps = 0
         for i in range(int(instrument_config.get("n_pumps", 0))):
             field = "Pump"+str(i)
-            self.add_pump_set_buttons(int(instrument_config.get(field+"_address", 0)), instrument_config.get(field+"_name", ""), instrument_config.get(field+"_hardware", ""))
+            self.add_pump_set_buttons(int(instrument_config.get(field+"_address", 0)), instrument_config.get(field+"_name", ""), instrument_config.get(field+"_hardware", ""), pc_connect=instrument_config.getboolean(field+"_pc_connect", True))
 
         for i in range(int(instrument_config.get("n_rheodyne", 0))):
             field = "Rheodyne"+str(i)
-            self.add_rheodyne_set_buttons(int(instrument_config.get(field+"_address", -1)), instrument_config.get(field+"_name", ""), instrument_config.get(field+"_hardware", ""))
+            self.add_rheodyne_set_buttons(int(instrument_config.get(field+"_address", -1)), instrument_config.get(field+"_name", ""), instrument_config.get(field+"_hardware", ""), pc_connect=instrument_config.getboolean(field+"_pc_connect", True))
 
         for i in range(int(instrument_config.get("n_vici", 0))):
             field = "VICI"+str(i)
-            self.AddVICISetButtons(instrument_config.get(field+"_name", ''), instrument_config.get(field+"_hardware", ""))
+            self.AddVICISetButtons(instrument_config.get(field+"_name", ''), instrument_config.get(field+"_hardware", ""), pc_connect=instrument_config.getboolean(field+"_pc_connect", True))
 
     def save_config(self):
         """Save a config.ini file."""
@@ -625,15 +633,18 @@ class Main:
                     instrument_config["Pump"+str(npumps)+"_address"] = str(instrument.address)
                     instrument_config["Pump"+str(npumps)+"_name"] = instrument.name
                     instrument_config["Pump"+str(npumps)+"_hardware"] = instrument.hardware_configuration
+                    instrument_config["Pump"+str(npumps)+"_pc_connect"] = str(instrument.pc_connect)
                     npumps += 1
                 if instrument.instrument_type == "Rheodyne":
                     instrument_config["Rheodyne"+str(nrheodyne)+"_address"] = str(instrument.address_I2C)
                     instrument_config["Rheodyne"+str(nrheodyne)+"_name"] = instrument.name
                     instrument_config["Rheodyne"+str(nrheodyne)+"_hardware"] = instrument.hardware_configuration
+                    instrument_config["Rheodyne"+str(nrheodyne)+"_pc_connect"] = str(instrument.pc_connect)
                     nrheodyne += 1
                 if instrument.instrument_type == "VICI":
                     instrument_config["VICI"+str(nvici)+"_name"] = instrument.name
                     instrument_config["VICI"+str(nvici)+"_hardware"] = instrument.hardware_configuration
+                    instrument_config["VICI"+str(nvici)+"_pc_connect"] = str(instrument.pc_connect)
                     nvici += 1
             instrument_config["n_pumps"] = str(npumps)
             instrument_config["n_rheodyne"] = str(nrheodyne)
@@ -710,9 +721,11 @@ class Main:
         data_x_label_var = self.elveflow_display.data_x_label_var.get()
         data_y1_label_var = self.elveflow_display.data_y1_label_var.get()
         data_y2_label_var = self.elveflow_display.data_y2_label_var.get()
+        data_y3_label_var = self.elveflow_display.data_y3_label_var.get()
         self.main_tab_ax1.set_xlabel(data_x_label_var, fontsize=14)
         self.main_tab_ax1.set_ylabel(data_y1_label_var, fontsize=14, color=ElveflowDisplay.COLOR_Y1)
         self.main_tab_ax2.set_ylabel(data_y2_label_var, fontsize=14, color=ElveflowDisplay.COLOR_Y2)
+        self.main_tab_ax3.set_ylabel(data_y3_label_var, fontsize=14, color=ElveflowDisplay.COLOR_Y3)
         try:
             # read it once to avoid a race condition here when reading from
             # self.elveflow_display.data at the same time as it gets data from the machine
@@ -720,11 +733,13 @@ class Main:
             data_x = np.array([elt[data_x_label_var] for elt in elveflow_display_data])
             data_y1 = np.array([elt[data_y1_label_var] for elt in elveflow_display_data])
             data_y2 = np.array([elt[data_y2_label_var] for elt in elveflow_display_data])
+            data_y3 = np.array([elt[data_y3_label_var] for elt in elveflow_display_data])
 
             data_x_viable = (data_x >= self.graph_start_time)  # & (data_x < self.graph_end_time)
             data_x = data_x[data_x_viable]
             data_y1 = data_y1[data_x_viable]
             data_y2 = data_y2[data_x_viable]
+            data_y3 = data_y3[data_x_viable]
 
             if data_x_label_var == self.elveflow_display.elveflow_handler.header[0]:
                 data_x -= self.elveflow_display.starttime
@@ -732,18 +747,32 @@ class Main:
                 data_y1 -= self.elveflow_display.starttime
             if data_y2_label_var == self.elveflow_display.elveflow_handler.header[0]:
                 data_y2 -= self.elveflow_display.starttime
+            if data_y3_label_var == self.elveflow_display.elveflow_handler.header[0]:
+                data_y3 -= self.elveflow_display.starttime
 
-            extremes = [np.nanmin(data_x), np.nanmax(data_x), np.nanmin(data_y1), np.nanmax(data_y1), np.nanmin(data_y2), np.nanmax(data_y2)]
+            extremes = [np.nanmin(data_x), np.nanmax(data_x), np.nanmin(data_y1), np.nanmax(data_y1),
+                np.nanmin(data_y2), np.nanmax(data_y2), np.nanmin(data_y3), np.nanmax(data_y3)]
             if len(data_x) > 0:
                 self.the_line1.set_data(data_x, data_y1)
                 self.the_line2.set_data(data_x, data_y2)
+                self.the_line3.set_data(data_x, data_y3)
         except (ValueError, KeyError):
-            extremes = [*self.main_tab_ax1.get_xlim(), *self.main_tab_ax1.get_ylim(), *self.main_tab_ax2.get_ylim()]
+            extremes = [*self.main_tab_ax1.get_xlim(), *self.main_tab_ax1.get_ylim(),
+                *self.main_tab_ax2.get_ylim(), *self.main_tab_ax3.get_ylim()]
+        if extremes[1] - extremes[0] == 0:
+            extremes[1] += 1
+        if extremes[3] - extremes[2] == 0:
+            extremes[3] += 1
+        if extremes[5] - extremes[4] == 0:
+            extremes[5] += 1
+        if extremes[7] - extremes[6] == 0:
+            extremes[7] += 1
         limits = [item if item is not None else extremes[i]
                   for (i, item) in enumerate(self.elveflow_display.axisLimits_numbers)]
         self.main_tab_ax1.set_xlim(*extremes[0:2])
         self.main_tab_ax1.set_ylim(*limits[2:4])
         self.main_tab_ax2.set_ylim(*limits[4:6])
+        self.main_tab_ax3.set_ylim(*limits[6:8])
 
         self.canvas.draw()  # may need the stupid hack from widgets.py
 
@@ -772,8 +801,11 @@ class Main:
         # before scheduling anything, clear the graph
         self.main_tab_ax1.clear()
         self.main_tab_ax2.clear()
+        self.main_tab_ax3.clear()
+        self.main_tab_ax3.spines["right"].set_position(("outward", 60)) # offset second right axis
         self.the_line1 = self.main_tab_ax1.plot([], [], color=ElveflowDisplay.COLOR_Y1)[0]
         self.the_line2 = self.main_tab_ax2.plot([], [], color=ElveflowDisplay.COLOR_Y2)[0]
+        self.the_line3 = self.main_tab_ax3.plot([], [], color=ElveflowDisplay.COLOR_Y3)[0]
         self.graph_start_time = int(time.time())
         self.graph_end_time = np.inf
         self.python_logger.debug("main page graph start time: %s" % self.graph_start_time)
@@ -1016,27 +1048,42 @@ class Main:
         """Assign an instrument to the software version of it."""
         # TODO: Add checks for value type
         if keyword == self.hardware_config_options[0]:
-            self.pump = self.instruments[instrument_index]
-            self.python_logger.info("Pump configured to FlowPath")
+            if self.instruments[instrument_index].instrument_type == "Pump":
+                self.pump = self.instruments[instrument_index]
+                self.python_logger.info("Pump configured to FlowPath")
+            else:
+                self.python_logger.info("Invalid configuration for type " + self.instruments[instrument_index].instrument_type)
         elif keyword == self.hardware_config_options[1]:
-            self.flowpath.valve2.hardware = self.instruments[instrument_index]
-            self.python_logger.info("Oil valve configured to FlowPath")
+            if self.instruments[instrument_index].instrument_type == "Rheodyne":
+                self.flowpath.valve2.hardware = self.instruments[instrument_index]
+                self.python_logger.info("Oil valve configured to FlowPath")
+            else:
+                self.python_logger.info("Invalid configuration for type: " + self.instruments[instrument_index].instrument_type)
         elif keyword == self.hardware_config_options[2]:
-            self.flowpath.valve3.hardware = self.instruments[instrument_index]
-            self.python_logger.info("Sample/Buffer valve configured to FlowPath")
+            if self.instruments[instrument_index].instrument_type == "VICI":
+                self.flowpath.valve3.hardware = self.instruments[instrument_index]
+                self.python_logger.info("Sample/Buffer valve configured to FlowPath")
+            else:
+                self.python_logger.info("Invalid configuration for type: " + self.instruments[instrument_index].instrument_type)
         elif keyword == self.hardware_config_options[3]:
-            self.flowpath.valve4.hardware = self.instruments[instrument_index]
-            self.python_logger.info("Loading valve configerd to FlowPath")
+            if self.instruments[instrument_index].instrument_type == "Rheodyne":
+                self.flowpath.valve4.hardware = self.instruments[instrument_index]
+                self.python_logger.info("Loading valve configerd to FlowPath")
+            else:
+                self.python_logger.info("Invalid configuration for type: " + self.instruments[instrument_index].instrument_type)
         elif keyword == self.hardware_config_options[4]:
-            self.purge_valve = self.instruments[instrument_index]
-            self.python_logger.info("Purge valve configured to FlowPath")
+            if self.instruments[instrument_index].instrument_type == "Rheodyne":
+                self.purge_valve = self.instruments[instrument_index]
+                self.python_logger.info("Purge valve configured to FlowPath")
+            else:
+                self.python_logger.info("Invalid configuration for type: " + self.instruments[instrument_index].instrument_type)
         else:
             raise ValueError
         self.instruments[instrument_index].hardware_configuration = keyword
 
-    def add_pump_set_buttons(self, address=0, name="Pump", hardware=""):
+    def add_pump_set_buttons(self, address=0, name="Pump", hardware="", pc_connect = True):
         """Add pump buttons to the setup page."""
-        self.instruments.append(SAXSDrivers.HPump(logger=self.python_logger, name=name, address=address, hardware_configuration=hardware, lock=self._lock))
+        self.instruments.append(SAXSDrivers.HPump(logger=self.python_logger, name=name, address=address, hardware_configuration=hardware, lock=self._lock, pc_connect=pc_connect))
         self.NumberofPumps += 1
         instrument_index = len(self.instruments)-1
         self.python_logger.info("Added pump")
@@ -1046,7 +1093,6 @@ class Main:
         newbuttons = [
          COMPortSelector(self.setup_page, exportselection=0, height=4),
          tk.Button(self.setup_page, text="Set Port", command=lambda: self.instruments[instrument_index].set_port(self.AvailablePorts[int(self.setup_page_buttons[instrument_index][0].curselection()[0])].device)),
-         tk.Label(self.setup_page, text="or", bg=self.label_bg_color),
          tk.Button(self.setup_page, text="Send to Controller", command=lambda: self.instruments[instrument_index].set_to_controller(self.controller)),
          tk.Label(self.setup_page, text="   Pump Address:", bg=self.label_bg_color),
          tk.Spinbox(self.setup_page, from_=0, to=100, textvariable=self.setup_page_variables[instrument_index][0]),
@@ -1060,9 +1106,9 @@ class Main:
 
         # Pumps share a port-> Dont need extra ones
         if self.NumberofPumps > 1:
-            newbuttons[0] = tk.Label(self.setup_page, text=""    , bg=self.label_bg_color)
-            newbuttons[1] = tk.Label(self.setup_page, text=""    , bg=self.label_bg_color)
-            newbuttons[2] = tk.Label(self.setup_page, text=""    , bg=self.label_bg_color)
+            newbuttons[0] = tk.Label(self.setup_page, text="", bg=self.label_bg_color)
+            newbuttons[1] = tk.Label(self.setup_page, text="", bg=self.label_bg_color)
+            newbuttons[2] = tk.Label(self.setup_page, text="", bg=self.label_bg_color)
 
         self.setup_page_buttons.append(newbuttons)
         for i in range(len(self.setup_page_buttons)):
@@ -1132,8 +1178,8 @@ class Main:
             if isinstance(button[0], COMPortSelector):
                 button[0].updatelist(SAXSDrivers.list_available_ports(self.AvailablePorts))
 
-    def add_rheodyne_set_buttons(self, address=-1, name="Rheodyne", hardware=""):
-        self.instruments.append(SAXSDrivers.Rheodyne(logger=self.python_logger, address_I2C=address, name=name, hardware_configuration=hardware, lock=self._lock))
+    def add_rheodyne_set_buttons(self, address=-1, name="Rheodyne", hardware="", pc_connect=True):
+        self.instruments.append(SAXSDrivers.Rheodyne(logger=self.python_logger, address_I2C=address, name=name, hardware_configuration=hardware, lock=self._lock, pc_connect=pc_connect))
         instrument_index = len(self.instruments)-1
         newvars = [tk.IntVar(value=address), tk.StringVar(value=name), tk.IntVar(value=2), tk.StringVar(value=hardware)]
         self.setup_page_variables.append(newvars)
@@ -1141,7 +1187,6 @@ class Main:
         newbuttons = [
          COMPortSelector(self.setup_page, exportselection=0, height=4),
          tk.Button(self.setup_page, text="Set Port", command=lambda: self.instruments[instrument_index].set_port(self.AvailablePorts[int(self.setup_page_buttons[instrument_index][0].curselection()[0])].device)),
-         tk.Label(self.setup_page, text="or", bg=self.label_bg_color),
          tk.Button(self.setup_page, text="Send to Controller", command=lambda: self.instruments[instrument_index].set_to_controller(self.controller)),
          tk.Label(self.setup_page, text="   Type:", bg=self.label_bg_color),
          tk.Spinbox(self.setup_page, values=(2, 6), textvariable=self.setup_page_variables[instrument_index][2]),
@@ -1182,8 +1227,8 @@ class Main:
             for y in range(len(self.manual_page_buttons[i])):
                 self.manual_page_buttons[i][y].grid(row=i, column=y)
 
-    def AddVICISetButtons(self, name="VICI", hardware=""):
-        self.instruments.append(SAXSDrivers.VICI(logger=self.python_logger, name=name, hardware_configuration=hardware, lock=self._lock))
+    def AddVICISetButtons(self, name="VICI", hardware="", pc_connect=True):
+        self.instruments.append(SAXSDrivers.VICI(logger=self.python_logger, name=name, hardware_configuration=hardware, lock=self._lock, pc_connect=pc_connect))
         instrument_index = len(self.instruments)-1
         newvars = [tk.IntVar(value=-1), tk.StringVar(value=name), tk.StringVar(value=hardware)]
         self.setup_page_variables.append(newvars)
@@ -1191,7 +1236,6 @@ class Main:
         newbuttons = [
          COMPortSelector(self.setup_page, exportselection=0, height=4),
          tk.Button(self.setup_page, text="Set Port", command=lambda: self.instruments[instrument_index].set_port(self.AvailablePorts[int(self.setup_page_buttons[instrument_index][0].curselection()[0])].device)),
-         tk.Label(self.setup_page, text="or", bg=self.label_bg_color),
          tk.Button(self.setup_page, text="Send to Controller", command=lambda:self.instruments[instrument_index].set_to_controller(self.controller)),
          tk.Label(self.setup_page, text="   Valve Name:", bg=self.label_bg_color),
          tk.Entry(self.setup_page, textvariable=self.setup_page_variables[instrument_index][1]),
