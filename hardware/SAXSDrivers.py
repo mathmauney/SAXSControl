@@ -507,6 +507,9 @@ class HPump:
             time.sleep(0.1)
             currenttime += 0.1
             command_while_waiting()
+        if not currenttime < timeout:
+            self.logger.info("Pump wait timeout")
+            raise RuntimeError
 
     def infuse_volume(self, volume, rate):
         self.infuse()
