@@ -151,6 +151,8 @@ class Main:
         self.manual_page_variables = []
         # Config page
         self.config = None
+        self.sucrose_button = tk.Button(self.config_page, text='Sucrose Off', command=self.toggle_sucrose)
+
         self.save_config_button = tk.Button(self.config_page, text='Save Config', command=self.save_config)
         self.load_config_button = tk.Button(self.config_page, text='Load Config', command=self.load_config)
         self.spec_address = tk.StringVar(value='')
@@ -200,11 +202,11 @@ class Main:
         self.cerbus_oil_valve_names_label = tk.Label(self.config_page, text='Cerbus Oil Valve Hardware Port Names', bg=self.label_bg_color)
         self.cerbus_oil_valve_names = []
         self.cerbus_oil_valve_name_boxes = []
-        self.cerbus_set_oil_valve_names_button = tk.Button(self.config_page, text='Set Names', command=self.set_oil_valve_names)
+        self.cerbus_set_oil_valve_names_button = tk.Button(self.config_page, text='Set Names', command=self.set_cerbus_oil_valve_names)
         self.cerbus_loading_valve_names_label = tk.Label(self.config_page, text='Cerbus Loading Valve Hardware Port Names', bg=self.label_bg_color)
         self.cerbus_loading_valve_names = []
         self.cerbus_loading_valve_name_boxes = []
-        self.cerbus_set_loading_valve_names_button = tk.Button(self.config_page, text='Set Names', command=self.set_loading_valve_names)
+        self.cerbus_set_loading_valve_names_button = tk.Button(self.config_page, text='Set Names', command=self.set_cerbus_loading_valve_names)
         for i in range(6):
             self.oil_valve_names.append(tk.StringVar(value=''))
             self.oil_valve_name_boxes.append(tk.OptionMenu(self.config_page, self.oil_valve_names[i], ""))
@@ -385,6 +387,7 @@ class Main:
         rowcounter = 0
         self.save_config_button.grid(row=rowcounter, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
         self.load_config_button.grid(row=rowcounter, column=1, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.sucrose_button.grid(row=rowcounter, column=7, rowspan=3, sticky=tk.W+tk.E+tk.N+tk.S)
         rowcounter += 1
         self.config_spec_address_label.grid(row=rowcounter, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
         self.config_spec_address.grid(row=rowcounter, column=1, sticky=tk.W+tk.E+tk.N+tk.S)
@@ -709,6 +712,18 @@ class Main:
         for i in range(0, 6):
             self.flowpath.valve4.name_position(i, self.loading_valve_names[i].get())
 
+    def set_cerbus_oil_valve_names(self):
+        """Send selection valve names to the control gui."""
+        self.python_logger.info("Oil valve names set.")
+        for i in range(0, 6):
+            self.flowpath.valve6.name_position(i, self.oil_valve_names[i].get())
+
+    def set_cerbus_loading_valve_names(self):
+        """Send selection valve names to the control gui."""
+        self.python_logger.info("Loading valve names set.")
+        for i in range(0, 6):
+            self.flowpath.valve8.name_position(i, self.loading_valve_names[i].get())
+
     def connect_to_spec(self):
         """Connect to SPEC instance."""
         try:
@@ -1018,6 +1033,7 @@ class Main:
         self.queue.put(self.play_done_sound)
 
     def cerbus_clean_and_refill_command(self):
+
         """Clean the buffer and sample loops, then refill the oil."""
         elveflow_oil_channel = int(self.elveflow_oil_channel.get())  # throws an error if the conversion doesn't work
         elveflow_oil_pressure = self.elveflow_oil_pressure.get()
@@ -1029,7 +1045,7 @@ class Main:
 
         self.queue.put(self.cerbus_pump.stop_pump)
         self.queue.put((self.pump.refill_volume, (self.sample_volume.get()+self.first_buffer_volume.get()+self.last_buffer_volume.get())/1000, self.oil_refill_flowrate.get()))
-        self.queue.put((self.cerbus_pump.refill_volume, self.cerbus_volume.get(), self.cerbus_refill_rate.get()))
+        self.queue.put((self.cerbus_pump.refill_volume, self.cerbus_pump.get_delivered_volume(), self.cerbus_refill_rate.get()))
 
         self.cerbus_clean_only_command()
 
@@ -1183,9 +1199,9 @@ class Main:
 
         self.queue.put((self.elveflow_display.pressureValue_var[elveflow_oil_channel - 1].set, elveflow_oil_pressure))  # Set oil pressure
         self.queue.put((self.elveflow_display.start_pressure, elveflow_oil_channel))
-        self.queque.put(self.cerbus_pump.stop_pump)
+        self.queue.put(self.cerbus_pump.stop_pump)
         self.queue.put((self.pump.refill_volume, (self.sample_volume.get()+self.first_buffer_volume.get()+self.last_buffer_volume.get())/1000, self.oil_refill_flowrate.get()))
-        self.queue.put((self.cerbus_pump.refill_volume, self.cerbus_volume.get(), self.cerbus_refill_rate.get()))
+        self.queue.put((self.cerbus_pump.refill_volume, self.cerbus_volume.get()/1000, self.cerbus_refill_rate.get()))
         self.queue.put((self.pump.wait_until_stopped, 120))
         self.queue.put((self.cerbus_pump.wait_until_stopped, 120))
         self.queue.put(self.pump.infuse)
@@ -1263,6 +1279,14 @@ class Main:
         self.manual_queue.put((self.elveflow_display.run_volume, elveflow_sheath_channel, elveflow_sheath_volume))
         self.manual_queue.put((self.python_logger.info, "Done setting sheath flow to %s µL/min" % elveflow_sheath_volume))
 
+    def toggle_sucrose(self):
+        "change the sucrose status of the guy"
+        if self.sucrose:
+            self.sucrose = False
+            self.sucrose_button.config(bg="red", text="Sucrose OFF")
+        else:
+            self.sucrose = True
+            self.sucrose_button.config(bg="green", text="Sucrose ON")
     def toggle_buttons(self):
         """Toggle certain buttons on and off when they should not be allowed to add to queue."""
         buttons = (self.buffer_sample_buffer_button,
@@ -1333,13 +1357,13 @@ class Main:
                 self.python_logger.info("Invalid configuration for type: " + self.instruments[instrument_index].instrument_type)
         elif keyword == self.hardware_config_options[6]:
             if self.instruments[instrument_index].instrument_type == "Rheodyne":
-                self.flowpath.valve8 = self.instruments[instrument_index]
+                self.flowpath.valve8.hardware = self.instruments[instrument_index]
                 self.python_logger.info("Cerbus Oil valve configured to FlowPath")
             else:
                 self.python_logger.info("Invalid configuration for type: " + self.instruments[instrument_index].instrument_type)
         elif keyword == self.hardware_config_options[7]:
             if self.instruments[instrument_index].instrument_type == "Pump":
-                self.pump = self.instruments[instrument_index]
+                self.cerbus_pump = self.instruments[instrument_index]
                 self.python_logger.info("Cerbus Pump configured to FlowPath")
             else:
                 self.python_logger.info("Invalid configuration for type " + self.instruments[instrument_index].instrument_type)
@@ -1373,8 +1397,8 @@ class Main:
         # Pumps share a port-> Dont need extra ones
         if self.NumberofPumps > 1:
             newbuttons[0] = tk.Label(self.setup_page, text="", bg=self.label_bg_color)
-            newbuttons[1] = tk.Label(self.setup_page, text="", bg=self.label_bg_color)
-            newbuttons[2] = tk.Label(self.setup_page, text="", bg=self.label_bg_color)
+            #newbuttons[1] = tk.Label(self.setup_page, text="", bg=self.label_bg_color)
+            #newbuttons[2] = tk.Label(self.setup_page, text="", bg=self.label_bg_color)
 
         self.setup_page_buttons.append(newbuttons)
         for i in range(len(self.setup_page_buttons)):

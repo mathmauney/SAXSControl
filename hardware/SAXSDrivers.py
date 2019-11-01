@@ -98,7 +98,6 @@ class HPump:
         self.instrument_type = "Pump"
         self.hardware_configuration = hardware_configuration
         self._lock = lock
-        HPump.enabled = False
         # add init for syringe dismeter,flowrate, Direction etc
 
     # function to initialize ports
@@ -127,9 +126,9 @@ class HPump:
         if self.name != name:
             self.logger.info("Changing Name: "+self.name+" to "+name)
             self.name = name
-        if not self.address != address:
-            self.logger.info("Setting"+self.name+"address :"+name)
-            self.address = address
+        if self.address != address:
+            self.logger.info("Setting "+self.name+" address: "+ str(address))
+            self.address = str(address)
 
 # Pump action commands
 # To do in all. Read in confirmstion from pump.
@@ -702,6 +701,41 @@ class HPump:
             while self.controller.in_waiting > 0:   # Clear Buffer
                 self.controller.read().decode()
             self.controller.write(("-"+self.address+"RFR"+"\n\r").encode())
+            time.sleep(0.2)
+            while self.controller.in_waiting > 0:
+                answer = (self.controller.readline().decode())
+                if "." in answer:
+                    value = float(answer[0:-7])
+                    success = True
+        if not success:
+            self.logger.info("Failure Connecting to Pump")
+            raise RuntimeError
+        else:
+            return value
+
+    def get_delivered_volume(self, resource=pumpserial):
+        success = False
+        if not HPump.enabled:
+            self.logger.info(self.name+" not enabled")
+            raise ValueError
+        if self.pc_connect:
+            if not resource.is_open:
+                resource.open()
+            while resource.in_waiting > 0:  # Clear Buffer
+                resource.readline().decode()
+            resource.write((self.address+"DEL"+"\n\r").encode())  # Query Pump
+            time.sleep(0.2)
+            while resource.in_waiting > 0:
+                answer = (resource.readline().decode())
+                if "." in answer:
+                    value = float(answer[0:-7])
+                    success = True
+        else:
+            if not self.controller.is_open:
+                self.controller.open()
+            while self.controller.in_waiting > 0:   # Clear Buffer
+                self.controller.read().decode()
+            self.controller.write(("-"+self.address+"DEL"+"\n\r").encode())
             time.sleep(0.2)
             while self.controller.in_waiting > 0:
                 answer = (self.controller.readline().decode())
