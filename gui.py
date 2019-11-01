@@ -184,7 +184,7 @@ class Main:
         self.cerbus_flowrate_label = tk.Label(self.config_page, text='Cerbus Flowrate:', bg=self.label_bg_color)
         self.cerbus_flowrate = tk.DoubleVar(value=25)     # May need ot be a doublevar
         self.cerbus_flowrate_box = tk.Spinbox(self.config_page, textvariable=self.cerbus_flowrate)
-        self.cerbus_refill_rate_label = tk.Label(self.config_page, text='Cerbus Flowrate:', bg=self.label_bg_color)
+        self.cerbus_refill_rate_label = tk.Label(self.config_page, text='Cerbus Refill Flowrate:', bg=self.label_bg_color)
         self.cerbus_refill_rate = tk.DoubleVar(value=25)     # May need ot be a doublevar
         self.cerbus_refill_rate_box = tk.Spinbox(self.config_page, textvariable=self.cerbus_refill_rate)
 
@@ -1252,7 +1252,6 @@ class Main:
             self.manual_queue.put((self.purge_valve.switchvalve, purge_position))
             self.purge_dry_button.configure(bg="green")
             self.purge_soap_button.configure(bg="white smoke")
-            self.purge_air_button.configure(bg="white smoke")
             self.python_logger.info("Purging soap")
 
     def initialize_sheath_command(self):
