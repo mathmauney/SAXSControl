@@ -14,6 +14,7 @@ from hardware import FileIO
 from configparser import ConfigParser
 import logging
 import winsound
+import random
 
 import threading
 from hardware import SAXSDrivers
@@ -140,6 +141,7 @@ class Main:
         self.main_tab_fig = plt.Figure(figsize=(core_width*2/3/self.fig_dpi, core_height*3/4/self.fig_dpi), dpi=self.fig_dpi)
         self.main_tab_ax1 = self.main_tab_fig.add_subplot(111)
         self.main_tab_ax2 = self.main_tab_ax1.twinx()
+        self.main_tab_ax3 = self.main_tab_ax1.twinx()
         self.graph_start_time = 0
         self.graph_end_time = np.inf
         self.canvas = matplotlib.backends.backend_tkagg.FigureCanvasTkAgg(self.main_tab_fig, self.auto_page)
@@ -155,17 +157,24 @@ class Main:
         self.config_spec_address = tk.Entry(self.config_page, textvariable=self.spec_address)
         self.config_spec_address_label = tk.Label(self.config_page, text='SPEC Address', bg=self.label_bg_color)
         self.spec_connect_button = tk.Button(self.config_page, text='Connect to SPEC', command=self.connect_to_spec)
-        self.volumes_label = tk.Label(self.config_page, text='Buffer/Sample/Buffer volumes in uL:', bg=self.label_bg_color)
-        self.first_buffer_volume = tk.IntVar(value=25)     # May need ot be a doublevar
+        self.volumes_label = tk.Label(self.config_page, text='Buffer/Sample/Buffer volumes in µL:', bg=self.label_bg_color)
+        self.eq_volumes_label = tk.Label(self.config_page, text='B/S/B equilibration volumes in µL:', bg=self.label_bg_color)
+        self.first_buffer_volume = tk.IntVar(value=25)     # May need to be a doublevar
         self.first_buffer_volume_box = tk.Entry(self.config_page, textvariable=self.first_buffer_volume)
-        self.sample_volume = tk.IntVar(value=25)           # May need ot be a doublevar
+        self.sample_volume = tk.IntVar(value=25)           # May need to be a doublevar
         self.sample_volume_box = tk.Entry(self.config_page, textvariable=self.sample_volume)
-        self.last_buffer_volume = tk.IntVar(value=25)      # May need ot be a doublevar
+        self.last_buffer_volume = tk.IntVar(value=25)      # May need to be a doublevar
         self.last_buffer_volume_box = tk.Entry(self.config_page, textvariable=self.last_buffer_volume)
-        self.sample_flowrate_label = tk.Label(self.config_page, text="Sample-Buffer Infuse flowrate (ul/min)", bg=self.label_bg_color)
+        self.first_buffer_eq_volume = tk.IntVar(value=1)     # May need to be a doublevar
+        self.first_buffer_eq_volume_box = tk.Entry(self.config_page, textvariable=self.first_buffer_eq_volume)
+        self.sample_eq_volume = tk.IntVar(value=1)           # May need to be a doublevar
+        self.sample_eq_volume_box = tk.Entry(self.config_page, textvariable=self.sample_eq_volume)
+        self.last_buffer_eq_volume = tk.IntVar(value=1)      # May need to be a doublevar
+        self.last_buffer_eq_volume_box = tk.Entry(self.config_page, textvariable=self.last_buffer_eq_volume)
+        self.sample_flowrate_label = tk.Label(self.config_page, text="Sample-Buffer Infuse flowrate (µL/min)", bg=self.label_bg_color)
         self.sample_flowrate = tk.DoubleVar(value=10)
         self.sample_flowrate_box = tk.Entry(self.config_page, textvariable=self.sample_flowrate)
-        self.oil_refill_flowrate_label = tk.Label(self.config_page, text="Oil refill rate (ul/min)", bg=self.label_bg_color)
+        self.oil_refill_flowrate_label = tk.Label(self.config_page, text="Oil refill rate (µL/min)", bg=self.label_bg_color)
         self.oil_refill_flowrate = tk.DoubleVar(value=10)
         self.oil_refill_flowrate_box = tk.Entry(self.config_page, textvariable=self.oil_refill_flowrate)
 
@@ -386,6 +395,11 @@ class Main:
         self.sample_volume_box.grid(row=rowcounter, column=2, sticky=tk.W+tk.E+tk.N+tk.S)
         self.last_buffer_volume_box.grid(row=rowcounter, column=3, sticky=tk.W+tk.E+tk.N+tk.S)
         rowcounter += 1
+        self.eq_volumes_label.grid(row=rowcounter, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.first_buffer_eq_volume_box.grid(row=rowcounter, column=1, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.sample_eq_volume_box.grid(row=rowcounter, column=2, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.last_buffer_eq_volume_box.grid(row=rowcounter, column=3, sticky=tk.W+tk.E+tk.N+tk.S)
+        rowcounter += 1
         self.sample_flowrate_label.grid(row=rowcounter, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
         self.sample_flowrate_box.grid(row=rowcounter, column=1, sticky=tk.W+tk.E+tk.N+tk.S)
         self.oil_refill_flowrate_label.grid(row=rowcounter, column=2, sticky=tk.W+tk.E+tk.N+tk.S)
@@ -557,6 +571,9 @@ class Main:
             self.first_buffer_volume.set(run_config.get('buffer1_vol', 25))
             self.sample_volume.set(run_config.get('sample_vol', 25))
             self.last_buffer_volume.set(run_config.get('buffer2_vol', 25))
+            self.first_buffer_eq_volume.set(run_config.get('buffer1_eq_vol', 0))
+            self.sample_eq_volume.set(run_config.get('sample_eq_vol', 0))
+            self.last_buffer_eq_volume.set(run_config.get('buffer2_eq_vol', 0))
             self.low_soap_time.set(run_config.get('low_soap_time', 0))
             self.high_soap_time.set(run_config.get('high_soap_time', 0))
             self.water_time.set(run_config.get('water_time', 0))
@@ -570,6 +587,12 @@ class Main:
         if not preload:
             self.set_oil_valve_names()
             self.set_loading_valve_names()
+            # restart Elevflow
+            try:
+                self.elveflow_display.stop()
+                self.elveflow_display.start()
+            except Exception as e:
+                self.python_logger.warning("Something went wrong when restarting the Elveflow")
         # Instrument Config
         # Clear existing devices
         self.instruments = []
@@ -625,6 +648,9 @@ class Main:
             run_config['buffer1_vol'] = str(self.first_buffer_volume.get())
             run_config['sample_vol'] = str(self.sample_volume.get())
             run_config['buffer2_vol'] = str(self.last_buffer_volume.get())
+            run_config['buffer1_eq_vol'] = str(self.first_buffer_eq_volume.get())
+            run_config['sample_eq_vol'] = str(self.sample_eq_volume.get())
+            run_config['buffer2_eq_vol'] = str(self.last_buffer_eq_volume.get())
             run_config['low_soap_time'] = str(self.low_soap_time.get())
             run_config['high_soap_time'] = str(self.high_soap_time.get())
             run_config['water_time'] = str(self.water_time.get())
@@ -714,14 +740,20 @@ class Main:
 
     def exit_(self):
         """Exit the GUI and stop all running things."""
-        print("STARTING EXIT PROCEDURE")
-        self.stop()
-        self.elveflow_display.stop(shutdown=True)
-        # if self.SPEC_Connection.run_flag.is_set():
-        #    self.SPEC_Connection.stop()
+        with self.elveflow_display.exit_lock:
+            # the first thing we do is grab the lock to stop the elveflow display
+            # from being able to update. There is still a race condition in that the Display
+            # Thread could steal the lock after exit_ starts but before it can execute
+            # even its first line of code. But hopefully that doesn't happen often
+            print("STARTING EXIT PROCEDURE")
+            self.stop()
+            self.elveflow_display.stop(shutdown=True)
+            # now that we've finished telling it to shut down, we can release the lock and
+            # let the elveflow display run again
         if self.listen_run_flag.is_set():
             self.listen_run_flag.clear()
         print("WAITING FOR OTHER THREADS TO SHUT DOWN...")
+        print(threading.enumerate())
         while not self.elveflow_display.done_shutting_down:
             # We could do this smarter by waiting for events. But we're not smarter.
             time.sleep(0.2)
@@ -734,9 +766,11 @@ class Main:
         data_x_label_var = self.elveflow_display.data_x_label_var.get()
         data_y1_label_var = self.elveflow_display.data_y1_label_var.get()
         data_y2_label_var = self.elveflow_display.data_y2_label_var.get()
+        data_y3_label_var = self.elveflow_display.data_y3_label_var.get()
         self.main_tab_ax1.set_xlabel(data_x_label_var, fontsize=14)
         self.main_tab_ax1.set_ylabel(data_y1_label_var, fontsize=14, color=ElveflowDisplay.COLOR_Y1)
         self.main_tab_ax2.set_ylabel(data_y2_label_var, fontsize=14, color=ElveflowDisplay.COLOR_Y2)
+        self.main_tab_ax3.set_ylabel(data_y3_label_var, fontsize=14, color=ElveflowDisplay.COLOR_Y3)
         try:
             # read it once to avoid a race condition here when reading from
             # self.elveflow_display.data at the same time as it gets data from the machine
@@ -744,11 +778,13 @@ class Main:
             data_x = np.array([elt[data_x_label_var] for elt in elveflow_display_data])
             data_y1 = np.array([elt[data_y1_label_var] for elt in elveflow_display_data])
             data_y2 = np.array([elt[data_y2_label_var] for elt in elveflow_display_data])
+            data_y3 = np.array([elt[data_y3_label_var] for elt in elveflow_display_data])
 
             data_x_viable = (data_x >= self.graph_start_time)  # & (data_x < self.graph_end_time)
             data_x = data_x[data_x_viable]
             data_y1 = data_y1[data_x_viable]
             data_y2 = data_y2[data_x_viable]
+            data_y3 = data_y3[data_x_viable]
 
             if data_x_label_var == self.elveflow_display.elveflow_handler.header[0]:
                 data_x -= self.elveflow_display.starttime
@@ -756,24 +792,38 @@ class Main:
                 data_y1 -= self.elveflow_display.starttime
             if data_y2_label_var == self.elveflow_display.elveflow_handler.header[0]:
                 data_y2 -= self.elveflow_display.starttime
+            if data_y3_label_var == self.elveflow_display.elveflow_handler.header[0]:
+                data_y3 -= self.elveflow_display.starttime
 
-            extremes = [np.nanmin(data_x), np.nanmax(data_x), np.nanmin(data_y1), np.nanmax(data_y1), np.nanmin(data_y2), np.nanmax(data_y2)]
+            extremes = [np.nanmin(data_x), np.nanmax(data_x), np.nanmin(data_y1), np.nanmax(data_y1),
+                np.nanmin(data_y2), np.nanmax(data_y2), np.nanmin(data_y3), np.nanmax(data_y3)]
             if len(data_x) > 0:
                 self.the_line1.set_data(data_x, data_y1)
                 self.the_line2.set_data(data_x, data_y2)
+                self.the_line3.set_data(data_x, data_y3)
         except (ValueError, KeyError):
-            extremes = [*self.main_tab_ax1.get_xlim(), *self.main_tab_ax1.get_ylim(), *self.main_tab_ax2.get_ylim()]
+            extremes = [*self.main_tab_ax1.get_xlim(), *self.main_tab_ax1.get_ylim(),
+                *self.main_tab_ax2.get_ylim(), *self.main_tab_ax3.get_ylim()]
+        if extremes[1] - extremes[0] == 0:
+            extremes[1] += 1
+        if extremes[3] - extremes[2] == 0:
+            extremes[3] += 1
+        if extremes[5] - extremes[4] == 0:
+            extremes[5] += 1
+        if extremes[7] - extremes[6] == 0:
+            extremes[7] += 1
         limits = [item if item is not None else extremes[i]
                   for (i, item) in enumerate(self.elveflow_display.axisLimits_numbers)]
         self.main_tab_ax1.set_xlim(*extremes[0:2])
         self.main_tab_ax1.set_ylim(*limits[2:4])
         self.main_tab_ax2.set_ylim(*limits[4:6])
+        self.main_tab_ax3.set_ylim(*limits[6:8])
 
         self.canvas.draw()  # may need the stupid hack from widgets.py
 
-    def graph_vline(self):
+    def graph_vline(self, color='k'):
         """Add a vertical line to the graph."""
-        self.main_tab_ax1.axvline(int(time.time() - self.elveflow_display.starttime), color='k', linewidth=5)
+        self.main_tab_ax1.axvline(int(time.time() - self.elveflow_display.starttime), color=color, linewidth=5)
 
     def auto_run_choice(self):
         if self.sucrose:
@@ -788,7 +838,11 @@ class Main:
             self.python_logger.warning("Elveflow connection not initialized! Please start the connection on the Elveflow tab.")
             raise RuntimeError("Elveflow connection not initialized! Please start the connection on the Elveflow tab.")
 
-        if self.oil_refill_flag is False:
+        if not self.is_filename_safe():
+            tk.messagebox.showinfo('Error', 'Filename is blank or contains invalid characters. \nThese include: %s (includes spaces).' % (self.illegal_chars))
+            return
+
+        if not self.oil_refill_flag:
             MsgBox = messagebox.askquestion('Warning', 'Oil may not be full, continue with buffer/sample/buffer?', icon='warning')
             if MsgBox == 'yes':
                 pass
@@ -798,8 +852,11 @@ class Main:
         # before scheduling anything, clear the graph
         self.main_tab_ax1.clear()
         self.main_tab_ax2.clear()
+        self.main_tab_ax3.clear()
+        self.main_tab_ax3.spines["right"].set_position(("outward", 60)) # offset second right axis
         self.the_line1 = self.main_tab_ax1.plot([], [], color=ElveflowDisplay.COLOR_Y1)[0]
         self.the_line2 = self.main_tab_ax2.plot([], [], color=ElveflowDisplay.COLOR_Y2)[0]
+        self.the_line3 = self.main_tab_ax3.plot([], [], color=ElveflowDisplay.COLOR_Y3)[0]
         self.graph_start_time = int(time.time())
         self.graph_end_time = np.inf
         self.python_logger.debug("main page graph start time: %s" % self.graph_start_time)
@@ -812,29 +869,42 @@ class Main:
         self.queue.put(self.update_graph)
         self.queue.put(self.elveflow_display.start_saving)
 
+        # prebuffer
         self.queue.put((self.python_logger.info, "Starting to run pre-buffer"))
         self.queue.put((self.flowpath.valve2.set_auto_position, "Run"))
         self.queue.put((self.flowpath.valve3.set_auto_position, 0))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Run"))
         self.queue.put((self.pump.infuse_volume, self.first_buffer_volume.get()/1000, self.sample_flowrate.get()))
-        self.queue.put((self.pump.wait_until_stopped, self.first_buffer_volume.get()/self.sample_flowrate.get()*60, self.update_graph))
+        self.queue.put((self.python_logger.debug, f'Calculated equilibration time: {self.first_buffer_eq_volume.get()/self.sample_flowrate.get()*60}'))
+        self.queue.put((self.pump.wait_until_time, self.first_buffer_eq_volume.get()/self.sample_flowrate.get()*60, self.update_graph)) # wait some amount of time until stable
+        self.queue.put((self.graph_vline, 'chartreuse'))
+        self.run_tseries(postfix="pre")
+        self.queue.put((self.pump.wait_until_stopped, self.first_buffer_volume.get()/self.sample_flowrate.get()*60, self.update_graph)) # wait the remaining amount of time
 
+        # sample
         self.queue.put(self.graph_vline)
-        self.queue.put(self.update_graph)
         self.queue.put((self.python_logger.info, "Starting to run sample"))
         self.queue.put((self.flowpath.valve2.set_auto_position, "Run"))
         self.queue.put((self.flowpath.valve3.set_auto_position, 1))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Run"))
         self.queue.put((self.pump.infuse_volume, self.sample_volume.get()/1000, self.sample_flowrate.get()))
+        self.queue.put((self.python_logger.debug, f'Calculated equilibration time: {self.first_buffer_eq_volume.get()/self.sample_flowrate.get()*60}'))
+        self.queue.put((self.pump.wait_until_time, self.sample_eq_volume.get()/self.sample_flowrate.get()*60, self.update_graph)) # wait some amount of time until stable
+        self.queue.put((self.graph_vline, 'chartreuse'))
+        self.run_tseries(postfix="sample")
         self.queue.put((self.pump.wait_until_stopped, self.sample_volume.get()/self.sample_flowrate.get()*60, self.update_graph))
 
+        # postbuffer
         self.queue.put(self.graph_vline)
-        self.queue.put(self.update_graph)
         self.queue.put((self.python_logger.info, "Starting to run post-buffer"))
         self.queue.put((self.flowpath.valve2.set_auto_position, "Run"))
         self.queue.put((self.flowpath.valve3.set_auto_position, 0))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Run"))
         self.queue.put((self.pump.infuse_volume, self.last_buffer_volume.get()/1000, self.sample_flowrate.get()))
+        self.queue.put((self.python_logger.debug, f'Calculated equilibration time: {self.first_buffer_eq_volume.get()/self.sample_flowrate.get()*60}'))
+        self.queue.put((self.pump.wait_until_time, self.last_buffer_eq_volume.get()/self.sample_flowrate.get()*60, self.update_graph)) # wait some amount of time until stable
+        self.queue.put((self.graph_vline, 'chartreuse'))
+        self.run_tseries(postfix="post")
         self.queue.put((self.pump.wait_until_stopped, self.last_buffer_volume.get()/self.sample_flowrate.get()*60, self.update_graph))
 
         self.queue.put(self.elveflow_display.stop_saving)
@@ -945,7 +1015,7 @@ class Main:
 
         self.queue.put((self.python_logger.info, 'Clean and refill done. 完成了！'))
         self.queue.put(self.set_refill_flag_true)
-        self.queue.put(self.play_done_soud)
+        self.queue.put(self.play_done_sound)
 
     def cerbus_clean_and_refill_command(self):
         """Clean the buffer and sample loops, then refill the oil."""
@@ -1208,10 +1278,19 @@ class Main:
         else:
             for button in buttons:
                 button['state'] = 'normal'
-    def play_done_soud(self):
-        duration = 300
-        notes = [392, 494, 587, 740, 783]
-        for note in notes:
+    def play_done_sound(self):
+        possible_songs = [
+                [(392, 300),(494, 300),(587, 300),(740, 300),(783, 600)], # major 7 arpeggio
+                [(330, 250),(440, 750),(554, 250),(659, 750),(440, 250),(415, 750),(554, 250),(659, 750)], # 月亮代表我的心
+                [(659, 150),(659, 300),(659, 300),(523, 150),(659, 300),(784, 600),(392, 600)], # Mario
+                [(784, 150),(740, 150),(622, 150),(440, 150),(415, 150),(659, 150),(831, 150),(1047, 150)], # Zelda
+                [(880, 400),(784, 200),(698, 400),(784, 200),(880, 400),(932, 200),(1047, 600),(880, 200),(784, 200),(698, 200),(659, 400),(587, 200),(659, 400),(698, 200),(523, 600)], # Do You Hear the People Sing?
+                [(523, 200),(659, 400),(659, 200),(659, 200),(587, 200),(659, 200),(698, 600),(659, 400),(659, 200),(587, 400),(587, 200),(587, 200),(523, 200),(587, 200),(659, 600),(523, 600)], # For He's a Jolly Good Fellow
+                [(415, 150),(311, 150),(415, 150),(523, 150),(415, 150),(523, 150),(622, 450),(523, 300),(415, 150),(554, 450),(523, 300),(466, 150),(415, 450),(466, 450),(415, 450)], # Kid Icarus Underworld
+                [(831, 600),(932, 200),(1047, 600),(932, 200),(831, 400),(698, 400),(698, 400),(622, 400)] # Cornell Alma Mater
+            ]
+        notes = random.choice(possible_songs)
+        for (note, duration) in notes:
             winsound.Beep(note,duration)
 
     def configure_to_hardware(self, keyword, instrument_index):
@@ -1465,11 +1544,11 @@ class Main:
 
         for eachChar in SubDirectory:
             if eachChar in self.illegal_chars:
-                tk.messagebox.showinfo("Error", 'Directory name contains invalid characters. \nThese include: %s (includes spaces).' % (self.illegal_chars), 'Invalid Input')
+                tk.messagebox.showinfo("Error", 'Directory name contains invalid characters. \nThese include: %s (includes spaces).' % (self.illegal_chars))
                 return (False)
 
         if '//' in SubDirectory:
-            tk.messagebox.showinfo("Error", 'Directory path is invalid. Please check path. \nHint: subdirectory name contains "//".', 'Invalid Input')
+            tk.messagebox.showinfo("Error", 'Directory path is invalid. Please check path. \nHint: subdirectory name contains "//".')
             return (False)
 
         if SubDirectory != "":
@@ -1538,6 +1617,16 @@ class Main:
                 solocomm.controlQueue.put([('G', 'ADXDONE_OK')])
         pass
 
+    def is_filename_safe(self):
+        """returns whether or not the tseries filename is existent and properly formatted."""
+        filename = self.spec_filename.get().strip()
+        for eachChar in filename:
+            if eachChar in self.illegal_chars:
+                return False
+        if filename == '':
+            return False
+        return True
+
     def run_tseries(self, postfix=None):
         """Run a tseries."""
         # Input Sanitation
@@ -1550,21 +1639,15 @@ class Main:
                 raise ValueError
 
         except ValueError:
-            tk.messagebox.showinfo('Error', 'Exposure time, number of frames or filenumber is invalid.', 'Invalid Input')
+            tk.messagebox.showinfo('Error', 'Exposure time, number of frames or filenumber is invalid.')
             return
 
         filename = self.spec_filename.get().strip()
-
-        for eachChar in filename:
-            if eachChar in self.illegal_chars:
-                tk.messagebox.showinfo('Error', 'Filename contains invalid characters. \nThese include: %s (includes spaces).' % (self.illegal_chars), 'Invalid Input')
-                return
-
-        if filename == '':
-            tk.messagebox.showinfo('Error', 'File must have a name.', 'Invalid Input')
+        if not self.is_filename_safe():
+            tk.messagebox.showinfo('Error', 'Filename is blank or contains invalid characters. \nThese include: %s (includes spaces).' % (self.illegal_chars))
             return
 
-        changedir, directory = self.Changedirectory()
+        changedir, directory = self.ChangeDirectory()
 
         if changedir:
             self.exposing = True
@@ -1572,10 +1655,10 @@ class Main:
 
             new_dark = '0'
 
-            print(('A EXPOSE '+filename + '_' + file_number + ',' + str(exposure_time) + ',' + str(number_of_frames)))
+            # print(('A EXPOSE '+filename + '_' + file_number + ',' + str(exposure_time) + ',' + str(number_of_frames)))
 
             file = filename
-            file += '_' + file_number
+            file += '_%s' % file_number
             if postfix is not None:
                 file += '_' + postfix
 
@@ -1583,8 +1666,8 @@ class Main:
                                         str(exposure_time) + ',' + str(number_of_frames) +
                                         ',' + str(directory) + ',' + str(new_dark))])
 
-            self.spec_fileno.delete(0, 'end')
-            self.spec_fileno.insert(0, file_number+1)
+            self.spec_fileno_box.delete(0, 'end')
+            self.spec_fileno_box.insert(0, file_number+1)
 
 
 if __name__ == "__main__":
