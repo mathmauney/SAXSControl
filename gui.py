@@ -177,15 +177,15 @@ class Main:
         self.oil_refill_flowrate = tk.DoubleVar(value=10)
         self.oil_refill_flowrate_box = tk.Entry(self.config_page, textvariable=self.oil_refill_flowrate)
 
-        self.cerbus_volume_label = tk.Label(self.config_page, text='Cerbus Volume:', bg=self.label_bg_color)
-        self.cerbus_volume = tk.DoubleVar(value=25)     # May need ot be a doublevar
-        self.cerbus_volume_box = tk.Spinbox(self.config_page, textvariable=self.cerbus_volume)
-        self.cerbus_flowrate_label = tk.Label(self.config_page, text='Cerbus Flowrate:', bg=self.label_bg_color)
-        self.cerbus_flowrate = tk.DoubleVar(value=25)     # May need ot be a doublevar
-        self.cerbus_flowrate_box = tk.Spinbox(self.config_page, textvariable=self.cerbus_flowrate)
-        self.cerbus_refill_rate_label = tk.Label(self.config_page, text='Cerbus Refill Flowrate:', bg=self.label_bg_color)
-        self.cerbus_refill_rate = tk.DoubleVar(value=25)     # May need ot be a doublevar
-        self.cerbus_refill_rate_box = tk.Spinbox(self.config_page, textvariable=self.cerbus_refill_rate)
+        self.cerberus_volume_label = tk.Label(self.config_page, text='cerberus Volume:', bg=self.label_bg_color)
+        self.cerberus_volume = tk.DoubleVar(value=25)     # May need ot be a doublevar
+        self.cerberus_volume_box = tk.Spinbox(self.config_page, textvariable=self.cerberus_volume)
+        self.cerberus_flowrate_label = tk.Label(self.config_page, text='cerberus Flowrate:', bg=self.label_bg_color)
+        self.cerberus_flowrate = tk.DoubleVar(value=25)     # May need ot be a doublevar
+        self.cerberus_flowrate_box = tk.Spinbox(self.config_page, textvariable=self.cerberus_flowrate)
+        self.cerberus_refill_rate_label = tk.Label(self.config_page, text='cerberus Refill Flowrate:', bg=self.label_bg_color)
+        self.cerberus_refill_rate = tk.DoubleVar(value=25)     # May need ot be a doublevar
+        self.cerberus_refill_rate_box = tk.Spinbox(self.config_page, textvariable=self.cerberus_refill_rate)
 
         self.oil_valve_names_label = tk.Label(self.config_page, text='Oil Valve Hardware Port Names', bg=self.label_bg_color)
         self.oil_valve_names = []
@@ -196,23 +196,23 @@ class Main:
         self.loading_valve_name_boxes = []
         self.set_loading_valve_names_button = tk.Button(self.config_page, text='Set Names', command=self.set_loading_valve_names)
 
-        self.cerbus_oil_valve_names_label = tk.Label(self.config_page, text='Cerbus Oil Valve Hardware Port Names', bg=self.label_bg_color)
-        self.cerbus_oil_valve_names = []
-        self.cerbus_oil_valve_name_boxes = []
-        self.cerbus_set_oil_valve_names_button = tk.Button(self.config_page, text='Set Names', command=self.set_cerbus_oil_valve_names)
-        self.cerbus_loading_valve_names_label = tk.Label(self.config_page, text='Cerbus Loading Valve Hardware Port Names', bg=self.label_bg_color)
-        self.cerbus_loading_valve_names = []
-        self.cerbus_loading_valve_name_boxes = []
-        self.cerbus_set_loading_valve_names_button = tk.Button(self.config_page, text='Set Names', command=self.set_cerbus_loading_valve_names)
+        self.cerberus_oil_valve_names_label = tk.Label(self.config_page, text='cerberus Oil Valve Hardware Port Names', bg=self.label_bg_color)
+        self.cerberus_oil_valve_names = []
+        self.cerberus_oil_valve_name_boxes = []
+        self.cerberus_set_oil_valve_names_button = tk.Button(self.config_page, text='Set Names', command=self.set_cerberus_oil_valve_names)
+        self.cerberus_loading_valve_names_label = tk.Label(self.config_page, text='cerberus Loading Valve Hardware Port Names', bg=self.label_bg_color)
+        self.cerberus_loading_valve_names = []
+        self.cerberus_loading_valve_name_boxes = []
+        self.cerberus_set_loading_valve_names_button = tk.Button(self.config_page, text='Set Names', command=self.set_cerberus_loading_valve_names)
         for i in range(6):
             self.oil_valve_names.append(tk.StringVar(value=''))
             self.oil_valve_name_boxes.append(tk.OptionMenu(self.config_page, self.oil_valve_names[i], ""))
             self.loading_valve_names.append(tk.StringVar(value=''))
             self.loading_valve_name_boxes.append(tk.OptionMenu(self.config_page, self.loading_valve_names[i], ""))
-            self.cerbus_oil_valve_names.append(tk.StringVar(value=''))
-            self.cerbus_oil_valve_name_boxes.append(tk.OptionMenu(self.config_page, self.cerbus_oil_valve_names[i], ""))
-            self.cerbus_loading_valve_names.append(tk.StringVar(value=''))
-            self.cerbus_loading_valve_name_boxes.append(tk.OptionMenu(self.config_page, self.cerbus_loading_valve_names[i], ""))
+            self.cerberus_oil_valve_names.append(tk.StringVar(value=''))
+            self.cerberus_oil_valve_name_boxes.append(tk.OptionMenu(self.config_page, self.cerberus_oil_valve_names[i], ""))
+            self.cerberus_loading_valve_names.append(tk.StringVar(value=''))
+            self.cerberus_loading_valve_name_boxes.append(tk.OptionMenu(self.config_page, self.cerberus_loading_valve_names[i], ""))
 
         self.tseries_time = tk.IntVar(value=0)
         self.tseries_time_box = tk.Entry(self.config_page, textvariable=self.tseries_time)
@@ -283,11 +283,11 @@ class Main:
         self.controller = SAXSDrivers.SAXSController(timeout=0.1)
         self.instruments = []
         self.pump = None
-        self.cerbus_pump = None
+        self.cerberus_pump = None
         self.purge_valve = None
         self.NumberofPumps = 0
         # Setup Page
-        self.hardware_config_options = ("Pump", "Oil Valve", "Sample/Buffer Valve", "Loading Valve", "Purge", "Cerbus Load", "Cerbus Oil", "Cerbus Pump")
+        self.hardware_config_options = ("Pump", "Oil Valve", "Sample/Buffer Valve", "Loading Valve", "Purge", "cerberus Load", "cerberus Oil", "cerberus Pump")
         self.AvailablePorts = SAXSDrivers.list_available_ports()
         self.setup_page_buttons = []
         self.setup_page_variables = []
@@ -321,8 +321,8 @@ class Main:
         # I suspect something might be going wrong with the libraries, then, especially tkinter and matplotlib
         self.refresh_dropdown(self.oil_valve_name_boxes, self.flowpath.valve2.gui_names, self.oil_valve_names)
         self.refresh_dropdown(self.loading_valve_name_boxes, self.flowpath.valve4.gui_names, self.loading_valve_names)
-        self.refresh_dropdown(self.cerbus_oil_valve_name_boxes, self.flowpath.valve6.gui_names, self.cerbus_oil_valve_names)
-        self.refresh_dropdown(self.cerbus_loading_valve_name_boxes, self.flowpath.valve8.gui_names, self.cerbus_loading_valve_names)
+        self.refresh_dropdown(self.cerberus_oil_valve_name_boxes, self.flowpath.valve6.gui_names, self.cerberus_oil_valve_names)
+        self.refresh_dropdown(self.cerberus_loading_valve_name_boxes, self.flowpath.valve8.gui_names, self.cerberus_loading_valve_names)
         self.draw_static()
         self.elveflow_display = ElveflowDisplay(self.elveflow_page, core_height, core_width, self.config['Elveflow'], self.python_logger)
         self.elveflow_display.grid(row=0, column=0)
@@ -405,12 +405,12 @@ class Main:
         self.oil_refill_flowrate_label.grid(row=rowcounter, column=2, sticky=tk.W+tk.E+tk.N+tk.S)
         self.oil_refill_flowrate_box.grid(row=rowcounter, column=3, sticky=tk.W+tk.E+tk.N+tk.S)
         rowcounter += 1
-        self.cerbus_volume_label.grid(row=rowcounter, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
-        self.cerbus_volume_box.grid(row=rowcounter, column=1, sticky=tk.W+tk.E+tk.N+tk.S)
-        self.cerbus_flowrate_label.grid(row=rowcounter, column=2, sticky=tk.W+tk.E+tk.N+tk.S)
-        self.cerbus_flowrate_box.grid(row=rowcounter, column=3, sticky=tk.W+tk.E+tk.N+tk.S)
-        self.cerbus_refill_rate_label.grid(row=rowcounter, column=4, sticky=tk.W+tk.E+tk.N+tk.S)
-        self.cerbus_refill_rate_box.grid(row=rowcounter, column=5, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.cerberus_volume_label.grid(row=rowcounter, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.cerberus_volume_box.grid(row=rowcounter, column=1, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.cerberus_flowrate_label.grid(row=rowcounter, column=2, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.cerberus_flowrate_box.grid(row=rowcounter, column=3, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.cerberus_refill_rate_label.grid(row=rowcounter, column=4, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.cerberus_refill_rate_box.grid(row=rowcounter, column=5, sticky=tk.W+tk.E+tk.N+tk.S)
         rowcounter += 1
         self.oil_valve_names_label.grid(row=rowcounter, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
         self.set_oil_valve_names_button.grid(row=rowcounter, column=7, sticky=tk.W+tk.E+tk.N+tk.S)
@@ -422,15 +422,15 @@ class Main:
         for i in range(6):
             self.loading_valve_name_boxes[i].grid(row=rowcounter, column=i+1, sticky=tk.W+tk.E+tk.N+tk.S)
         rowcounter += 1
-        self.cerbus_oil_valve_names_label.grid(row=rowcounter, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
-        self.cerbus_set_oil_valve_names_button.grid(row=rowcounter, column=7, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.cerberus_oil_valve_names_label.grid(row=rowcounter, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.cerberus_set_oil_valve_names_button.grid(row=rowcounter, column=7, sticky=tk.W+tk.E+tk.N+tk.S)
         for i in range(6):
-            self.cerbus_oil_valve_name_boxes[i].grid(row=rowcounter, column=i+1, sticky=tk.W+tk.E+tk.N+tk.S)
+            self.cerberus_oil_valve_name_boxes[i].grid(row=rowcounter, column=i+1, sticky=tk.W+tk.E+tk.N+tk.S)
         rowcounter += 1
-        self.cerbus_loading_valve_names_label.grid(row=rowcounter, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
-        self.cerbus_set_loading_valve_names_button.grid(row=rowcounter, column=7, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.cerberus_loading_valve_names_label.grid(row=rowcounter, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.cerberus_set_loading_valve_names_button.grid(row=rowcounter, column=7, sticky=tk.W+tk.E+tk.N+tk.S)
         for i in range(6):
-            self.cerbus_loading_valve_name_boxes[i].grid(row=rowcounter, column=i+1, sticky=tk.W+tk.E+tk.N+tk.S)
+            self.cerberus_loading_valve_name_boxes[i].grid(row=rowcounter, column=i+1, sticky=tk.W+tk.E+tk.N+tk.S)
         rowcounter += 2
         self.elveflow_sourcename_label.grid(row=rowcounter, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
         self.elveflow_sourcename_box.grid(row=rowcounter, column=1, sticky=tk.W+tk.E+tk.N+tk.S)
@@ -545,6 +545,7 @@ class Main:
             oil_config = self.config['Oil Valve']
             loading_config = self.config['Loading Valve']
             instrument_config = self.config['Instruments']
+            cerberus_config = self.config['Cerberus']
             cerberus_oil_config = self.config['Cerberus Oil Valve']
             cerberus_loading_config = self.config['Cerberus Loading Valve']
             # Main Config
@@ -580,6 +581,10 @@ class Main:
             self.high_soap_time.set(run_config.get('high_soap_time', 0))
             self.water_time.set(run_config.get('water_time', 0))
             self.air_time.set(run_config.get('air_time', 0))
+            # Cerberus Config
+            self.cerberus_volume.set(cerberus_config.get('Volume', 0))
+            self.cerberus_flowrate.set(cerberus_config.get('Flowrate', 0))
+            self.cerberus_refill_rate.set(cerberus_config.get('Refill Rate', 0))
             # Valve Config
             for i in range(0, 6):
                 field = 'name'+str(i+1)
@@ -628,6 +633,9 @@ class Main:
             oil_config = self.config['Oil Valve']
             loading_config = self.config['Loading Valve']
             instrument_config = self.config['Instruments']
+            cerberus_config = self.config['Cerberus']
+            cerberus_oil_config = self.config['Cerberus Oil Valve']
+            cerberus_loading_config = self.config['Cerberus Loading Valve']
             # Main Config
             main_config['Sucrose'] = str(self.sucrose)
             # Elveflow Config
@@ -659,15 +667,25 @@ class Main:
             run_config['high_soap_time'] = str(self.high_soap_time.get())
             run_config['water_time'] = str(self.water_time.get())
             run_config['air_time'] = str(self.air_time.get())
+            # Cerberus Config
+            cerberus_config['Volume'] = str(self.cerberus_volume.get())
+            cerberus_config['Flowrate'] = str(self.cerberus_flowrate.get())
+            cerberus_config['Refill Rate'] = str(self.cerberus_refill_rate.get())
             # Valve Configs
             for i in range(0, 6):
                 field = 'name'+str(i+1)
                 oil_name = self.oil_valve_names[i].get()
-                if oil_name is not '':
+                if oil_name != '':
                     oil_config[field] = oil_name
                 loading_name = self.loading_valve_names[i].get()
-                if loading_name is not '':
+                if loading_name != '':
                     loading_config[field] = loading_name
+                cerberus_oil_name = self.cerberus_oil_valve_names[i].get()
+                if cerberus_oil_name != '':
+                    cerberus_oil_config[field] = cerberus_oil_name
+                cerberus_loading_name = self.cerberus_loading_valve_names[i].get()
+                if cerberus_loading_name != '':
+                    cerberus_loading_config[field] = cerberus_loading_name
 
             elveflow_config['elveflow_sourcename'] = self.elveflow_sourcename.get()
 
@@ -713,13 +731,13 @@ class Main:
         for i in range(0, 6):
             self.flowpath.valve4.name_position(i, self.loading_valve_names[i].get())
 
-    def set_cerbus_oil_valve_names(self):
+    def set_cerberus_oil_valve_names(self):
         """Send selection valve names to the control gui."""
         self.python_logger.info("Oil valve names set.")
         for i in range(0, 6):
             self.flowpath.valve6.name_position(i, self.oil_valve_names[i].get())
 
-    def set_cerbus_loading_valve_names(self):
+    def set_cerberus_loading_valve_names(self):
         """Send selection valve names to the control gui."""
         self.python_logger.info("Loading valve names set.")
         for i in range(0, 6):
@@ -843,7 +861,7 @@ class Main:
 
     def auto_run_choice(self):
         if self.sucrose:
-            self.cerbus_buffer_sample_buffer_command()
+            self.cerberus_buffer_sample_buffer_command()
         else:
             self.buffer_sample_buffer_command()
 
@@ -933,7 +951,7 @@ class Main:
 
         self.clean_and_refill_command()  # Run a clean and refill after finishing
 
-    def cerbus_buffer_sample_buffer_command(self):
+    def cerberus_buffer_sample_buffer_command(self):
         """Run a buffer-sample-buffer cycle."""
         if self.elveflow_display is None or self.elveflow_display.elveflow_handler is None:
             # TODO: make us not need to do this twice?
@@ -965,10 +983,10 @@ class Main:
         self.queue.put(self.elveflow_display.start_saving)
 
         self.queue.put((self.python_logger.info, "Starting to run pre-buffer"))
-        # Start Cerbus
+        # Start cerberus
         self.queue.put((self.flowpath.valve6.set_auto_position, "Run"))
         self.queue.put((self.flowpath.valve8.set_auto_position, "Run"))
-        self.queue.put((self.cerbus_pump.infuse_volume, self.cerbus_volume.get()/1000, self.cerbus_flowrate.get()))
+        self.queue.put((self.cerberus_pump.infuse_volume, self.cerberus_volume.get()/1000, self.cerberus_flowrate.get()))
         # start regular
         self.queue.put((self.flowpath.valve2.set_auto_position, "Run"))
         self.queue.put((self.flowpath.valve3.set_auto_position, 0))
@@ -994,7 +1012,7 @@ class Main:
         self.queue.put((self.pump.infuse_volume, self.last_buffer_volume.get()/1000, self.sample_flowrate.get()))
         self.queue.put((self.pump.wait_until_stopped, self.last_buffer_volume.get()/self.sample_flowrate.get()*60, self.update_graph))
 
-        self.queue.put(self.cerbus_pump.stop_pump)
+        self.queue.put(self.cerberus_pump.stop_pump)
         self.queue.put(self.elveflow_display.stop_saving)
         self.queue.put(self.update_graph)
 
@@ -1003,11 +1021,11 @@ class Main:
         self.queue.put(update_end_time)
         self.queue.put((self.python_logger.info, "Done with running buffer-sample-buffer"))
 
-        self.cerbus_clean_and_refill_command()  # Run a clean and refill after finishing
+        self.cerberus_clean_and_refill_command()  # Run a clean and refill after finishing
 
     def choose_clean_and_refill_command(self):
         if self.sucrose:
-            self.cerbus_clean_and_refill_command()
+            self.cerberus_clean_and_refill_command()
         else:
             self.clean_and_refill_command()
 
@@ -1033,7 +1051,7 @@ class Main:
         self.queue.put(self.set_refill_flag_true)
         self.queue.put(self.play_done_sound)
 
-    def cerbus_clean_and_refill_command(self):
+    def cerberus_clean_and_refill_command(self):
 
         """Clean the buffer and sample loops, then refill the oil."""
         elveflow_oil_channel = int(self.elveflow_oil_channel.get())  # throws an error if the conversion doesn't work
@@ -1044,16 +1062,16 @@ class Main:
         self.queue.put((self.elveflow_display.pressureValue_var[elveflow_oil_channel - 1].set, elveflow_oil_pressure))  # Set oil pressure
         self.queue.put((self.elveflow_display.start_pressure, elveflow_oil_channel))
 
-        self.queue.put(self.cerbus_pump.stop_pump)
+        self.queue.put(self.cerberus_pump.stop_pump)
         self.queue.put((self.pump.refill_volume, (self.sample_volume.get()+self.first_buffer_volume.get()+self.last_buffer_volume.get())/1000, self.oil_refill_flowrate.get()))
-        self.queue.put((self.cerbus_pump.refill_volume, self.cerbus_pump.get_delivered_volume(), self.cerbus_refill_rate.get()))
+        self.queue.put((self.cerberus_pump.refill_volume, self.cerberus_pump.get_delivered_volume(), self.cerberus_refill_rate.get()))
 
-        self.cerbus_clean_only_command()
+        self.cerberus_clean_only_command()
 
         self.queue.put((self.pump.wait_until_stopped, 120))
-        self.queue.put((self.cerbus.pump.wait_until_stopped, 120))
+        self.queue.put((self.cerberus.pump.wait_until_stopped, 120))
         self.queue.put(self.pump.infuse)
-        self.queue.put(self.cerbus_pump.infuse)
+        self.queue.put(self.cerberus_pump.infuse)
         self.queue.put((self.elveflow_display.pressureValue_var[elveflow_oil_channel - 1].set, "0"))  # Set oil pressure to 0
         self.queue.put((self.elveflow_display.start_pressure, elveflow_oil_channel))
 
@@ -1068,7 +1086,7 @@ class Main:
 
     def choose_cleaning(self):
         if self.sucrose:
-            self.cerbus_clean_only_command()
+            self.cerberus_clean_only_command()
         else:
             self.clean_only_command()
 
@@ -1121,14 +1139,14 @@ class Main:
         self.queue.put((self.flowpath.valve3.set_auto_position, 0))
         self.queue.put((self.python_logger.info, "Finished cleaning sample"))
 
-    def cerbus_clean_only_command(self):
+    def cerberus_clean_only_command(self):
         self.queue.put((self.python_logger.info, "Cleaning Buffer Loop"))
-        self.cerbus_clean_loop_command(0)
+        self.cerberus_clean_loop_command(0)
         self.queue.put((self.python_logger.info, "Cleaning Sample Loop"))
-        self.cerbus_clean_loop_command(1)
+        self.cerberus_clean_loop_command(1)
         self.queue.put((self.python_logger.info, "Done Cleaning!"))
 
-    def cerbus_clean_loop_command(self, loop):
+    def cerberus_clean_loop_command(self, loop):
         """Clean the buffer and sample loops."""
         self.queue.put((self.python_logger.info, "Starting to clean buffer"))
         self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
@@ -1137,7 +1155,7 @@ class Main:
         self.queue.put((time.sleep, self.low_soap_time.get()))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Load"))
 
-        self.queue.put((self.python_logger.info, "Cleaning Cerbus"))
+        self.queue.put((self.python_logger.info, "Cleaning cerberus"))
         self.queue.put((self.flowpath.valve6.set_auto_position, "Waste"))
         self.queue.put((self.flowpath.valve8.set_auto_position, "Low Flow Soap"))
         self.queue.put((time.sleep, self.low_soap_time.get()))
@@ -1171,7 +1189,7 @@ class Main:
 
     def choice_refill_only_command(self):
         if self.sucrose:
-            self.cerbus_refill_only_command()
+            self.cerberus_refill_only_command()
         else:
             self.refill_only_command()
 
@@ -1193,20 +1211,20 @@ class Main:
 
         self.oil_refill_flag = True
 
-    def cerbus_refill_only_command(self):
+    def cerberus_refill_only_command(self):
         """Refill the oil only."""
         elveflow_oil_channel = int(self.elveflow_oil_channel.get())  # throws an error if the conversion doesn't work
         elveflow_oil_pressure = self.elveflow_oil_pressure.get()
 
         self.queue.put((self.elveflow_display.pressureValue_var[elveflow_oil_channel - 1].set, elveflow_oil_pressure))  # Set oil pressure
         self.queue.put((self.elveflow_display.start_pressure, elveflow_oil_channel))
-        self.queue.put(self.cerbus_pump.stop_pump)
+        self.queue.put(self.cerberus_pump.stop_pump)
         self.queue.put((self.pump.refill_volume, (self.sample_volume.get()+self.first_buffer_volume.get()+self.last_buffer_volume.get())/1000, self.oil_refill_flowrate.get()))
-        self.queue.put((self.cerbus_pump.refill_volume, self.cerbus_volume.get()/1000, self.cerbus_refill_rate.get()))
+        self.queue.put((self.cerberus_pump.refill_volume, self.cerberus_volume.get()/1000, self.cerberus_refill_rate.get()))
         self.queue.put((self.pump.wait_until_stopped, 120))
-        self.queue.put((self.cerbus_pump.wait_until_stopped, 120))
+        self.queue.put((self.cerberus_pump.wait_until_stopped, 120))
         self.queue.put(self.pump.infuse)
-        self.queue.put(self.cerbus_pump.infuse)
+        self.queue.put(self.cerberus_pump.infuse)
         self.queue.put((self.elveflow_display.pressureValue_var[elveflow_oil_channel - 1].set, "0"))  # Set oil pressure to 0
         self.queue.put((self.elveflow_display.start_pressure, elveflow_oil_channel))
 
@@ -1353,19 +1371,19 @@ class Main:
         elif keyword == self.hardware_config_options[5]:
             if self.instruments[instrument_index].instrument_type == "Rheodyne":
                 self.flowpath.valve6.hardware = self.instruments[instrument_index]
-                self.python_logger.info("Cerbus Loading valve configerd to FlowPath")
+                self.python_logger.info("cerberus Loading valve configerd to FlowPath")
             else:
                 self.python_logger.info("Invalid configuration for type: " + self.instruments[instrument_index].instrument_type)
         elif keyword == self.hardware_config_options[6]:
             if self.instruments[instrument_index].instrument_type == "Rheodyne":
                 self.flowpath.valve8.hardware = self.instruments[instrument_index]
-                self.python_logger.info("Cerbus Oil valve configured to FlowPath")
+                self.python_logger.info("cerberus Oil valve configured to FlowPath")
             else:
                 self.python_logger.info("Invalid configuration for type: " + self.instruments[instrument_index].instrument_type)
         elif keyword == self.hardware_config_options[7]:
             if self.instruments[instrument_index].instrument_type == "Pump":
-                self.cerbus_pump = self.instruments[instrument_index]
-                self.python_logger.info("Cerbus Pump configured to FlowPath")
+                self.cerberus_pump = self.instruments[instrument_index]
+                self.python_logger.info("cerberus Pump configured to FlowPath")
             else:
                 self.python_logger.info("Invalid configuration for type " + self.instruments[instrument_index].instrument_type)
         else:
