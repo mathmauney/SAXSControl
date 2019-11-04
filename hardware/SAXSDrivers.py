@@ -470,27 +470,22 @@ class HPump:
                 if not self.controller.is_open:
                     self.controller.open()
                 while self.controller.in_waiting > 0:   # Clear Buffer
-                    self.logger.info(self.controller.read().decode())
+                    self.controller.read()
                 self.controller.write(("-"+self.address+"\n\r").encode())
                 time.sleep(0.2)
                 while self.controller.in_waiting > 0:
-                    try:
-                        answer = self.controller.readline()
-                        answer = answer.decode()
-                    except:
-                        self.logger.debug(repr(answer))
-                        raise RuntimeError
-                    if self.address in answer:
-                        if "<" in answer:
+                    if self.controller.read() == self.address.encode():
+                        answer = self.controller.read()
+                        if b"<" == answer:
                             running = True
                             success = True
-                        elif ">" in answer:
+                        elif b">" == answer:
                             running = True
                             success = True
-                        elif ":" in answer:
+                        elif b":" == answer:
                             running = False
                             success = True
-                        elif "*" in answer:
+                        elif b"*" == answer:
                             running = False
                             success = True
                 if success:
@@ -551,11 +546,11 @@ class HPump:
             if not resource.is_open:
                 resource.open()
             while resource.in_waiting > 0:  # Clear Buffer
-                resource.readline().decode()
+                resource.readline()
             resource.write((self.address+"DIR"+"\n\r").encode())  # Query Pump
             time.sleep(0.2)
             while resource.in_waiting > 0:
-                if dirstr in resource.readline().decode():
+                if dirstr.encode() in resource.readline():
                     success = True
             if not success:
                 self.logger.info("Failure Connecting to Pump")
@@ -564,11 +559,11 @@ class HPump:
             if not self.controller.is_open:
                 self.controller.open()
             while self.controller.in_waiting > 0:   # Clear Buffer
-                self.controller.read().decode()
+                self.controller.read()
             self.controller.write(("-"+self.address+"DIR"+"\n\r").encode())
             time.sleep(0.2)
             while self.controller.in_waiting > 0:
-                if dirstr in self.controller.readline().decode():
+                if dirstr.encode() in self.controller.readline():
                     success = True
             if not success:
                 self.logger.info("Failure Connecting to Pump")
@@ -583,11 +578,11 @@ class HPump:
             if not resource.is_open:
                 resource.open()
             while resource.in_waiting > 0:  # Clear Buffer
-                resource.readline().decode()
+                resource.readline()
             resource.write((self.address+"MOD"+"\n\r").encode())  # Query Pump
             time.sleep(0.2)
             while resource.in_waiting > 0:
-                if modestr in resource.readline().decode():
+                if modestr.encode() in resource.readline():
                     success = True
             if not success:
                 self.logger.info("Failure Connecting to Pump")
@@ -596,11 +591,11 @@ class HPump:
             if not self.controller.is_open:
                 self.controller.open()
             while self.controller.in_waiting > 0:   # Clear Buffer
-                self.controller.read().decode()
+                self.controller.read()
             self.controller.write(("-"+self.address+"MOD"+"\n\r").encode())
             time.sleep(0.2)
             while self.controller.in_waiting > 0:
-                if modestr in self.controller.readline().decode():
+                if modestr.encode() in self.controller.readline():
                     success = True
             if not success:
                 self.logger.info("Failure Connecting to Pump")
@@ -619,8 +614,8 @@ class HPump:
             resource.write((self.address+"TGT"+"\n\r").encode())  # Query Pump
             time.sleep(0.2)
             while resource.in_waiting > 0:
-                answer = (resource.readline().decode())
-                if "." in answer:
+                answer = (resource.readline())
+                if b"." in answer:
                     value = float(answer)
                     success = True
 
@@ -628,12 +623,12 @@ class HPump:
             if not self.controller.is_open:
                 self.controller.open()
             while self.controller.in_waiting > 0:   # Clear Buffer
-                self.controller.read().decode()
+                self.controller.read()
             self.controller.write(("-"+self.address+"TGT"+"\n\r").encode())
             time.sleep(0.2)
             while self.controller.in_waiting > 0:
-                answer = (self.controller.readline().decode())
-                if "." in answer:
+                answer = (self.controller.readline())
+                if b"." in answer:
                     value = float(answer)
                     success = True
         if not success:
@@ -651,12 +646,12 @@ class HPump:
             if not resource.is_open:
                 resource.open()
             while resource.in_waiting > 0:  # Clear Buffer
-                resource.readline().decode()
+                resource.readline()
             resource.write((self.address+"RAT"+"\n\r").encode())  # Query Pump
             time.sleep(0.2)
             while resource.in_waiting > 0:
-                answer = (resource.readline().decode())
-                if "." in answer:
+                answer = (resource.readline())
+                if b"." in answer:
                     value = float(answer[0:-7])
                     success = True
 
@@ -664,12 +659,12 @@ class HPump:
             if not self.controller.is_open:
                 self.controller.open()
             while self.controller.in_waiting > 0:   # Clear Buffer
-                self.controller.read().decode()
+                self.controller.read()
             self.controller.write(("-"+self.address+"RAT"+"\n\r").encode())
             time.sleep(0.2)
             while self.controller.in_waiting > 0:
-                answer = (self.controller.readline().decode())
-                if "." in answer:
+                answer = (self.controller.readline())
+                if b"." in answer:
                     value = float(answer[0:-7])
                     success = True
         if not success:
@@ -687,24 +682,24 @@ class HPump:
             if not resource.is_open:
                 resource.open()
             while resource.in_waiting > 0:  # Clear Buffer
-                resource.readline().decode()
+                resource.readline()
             resource.write((self.address+"RFR"+"\n\r").encode())  # Query Pump
             time.sleep(0.2)
             while resource.in_waiting > 0:
-                answer = (resource.readline().decode())
-                if "." in answer:
+                answer = (resource.readline())
+                if b"." in answer:
                     value = float(answer[0:-7])
                     success = True
         else:
             if not self.controller.is_open:
                 self.controller.open()
             while self.controller.in_waiting > 0:   # Clear Buffer
-                self.controller.read().decode()
+                self.controller.read()
             self.controller.write(("-"+self.address+"RFR"+"\n\r").encode())
             time.sleep(0.2)
             while self.controller.in_waiting > 0:
-                answer = (self.controller.readline().decode())
-                if "." in answer:
+                answer = (self.controller.readline())
+                if b"." in answer:
                     value = float(answer[0:-7])
                     success = True
         if not success:
@@ -726,26 +721,27 @@ class HPump:
             resource.write((self.address+"DEL"+"\n\r").encode())  # Query Pump
             time.sleep(0.2)
             while resource.in_waiting > 0:
-                answer = (resource.readline().decode())
-                if "." in answer:
-                    value = float(answer[0:-7])
+                answer = (resource.readline())
+                if b"." in answer:
+                    value = float(answer)
                     success = True
         else:
             if not self.controller.is_open:
                 self.controller.open()
             while self.controller.in_waiting > 0:   # Clear Buffer
-                self.controller.read().decode()
+                self.controller.read()
             self.controller.write(("-"+self.address+"DEL"+"\n\r").encode())
             time.sleep(0.2)
             while self.controller.in_waiting > 0:
-                answer = (self.controller.readline().decode())
-                if "." in answer:
-                    value = float(answer[0:-7])
+                answer = (self.controller.readline())
+                if b"." in answer:
+                    value = float(answer)
                     success = True
         if not success:
             self.logger.info("Failure Connecting to Pump")
             raise RuntimeError
         else:
+            self.logger.info("Delivered "+str(value))
             return value
 
     def stop(self, resource=pumpserial):

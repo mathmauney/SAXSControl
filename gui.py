@@ -286,8 +286,9 @@ class Main:
         self.cerberus_pump = None
         self.purge_valve = None
         self.NumberofPumps = 0
+        self.last_delivered_volume = 0
         # Setup Page
-        self.hardware_config_options = ("Pump", "Oil Valve", "Sample/Buffer Valve", "Loading Valve", "Purge", "cerberus Load", "cerberus Oil", "cerberus Pump")
+        self.hardware_config_options = ("Pump", "Oil Valve", "Sample/Buffer Valve", "Loading Valve", "Purge", "cerberus Oil", "cerberus Load", "cerberus Pump")
         self.AvailablePorts = SAXSDrivers.list_available_ports()
         self.setup_page_buttons = []
         self.setup_page_variables = []
@@ -523,6 +524,17 @@ class Main:
                     self.flowpath.valve3.set_auto_position(1)
                 except:
                     pass
+                finally:
+                    if self.sucrose:
+                        try:
+                            self.flowpath.valve6.set_auto_position("Waste")
+                        except:
+                            pass
+                        finally:
+                            try:
+                                self.flowpath.valve8.set_auto_position("Load")
+                            except:
+                                pass
 
         # Add Elveflow stop if we use it for non-pressure
 
@@ -550,6 +562,7 @@ class Main:
             cerberus_loading_config = self.config['Cerberus Loading Valve']
             # Main Config
             self.sucrose = main_config.getboolean('Sucrose', False)
+            self.color_sucrose_button()
             # Elveflow Config
             self.elveflow_sourcename.set(elveflow_config.get('elveflow_sourcename', b''))
             self.elveflow_sensortypes[0].set(elveflow_config.get('sensor1_type', 'none'))
@@ -596,6 +609,8 @@ class Main:
         if not preload:
             self.set_oil_valve_names()
             self.set_loading_valve_names()
+            self.set_cerberus_oil_valve_names()
+            self.set_cerberus_loading_valve_names()
             # restart Elevflow
             try:
                 self.elveflow_display.stop()
@@ -604,6 +619,13 @@ class Main:
                 self.python_logger.warning("Something went wrong when restarting the Elveflow")
         # Instrument Config
         # Clear existing devices
+        for line in self.manual_page_buttons:
+            for button in line:
+                button.destroy()
+        for line in self.setup_page_buttons:
+            for button in line:
+                button.destroy()
+
         self.instruments = []
         self.manual_page_buttons = []
         self.manual_page_variables = []
@@ -735,13 +757,13 @@ class Main:
         """Send selection valve names to the control gui."""
         self.python_logger.info("Oil valve names set.")
         for i in range(0, 6):
-            self.flowpath.valve6.name_position(i, self.oil_valve_names[i].get())
+            self.flowpath.valve6.name_position(i, self.cerberus_oil_valve_names[i].get())
 
     def set_cerberus_loading_valve_names(self):
         """Send selection valve names to the control gui."""
         self.python_logger.info("Loading valve names set.")
         for i in range(0, 6):
-            self.flowpath.valve8.name_position(i, self.loading_valve_names[i].get())
+            self.flowpath.valve8.name_position(i, self.cerberus_loading_valve_names[i].get())
 
     def connect_to_spec(self):
         """Connect to SPEC instance."""
@@ -958,7 +980,11 @@ class Main:
             self.python_logger.warning("Elveflow connection not initialized! Please start the connection on the Elveflow tab.")
             raise RuntimeError("Elveflow connection not initialized! Please start the connection on the Elveflow tab.")
 
-        if self.oil_refill_flag is False:
+        if not self.is_filename_safe():
+            tk.messagebox.showinfo('Error', 'Filename is blank or contains invalid characters. \nThese include: %s (includes spaces).' % (self.illegal_chars))
+            return
+
+        if not self.oil_refill_flag:
             MsgBox = messagebox.askquestion('Warning', 'Oil may not be full, continue with buffer/sample/buffer?', icon='warning')
             if MsgBox == 'yes':
                 pass
@@ -968,12 +994,16 @@ class Main:
         # before scheduling anything, clear the graph
         self.main_tab_ax1.clear()
         self.main_tab_ax2.clear()
+        self.main_tab_ax3.clear()
+        self.main_tab_ax3.spines["right"].set_position(("outward", 60)) # offset second right axis
         self.the_line1 = self.main_tab_ax1.plot([], [], color=ElveflowDisplay.COLOR_Y1)[0]
         self.the_line2 = self.main_tab_ax2.plot([], [], color=ElveflowDisplay.COLOR_Y2)[0]
+        self.the_line3 = self.main_tab_ax3.plot([], [], color=ElveflowDisplay.COLOR_Y3)[0]
         self.graph_start_time = int(time.time())
         self.graph_end_time = np.inf
         self.python_logger.debug("main page graph start time: %s" % self.graph_start_time)
         self.flowpath.set_unlock_state(False)
+
 
         self.update_graph()
         self.oil_refill_flag = False
@@ -992,7 +1022,11 @@ class Main:
         self.queue.put((self.flowpath.valve3.set_auto_position, 0))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Run"))
         self.queue.put((self.pump.infuse_volume, self.first_buffer_volume.get()/1000, self.sample_flowrate.get()))
-        self.queue.put((self.pump.wait_until_stopped, self.first_buffer_volume.get()/self.sample_flowrate.get()*60, self.update_graph))
+        self.queue.put((self.pump.wait_until_time, self.first_buffer_eq_volume.get()/self.sample_flowrate.get()*60, self.update_graph)) # wait some amount of time until stable
+        self.queue.put((self.graph_vline, 'chartreuse'))
+        self.run_tseries(postfix="pre")
+        self.queue.put((self.pump.wait_until_stopped, self.first_buffer_volume.get()/self.sample_flowrate.get()*60, self.update_graph)) # wait the remaining amount of time
+
 
         self.queue.put(self.graph_vline)
         self.queue.put(self.update_graph)
@@ -1001,7 +1035,10 @@ class Main:
         self.queue.put((self.flowpath.valve3.set_auto_position, 1))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Run"))
         self.queue.put((self.pump.infuse_volume, self.sample_volume.get()/1000, self.sample_flowrate.get()))
-        self.queue.put((self.pump.wait_until_stopped, self.sample_volume.get()/self.sample_flowrate.get()*60, self.update_graph))
+        self.queue.put((self.pump.wait_until_time, self.sample_eq_volume.get()/self.sample_flowrate.get()*60, self.update_graph)) # wait some amount of time until stable
+        self.queue.put((self.graph_vline, 'chartreuse'))
+        self.run_tseries(postfix="sample")
+        self.queue.put((self.pump.wait_until_stopped, self.sample_volume.get()/self.sample_flowrate.get()*60, self.update_graph)) # wait the remaining amount of time
 
         self.queue.put(self.graph_vline)
         self.queue.put(self.update_graph)
@@ -1010,9 +1047,13 @@ class Main:
         self.queue.put((self.flowpath.valve3.set_auto_position, 0))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Run"))
         self.queue.put((self.pump.infuse_volume, self.last_buffer_volume.get()/1000, self.sample_flowrate.get()))
-        self.queue.put((self.pump.wait_until_stopped, self.last_buffer_volume.get()/self.sample_flowrate.get()*60, self.update_graph))
+        self.queue.put((self.pump.wait_until_time, self.last_buffer_eq_volume.get()/self.sample_flowrate.get()*60, self.update_graph)) # wait some amount of time until stable
+        self.queue.put((self.graph_vline, 'chartreuse'))
+        self.run_tseries(postfix="post")
+        self.queue.put((self.pump.wait_until_stopped, self.last_buffer_volume.get()/self.sample_flowrate.get()*60, self.update_graph)) # wait the remaining amount of time
 
         self.queue.put(self.cerberus_pump.stop_pump)
+        self.queue.put(self.save_last_delivered_volume)
         self.queue.put(self.elveflow_display.stop_saving)
         self.queue.put(self.update_graph)
 
@@ -1021,7 +1062,10 @@ class Main:
         self.queue.put(update_end_time)
         self.queue.put((self.python_logger.info, "Done with running buffer-sample-buffer"))
 
-        self.cerberus_clean_and_refill_command()  # Run a clean and refill after finishing
+        self.queue.put((self.cerberus_clean_and_refill_command, False))  # Run a clean and refill after finishing
+
+    def save_last_delivered_volume(self):
+        self.last_delivered_volume = self.cerberus_pump.get_delivered_volume()
 
     def choose_clean_and_refill_command(self):
         if self.sucrose:
@@ -1051,8 +1095,13 @@ class Main:
         self.queue.put(self.set_refill_flag_true)
         self.queue.put(self.play_done_sound)
 
-    def cerberus_clean_and_refill_command(self):
-
+    def cerberus_clean_and_refill_command(self, vol_flag=True):
+        if vol_flag:
+            vol=self.cerberus_volume.get()/1000
+        else:
+            vol = self.last_delivered_volume
+        if vol == 0:
+            vol=self.cerberus_volume.get()/1000
         """Clean the buffer and sample loops, then refill the oil."""
         elveflow_oil_channel = int(self.elveflow_oil_channel.get())  # throws an error if the conversion doesn't work
         elveflow_oil_pressure = self.elveflow_oil_pressure.get()
@@ -1064,12 +1113,12 @@ class Main:
 
         self.queue.put(self.cerberus_pump.stop_pump)
         self.queue.put((self.pump.refill_volume, (self.sample_volume.get()+self.first_buffer_volume.get()+self.last_buffer_volume.get())/1000, self.oil_refill_flowrate.get()))
-        self.queue.put((self.cerberus_pump.refill_volume, self.cerberus_pump.get_delivered_volume(), self.cerberus_refill_rate.get()))
+        self.queue.put((self.cerberus_pump.refill_volume, vol, self.cerberus_refill_rate.get()))
 
         self.cerberus_clean_only_command()
 
         self.queue.put((self.pump.wait_until_stopped, 120))
-        self.queue.put((self.cerberus.pump.wait_until_stopped, 120))
+        self.queue.put((self.cerberus_pump.wait_until_stopped, 120))
         self.queue.put(self.pump.infuse)
         self.queue.put(self.cerberus_pump.infuse)
         self.queue.put((self.elveflow_display.pressureValue_var[elveflow_oil_channel - 1].set, "0"))  # Set oil pressure to 0
@@ -1077,7 +1126,7 @@ class Main:
 
         self.queue.put((self.python_logger.info, 'Clean and refill done. 完成了！'))
         self.queue.put(self.set_refill_flag_true)
-        self.queue.put(self.play_done_soud)
+        self.queue.put(self.play_done_sound)
 
     def set_refill_flag_true(self):
         """def this_this_dumb - This function is so that the flag setting is done in the queue.
@@ -1237,16 +1286,16 @@ class Main:
         self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
         self.queue.put((self.flowpath.valve3.set_auto_position, 1))
         if self.sucrose:
-            self.queue.put((self.flowpath.valve6.set_auto_position, "Load"))
-            self.queue.put((self.flowpath.valve8.set_auto_position, "Waste"))
+            self.queue.put((self.flowpath.valve8.set_auto_position, "Load"))
+            self.queue.put((self.flowpath.valve6.set_auto_position, "Waste"))
 
     def load_buffer_command(self):
         self.queue.put((self.flowpath.valve4.set_auto_position, "Load"))
         self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
         self.queue.put((self.flowpath.valve3.set_auto_position, 0))
         if self.sucrose:
-            self.queue.put((self.flowpath.valve6.set_auto_position, "Load"))
-            self.queue.put((self.flowpath.valve8.set_auto_position, "Waste"))
+            self.queue.put((self.flowpath.valve8.set_auto_position, "Load"))
+            self.queue.put((self.flowpath.valve6.set_auto_position, "Waste"))
 
     def purge_command(self):
         run_position = self.purge_running_pos.get()
@@ -1287,6 +1336,7 @@ class Main:
             self.manual_queue.put((self.purge_valve.switchvalve, purge_position))
             self.purge_dry_button.configure(bg="green")
             self.purge_soap_button.configure(bg="white smoke")
+            self.purge_button.configure(bg="white smoke")
             self.python_logger.info("Purging soap")
 
     def initialize_sheath_command(self):
@@ -1306,6 +1356,13 @@ class Main:
         else:
             self.sucrose = True
             self.sucrose_button.config(bg="green", text="Sucrose ON")
+
+    def color_sucrose_button(self):
+        if not self.sucrose:
+            self.sucrose_button.config(bg="red", text="Sucrose OFF")
+        else:
+            self.sucrose_button.config(bg="green", text="Sucrose ON")
+
     def toggle_buttons(self):
         """Toggle certain buttons on and off when they should not be allowed to add to queue."""
         buttons = (self.buffer_sample_buffer_button,
