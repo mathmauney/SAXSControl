@@ -83,9 +83,6 @@ class Main:
         # Make it pretty
         self.gui_bg_color = "thistle3"
         self.label_bg_color = self.gui_bg_color
-        #self.gui_bg_color = "lavender"
-        #self.gui_bg_color = "deep pink"
-        #self.gui_bg_color = "steel blue"
 
         self.main_window.configure(bg=self.gui_bg_color)
         ttk.Style().configure("TNotebook", background=self.gui_bg_color)
@@ -548,6 +545,8 @@ class Main:
             oil_config = self.config['Oil Valve']
             loading_config = self.config['Loading Valve']
             instrument_config = self.config['Instruments']
+            cerberus_oil_config = self.config['Cerberus Oil Valve']
+            cerberus_loading_config = self.config['Cerberus Loading Valve']
             # Main Config
             self.sucrose = main_config.getboolean('Sucrose', False)
             # Elveflow Config
@@ -586,6 +585,8 @@ class Main:
                 field = 'name'+str(i+1)
                 self.oil_valve_names[i].set(oil_config.get(field, ''))
                 self.loading_valve_names[i].set(loading_config.get(field, ''))
+                self.cerberus_oil_valve_names[i].set(cerberus_oil_config.get(field, ''))
+                self.cerberus_loading_valve_names[i].set(cerberus_loading_config.get(field, ''))
 
         if not preload:
             self.set_oil_valve_names()
