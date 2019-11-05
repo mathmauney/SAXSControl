@@ -13,14 +13,18 @@ class ConsoleUi:
     def __init__(self, frame, simple_time=False):
         self.frame = frame
         # Create a ScrolledText wdiget
+        if simple_time:
+            font='80'
+        else:
+            font=''
         self.scrolled_text = ScrolledText(frame, state='disabled', height=39)
         self.scrolled_text.grid(row=0, column=0, sticky=(N, S, W, E))
         self.scrolled_text.configure(font='TkFixedFont')
-        self.scrolled_text.tag_config('INFO', foreground='black')
-        self.scrolled_text.tag_config('DEBUG', foreground='gray')
-        self.scrolled_text.tag_config('WARNING', foreground='orange')
-        self.scrolled_text.tag_config('ERROR', foreground='red')
-        self.scrolled_text.tag_config('CRITICAL', foreground='red', underline=1)
+        self.scrolled_text.tag_config('INFO', foreground='black', font=font)
+        self.scrolled_text.tag_config('DEBUG', foreground='gray', font=font)
+        self.scrolled_text.tag_config('WARNING', foreground='orange', font=font)
+        self.scrolled_text.tag_config('ERROR', foreground='red', font=font)
+        self.scrolled_text.tag_config('CRITICAL', foreground='red', underline=1, font=font)
         # Create a logging handler using a queue
         self.log_queue = Queue()
         self.queue_handler = QueueHandler(self.log_queue)
