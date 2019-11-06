@@ -294,7 +294,7 @@ class FlowPath(tk.Canvas):
                 self.canvas.delete(self.arc3)
             except AttributeError:
                 pass
-            if self.position == 1:
+            if self.position == 0:
                 self.arc1 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=300+self.angle_off, extent=60, fill=self.color2, outline=self.color2)
                 self.arc2 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=180+self.angle_off, extent=60, fill=self.color1, outline=self.color1)
                 self.arc3 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=60+self.angle_off, extent=60, fill=self.color3, outline=self.color3)
@@ -308,7 +308,7 @@ class FlowPath(tk.Canvas):
                 self.canvas.itemconfig(self.circles[3], fill=self.color1, outline=self.color1)
                 self.canvas.itemconfig(self.circles[4], fill=self.color3, outline=self.color3)
                 self.canvas.itemconfig(self.circles[5], fill=self.color3, outline=self.color3)
-            elif self.position == 0:
+            elif self.position == 1:
                 self.arc1 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=0, extent=60, fill=self.color3, outline=self.color3)
                 self.arc2 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=240, extent=60, fill=self.color2, outline=self.color2)
                 self.arc3 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=120, extent=60, fill=self.color1, outline=self.color1)
@@ -330,10 +330,10 @@ class FlowPath(tk.Canvas):
                 self.canvas.tag_raise(self.circles[i])
 
         def propagate_fluid(self, port, fluid_color):
-            if self.position == 1:
+            if self.position == 0:
                 pairs = [1, 0, 3, 2, 5, 4]
                 colors = [self.color2, self.color2, self.color1, self.color1, self.color3, self.color3]
-            elif self.position == 0:
+            elif self.position == 1:
                 pairs = [5, 2, 1, 4, 3, 0]
                 colors = [self.color3, self.color2, self.color2, self.color1, self.color1, self.color3]
             colors[port] = fluid_color
