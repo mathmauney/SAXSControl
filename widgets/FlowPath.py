@@ -531,9 +531,9 @@ class FlowPath(tk.Canvas):
         self.valve8.gui_names[5] = 'Run'
         self.valve8.gui_names[0] = 'Load'
         self.valve8.colors[0] = self.sheath_color
-        self.valve8.gui_names[3] = 'Low Flow Soap'
+        self.valve8.gui_names[3] = 'High Flow Soap'
         self.valve8.colors[3] = self.soap_color
-        self.valve8.gui_names[4] = 'High Flow Soap'
+        self.valve8.gui_names[4] = 'Low Flow Soap'
         self.valve8.colors[4] = self.soap_color
         self.valve8.gui_names[2] = 'Water'
         self.valve8.colors[2] = self.water_color
