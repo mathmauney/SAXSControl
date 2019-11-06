@@ -552,7 +552,7 @@ class FlowPath(tk.Canvas):
         # Line from syringe to valve 1
         self.syringe_line = self.create_fluid_line('x', 150, 100, 110, color='black')
         self.tag_lower(self.syringe_line)
-        self.valve2.connect(self.syringe_line, 3)
+        # self.valve2.connect(self.syringe_line, 3)
         # From Valve 2 to Waste
         x0, y0, x1, y1 = self.coords(self.valve2.circles[5])
         x_avg = math.floor((x0 + x1) / 2)
@@ -659,7 +659,7 @@ class FlowPath(tk.Canvas):
         # Line from syringe to valve 6
         self.syringe_line_2 = self.create_fluid_line('x', 150, 300, 110, color='black')
         self.tag_lower(self.syringe_line_2)
-        self.valve6.connect(self.syringe_line_2, 3)
+        # self.valve6.connect(self.syringe_line_2, 3)
         # From Valve 6 to Waste
         x0, y0, x1, y1 = self.coords(self.valve6.circles[5])
         x_avg = math.floor((x0 + x1) / 2)
