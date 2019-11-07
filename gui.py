@@ -1166,7 +1166,7 @@ class Main:
         self.queue.put((self.python_logger.info, "Starting to clean sample"))
         self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
         self.queue.put((self.flowpath.valve3.set_auto_position, 1))
-        self.queue.put((self.flowpath.valve4.set_auto_position, "Water"))
+        self.queue.put((self.flowpath.valve4.set_auto_position, "Water")) # to avoid passing oil
         self.queue.put((self.flowpath.valve4.set_auto_position, "Low Flow Soap"))
         self.queue.put((time.sleep, self.low_soap_time.get()))
 
@@ -1184,24 +1184,19 @@ class Main:
         self.queue.put((self.flowpath.valve3.set_auto_position, 1))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Air"))
         self.queue.put((time.sleep, self.air_time.get()))
-        self.queue.put((self.flowpath.valve4.set_auto_position, "Load"))
+        self.queue.put((self.flowpath.valve4.set_auto_position, "Load"))  # to avoid passing oil
         self.queue.put((self.flowpath.valve3.set_auto_position, 0))
         self.queue.put((self.python_logger.info, "Finished cleaning sample"))
+        self.load_sample_command()
 
     def cerberus_clean_only_command(self):
-        self.queue.put((self.python_logger.info, "Cleaning Buffer Loop"))
-        self.cerberus_clean_loop_command(0)
-        self.queue.put((self.python_logger.info, "Cleaning Sample Loop"))
-        self.cerberus_clean_loop_command(1)
-        self.queue.put((self.python_logger.info, "Done Cleaning!"))
-
-    def cerberus_clean_loop_command(self, loop):
         """Clean the buffer and sample loops."""
         self.queue.put((self.python_logger.info, "Starting to clean buffer"))
         self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
-        self.queue.put((self.flowpath.valve3.set_auto_position, loop))
+        self.queue.put((self.flowpath.valve3.set_auto_position, 0))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Low Flow Soap"))
         self.queue.put((time.sleep, self.low_soap_time.get()))
+        self.queue.put((self.flowpath.valve4.set_auto_position, "Water"))  # to avoid passing oil
         self.queue.put((self.flowpath.valve4.set_auto_position, "Load"))
 
         self.queue.put((self.python_logger.info, "Cleaning cerberus"))
@@ -1213,7 +1208,7 @@ class Main:
         self.queue.put((self.flowpath.valve6.set_auto_position, "Waste"))
         self.queue.put((self.flowpath.valve8.set_auto_position, "High Flow Soap"))
         self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
-        self.queue.put((self.flowpath.valve3.set_auto_position, loop))
+        self.queue.put((self.flowpath.valve3.set_auto_position, 0))
         self.queue.put((self.flowpath.valve4.set_auto_position, "High Flow Soap"))
         self.queue.put((time.sleep, self.high_soap_time.get()))
 
@@ -1221,7 +1216,7 @@ class Main:
         self.queue.put((self.flowpath.valve6.set_auto_position, "Waste"))
         self.queue.put((self.flowpath.valve8.set_auto_position, "Water"))
         self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
-        self.queue.put((self.flowpath.valve3.set_auto_position, loop))
+        self.queue.put((self.flowpath.valve3.set_auto_position, 0))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Water"))
         self.queue.put((time.sleep, self.water_time.get()))
 
@@ -1229,12 +1224,43 @@ class Main:
         self.queue.put((self.flowpath.valve6.set_auto_position, "Waste"))
         self.queue.put((self.flowpath.valve8.set_auto_position, "Air"))
         self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
-        self.queue.put((self.flowpath.valve3.set_auto_position, loop))
+        self.queue.put((self.flowpath.valve3.set_auto_position, 0))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Air"))
         self.queue.put((time.sleep, self.air_time.get()))
         self.queue.put((self.flowpath.valve4.set_auto_position, "Load"))
         self.queue.put((self.flowpath.valve8.set_auto_position, "Load"))
-        self.queue.put((self.flowpath.valve3.set_auto_position, (loop-1)**2))
+
+        """ Clean second loop"""
+        self.queue.put((self.python_logger.info, "Starting to clean buffer"))
+        self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
+        self.queue.put((self.flowpath.valve3.set_auto_position, 1))
+        self.queue.put((self.flowpath.valve4.set_auto_position, "Low Flow Soap"))
+        self.queue.put((time.sleep, self.low_soap_time.get()))
+
+        self.queue.put((self.python_logger.info, "Flushing High Flow Soap"))
+        self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
+        self.queue.put((self.flowpath.valve3.set_auto_position, 1))
+        self.queue.put((self.flowpath.valve4.set_auto_position, "High Flow Soap"))
+        self.queue.put((time.sleep, self.high_soap_time.get()))
+
+        self.queue.put((self.python_logger.info, "Flushing Water"))
+        self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
+        self.queue.put((self.flowpath.valve3.set_auto_position, 1))
+        self.queue.put((self.flowpath.valve4.set_auto_position, "Water"))
+        self.queue.put((time.sleep, self.water_time.get()))
+
+        self.queue.put((self.python_logger.info, "Air drying loops"))
+        self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
+        self.queue.put((self.flowpath.valve3.set_auto_position, 1))
+        self.queue.put((self.flowpath.valve4.set_auto_position, "Air"))
+        self.queue.put((time.sleep, self.air_time.get()))
+
+        self.queue.put((self.flowpath.valve4.set_auto_position, "Load"))
+        self.queue.put((self.flowpath.valve8.set_auto_position, "Load"))
+        self.queue.put((self.flowpath.valve3.set_auto_position, 0))
+        self.queue.put((self.python_logger.info, "Finished cleaning sample"))
+        self.load_sample_command()
+
 
     def choice_refill_only_command(self):
         if self.sucrose:

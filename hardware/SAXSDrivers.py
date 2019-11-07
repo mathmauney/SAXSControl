@@ -148,14 +148,16 @@ class HPump:
                 resource.write((self.address+"RUN\n\r").encode())
                 time.sleep(0.2)
                 if resource.in_waiting == 0:  # give extra time if it hasn't responded
-                    time.sleep(0.2)
+                    self.logger.debug("No responce: Waiting")
+
+                    time.sleep(0.4)
                 while resource.in_waiting > 0:
-                    pumpanswer = resource.readline().decode()
-                    if self.address+"<" in pumpanswer:
+                    pumpanswer = resource.readline()
+                    if (self.address+"<").encode() in pumpanswer:
                         self.running = True
                         self.logger.info("Refilling " + self.name)
                         responceflag = True
-                    elif self.address+">" in pumpanswer:
+                    elif (self.address+">").encode() in pumpanswer:
                         self.running = True
                         self.logger.info("Infusing " + self.name)
                         responceflag = True
@@ -167,14 +169,15 @@ class HPump:
                 self.controller.write(("-"+self.address+"RUN\n\r").encode())
                 time.sleep(0.2)
                 if self.controller.in_waiting == 0:  # give more time if it hasn't finished
+                    self.logger.debug("No responce: Waiting")
                     time.sleep(0.2)
                 while self.controller.in_waiting > 0:
-                    pumpanswer = self.controller.readline().decode()
-                    if self.address+"<" in pumpanswer:
+                    pumpanswer = self.controller.readline()
+                    if (self.address+"<").encode() in pumpanswer:
                         self.running = True
                         self.logger.info("Refilling " + self.name)
                         responceflag = True
-                    elif self.address+">" in pumpanswer:
+                    elif (self.address+">").encode() in pumpanswer:
                         self.running = True
                         self.logger.info("Infusing " + self.name)
                         responceflag = True
@@ -199,11 +202,11 @@ class HPump:
                     time.sleep(0.2)
                 while resource.in_waiting > 0:  # Clear Buffer
                     pumpanswer = resource.readline()
-                    if self.address+"*" in pumpanswer:
+                    if (self.address+"*").encode() in pumpanswer:
                         self.running = False
                         self.logger.info("Paused " + self.name)
                         responceflag = True
-                    elif self.address+":" in pumpanswer:
+                    elif (self.address+":").encode() in pumpanswer:
                         self.running = False
                         self.logger.info("Stopped " + self.name)
                         responceflag = True
@@ -215,14 +218,15 @@ class HPump:
                 self.controller.write(("-"+self.address+"STP\n\r").encode())
                 time.sleep(0.2)
                 if self.controller.in_waiting == 0:  # give more time if it hasn't finished
-                    time.sleep(0.2)
+                    self.logger.debug("No responce: Waiting")
+                    time.sleep(0.4)
                 while self.controller.in_waiting > 0:
-                    pumpanswer = self.controller.readline().decode()
-                    if self.address+":" in pumpanswer:
+                    pumpanswer = self.controller.readline()
+                    if (self.address+":").encode() in pumpanswer:
                         self.running = False
                         self.logger.info("Paused " + self.name)
                         responceflag = True
-                    elif self.address+"*" in pumpanswer:
+                    elif (self.address+"*").encode() in pumpanswer:
                         self.running = False
                         self.logger.info("Stopped " + self.name)
                         responceflag = True
@@ -464,7 +468,7 @@ class HPump:
                 if success:
                     return running
                 else:
-                    self.logger.info("Failure Connecting to Pump")
+                    self.logger.debug("Failure Connecting to Pump")
                     return True
             else:
                 if not self.controller.is_open:
@@ -491,7 +495,7 @@ class HPump:
                 if success:
                     return running
                 else:
-                    self.logger.info("Failure Connecting to Pump")
+                    self.logger.debug("Failure Connecting to Pump")
                     return True
                     # raise RuntimeError Not raising so that if one fails queue isnt dumped
 
@@ -537,7 +541,7 @@ class HPump:
         self.start_pump()
         # self.wait_until_stopped(2*volume*1000/rate)  # wait for it to stop
 
-    def check_direction(self, dirstr="k", resource=pumpserial):
+    def check_direction(self, dirstr="k", resource=pumpserial, retry=True):
         success = False
         if not HPump.enabled:
             self.logger.info(self.name+" not enabled")
@@ -562,14 +566,22 @@ class HPump:
                 self.controller.read()
             self.controller.write(("-"+self.address+"DIR"+"\n\r").encode())
             time.sleep(0.2)
+            if self.controller.in_waiting == 0:
+                self.logger.debug("No responce: waiting")
+                time.sleep(0.4)
             while self.controller.in_waiting > 0:
                 if dirstr.encode() in self.controller.readline():
                     success = True
             if not success:
-                self.logger.info("Failure Connecting to Pump")
-                raise RuntimeError
+                if retry:
+                    self.logger.debug("Error connecting: retrying")
+                    time.sleep(0.2)
+                    self.check_direction(dirstr, retry=False)
+                else:
+                    self.logger.info("Failure Connecting to Pump")
+                    raise RuntimeError
 
-    def check_mode(self, modestr="k", resource=pumpserial):
+    def check_mode(self, modestr="k", resource=pumpserial, retry=True):
         success = False
         if not HPump.enabled:
             self.logger.info(self.name+" not enabled")
@@ -594,14 +606,22 @@ class HPump:
                 self.controller.read()
             self.controller.write(("-"+self.address+"MOD"+"\n\r").encode())
             time.sleep(0.2)
+            if self.controller.in_waiting == 0:
+                self.logger.debug("No responce: waiting")
+                time.sleep(0.4)
             while self.controller.in_waiting > 0:
                 if modestr.encode() in self.controller.readline():
                     success = True
             if not success:
-                self.logger.info("Failure Connecting to Pump")
-                raise RuntimeError
+                if retry:
+                    self.logger.debug("Error connecting: retrying")
+                    time.sleep(0.2)
+                    self.check_mode(modestr, retry=False)
+                else:
+                    self.logger.info("Failure Connecting to Pump")
+                    raise RuntimeError
 
-    def check_target_volume(self, resource=pumpserial):
+    def check_target_volume(self, resource=pumpserial, retry=True):
         success = False
         if not HPump.enabled:
             self.logger.info(self.name+" not enabled")
@@ -626,18 +646,26 @@ class HPump:
                 self.controller.read()
             self.controller.write(("-"+self.address+"TGT"+"\n\r").encode())
             time.sleep(0.2)
+            if self.controller.in_waiting == 0:
+                self.logger.debug("No responce: waiting")
+                time.sleep(0.4)
             while self.controller.in_waiting > 0:
                 answer = (self.controller.readline())
                 if b"." in answer:
                     value = float(answer)
                     success = True
         if not success:
-            self.logger.info("Failure Connecting to Pump")
-            raise RuntimeError
-        else:
-            return value
+            if retry:
+                self.logger.debug("Error connecting: retrying")
+                time.sleep(0.2)
+                value = self.check_target_volume(retry=False)
+            else:
+                self.logger.info("Failure Connecting to Pump")
+                raise RuntimeError
 
-    def check_infuse_rate(self, resource=pumpserial):
+        return value
+
+    def check_infuse_rate(self, resource=pumpserial, retry=True):
         success = False
         if not HPump.enabled:
             self.logger.info(self.name+" not enabled")
@@ -662,18 +690,23 @@ class HPump:
                 self.controller.read()
             self.controller.write(("-"+self.address+"RAT"+"\n\r").encode())
             time.sleep(0.2)
+            if self.controller.in_waiting == 0:
+                self.logger.debug("No responce: waiting")
+                time.sleep(0.4)
             while self.controller.in_waiting > 0:
                 answer = (self.controller.readline())
                 if b"." in answer:
                     value = float(answer[0:-7])
                     success = True
         if not success:
-            self.logger.info("Failure Connecting to Pump")
-            raise RuntimeError
-        else:
-            return value
+            if retry:
+                value = self.check_infuse_rate(retry= False)
+            else:
+                self.logger.info("Failure Connecting to Pump")
+                raise RuntimeError
+        return value
 
-    def check_refill_rate(self, resource=pumpserial):
+    def check_refill_rate(self, resource=pumpserial, retry=True):
         success = False
         if not HPump.enabled:
             self.logger.info(self.name+" not enabled")
@@ -697,18 +730,25 @@ class HPump:
                 self.controller.read()
             self.controller.write(("-"+self.address+"RFR"+"\n\r").encode())
             time.sleep(0.2)
+            if self.controller.in_waiting == 0:
+                self.logger.debug("No responce: waiting")
+                time.sleep(0.4)
             while self.controller.in_waiting > 0:
                 answer = (self.controller.readline())
                 if b"." in answer:
                     value = float(answer[0:-7])
                     success = True
         if not success:
-            self.logger.info("Failure Connecting to Pump")
-            raise RuntimeError
-        else:
-            return value
+            if retry:
+                self.logger.debug("Error connecting: retrying")
+                time.sleep(0.2)
+                value = self.check_refill_rate(retry=False)
+            else:
+                self.logger.info("Failure Connecting to Pump")
+                raise RuntimeError
+        return value
 
-    def get_delivered_volume(self, resource=pumpserial):
+    def get_delivered_volume(self, resource=pumpserial, retry=True):
         success = False
         if not HPump.enabled:
             self.logger.info(self.name+" not enabled")
@@ -732,17 +772,24 @@ class HPump:
                 self.controller.read()
             self.controller.write(("-"+self.address+"DEL"+"\n\r").encode())
             time.sleep(0.2)
+            if self.controller.in_waiting == 0:
+                self.logger.debug("No responce: waiting")
+                time.sleep(0.4)
             while self.controller.in_waiting > 0:
                 answer = (self.controller.readline())
                 if b"." in answer:
                     value = float(answer)
                     success = True
         if not success:
-            self.logger.info("Failure Connecting to Pump")
-            raise RuntimeError
-        else:
-            self.logger.info("Delivered "+str(value))
-            return value
+            if retry:
+                self.logger.debug("Error connecting: retrying")
+                time.sleep(0.2)
+                value = self.get_delivered_volume(retry=False)
+            else:
+                self.logger.info("Failure Connecting to Pump")
+                raise RuntimeError
+        self.logger.info("Delivered "+str(value))
+        return value
 
     def stop(self, resource=pumpserial):
         with self._lock:
@@ -844,7 +891,7 @@ class Rheodyne:
                 self.logger.info(self.name+" switched to "+str(position))
                 return 0    # Valve acknowledged commsnd
             else:
-                self.logger.info("Switching valve %s failed; retrying %i" % (self.name, attempts))
+                self.logger.debug("Switching valve %s failed; retrying %i" % (self.name, attempts))
                 self.switchvalve(position, attempts+1, max_attemps)
 
     # Todo maybe incorporate status check to confirm valve is in the right position
@@ -863,7 +910,7 @@ class Rheodyne:
             ans = self.serial_object.read(2).decode()
             self.serial_object.read()
             while ans not in ["01", "02", "03", "04", "05", "06"]:
-                self.logger.info("Rechecking Valve: iteration " + str(iter+1))
+                self.logger.debug("Rechecking Valve: iteration " + str(iter+1))
                 if iter == maxiterations:
                     self.logger.info("Error Checking Valve Status for "+self.name)
                     raise RuntimeError
@@ -883,7 +930,7 @@ class Rheodyne:
             self.controller.write(("S%03i" % self.address_I2C).encode())
             ans = self.controller.read().decode()  # need to ensure thwt buffer doesnt build up-> if so switch to readln
             while ans not in ["1", "2", "3", "4", "5", "6"]:
-                self.logger.info("Rechecking Valve: iteration " + str(iter+1))
+                self.logger.debug("Rechecking Valve: iteration " + str(iter+1))
                 if iter == maxiterations:
                     self.logger.info("Error Checking Valve Status for "+self.name)
                     raise RuntimeError
