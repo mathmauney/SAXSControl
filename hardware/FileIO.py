@@ -432,9 +432,12 @@ class ElveflowHandler_SDK:
         self.reading_thread = threading.Thread(target=start_thread, args=(channel_number, value, interrupt_event, pid_constants))
         self.reading_thread.start()
 
-    def run_volume(self, channel_number, value, interrupt_event=None, pid_constants=None, margin=0.1):
+    def run_volume(self, channel_number, value, interrupt_event=None, pid_constants=None, margin=0.5, stable_time=0.5):
         """in the calling thread, set the Elveflow flow rate
-        Run a volume PID loop until you are within +/- margin of the target value"""
+        Run a volume PID loop until you are within +/- margin of the target value
+        for at least stable_time amout of seconds
+
+        Return the last pressure reading"""
         if interrupt_event is None:
             # if there isn't one already, create a dummy one
             interrupt_event = threading.Event()
@@ -451,6 +454,7 @@ class ElveflowHandler_SDK:
         # self.errorlogger.debug("INITIAL PRESSURE IS %f" % initial_pressure.value)
 
         pressure_to_set = value
+        amount_of_time_stable = 0
         while self.run_flag.is_set() and not interrupt_event.is_set():
             time.sleep(ElveflowHandler_SDK.PID_SLEEPTIME)
             get_flowrate = c_double()
@@ -461,7 +465,13 @@ class ElveflowHandler_SDK:
             else:
                 if get_flowrate.value > (value - margin) and get_flowrate.value < (value + margin):
                     #we've reached the end! Just quit.
-                    break
+                    amount_of_time_stable += ElveflowHandler_SDK.PID_SLEEPTIME
+                    if amount_of_time_stable > stable_time:
+                        break
+                else:
+                    # We're no longer in the final range. Reset counter
+                    amount_of_time_stable = 0
+
 
                 pressure_to_set = pid(get_flowrate.value) + initial_pressure.value
 
@@ -474,7 +484,7 @@ class ElveflowHandler_SDK:
                 if error != 0:
                     self.errorlogger.warning('ERROR CODE SETTING PRESSURE %i: %s' % (channel_number, error))
 
-        self.errorlogger.debug("DONE WITH FLOW RATE SETTING CHANNEL %s; PRESSURE IS NOW %s" % (channel_number, pressure_to_set))
+        return pressure_to_set
 
 
 if USE_SDK:

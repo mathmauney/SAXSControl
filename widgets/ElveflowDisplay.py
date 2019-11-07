@@ -31,7 +31,7 @@ class ElveflowDisplay(tk.Canvas):
     DEFAULT_Y2_LABEL = 'Volume flow rate 1 [µL/min]'
     DEFAULT_Y3_LABEL = 'Volume flow rate 4 [µL/min]'
 
-    def __init__(self, window, height, width, elveflow_config, errorlogger, **kwargs):
+    def __init__(self, window, height, width, elveflow_config, errorlogger, maingui, **kwargs):
         """Start the FluidLevel object with default paramaters."""
         super().__init__(window, **kwargs)
 
@@ -44,16 +44,13 @@ class ElveflowDisplay(tk.Canvas):
         self.sensorTypes_var = [tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar()]
         self.pressureValue_var = [tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar()]
         self.isPressure_var = [tk.BooleanVar(), tk.BooleanVar(), tk.BooleanVar(), tk.BooleanVar()]
-        # self.x_data_label_var = tk.StringVar()
-        # self.y_data_label_var = tk.StringVar()
-        # self.pressure_value_var = [tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar()]
-        # self.is_pressure_var = [tk.BooleanVar(), tk.BooleanVar(), tk.BooleanVar(), tk.BooleanVar()]
         self.pressureSettingActive_var = [tk.BooleanVar(), tk.BooleanVar(), tk.BooleanVar(), tk.BooleanVar()]
         self.setPressureStop_flag = [None, None, None, None]
         self.axisLimits_var = [tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar()]  # x, y1, y2, y3
         self.axisLimits_numbers = [None, None, None, None, None, None, None, None]
         self.saveFileName_var = tk.StringVar()
         self.saveFileNameSuffix_var = tk.StringVar()
+        self.maingui = maingui
         (self.kp_var, self.ki_var, self.kd_var) = (tk.StringVar(), tk.StringVar(), tk.StringVar())
         self.ki_var.set(50)
 
@@ -180,8 +177,9 @@ class ElveflowDisplay(tk.Canvas):
             self.axisLimits_entry[i].config(width=int(remaining_width_per_column / fontsize))  # width is in units of font size
             self.axisLimits_entry[i].grid(row=rowcounter+i//2, column=2+(i % 2), padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
             self.axisLimits_var[i].set("")
+            self.axisLimits_entry[i].bind('<Return>', lambda event: self.set_axis_limits())
         rowcounter += 4
-        self.axisLimits_button = tk.Button(self, text='Set graph limits (leave blank for auto)', command=self.set_axis_limits)  # TODO
+        self.axisLimits_button = tk.Button(self, text='Set graph limits (leave blank for auto)', command=self.set_axis_limits)
         self.axisLimits_button.grid(row=rowcounter, column=1, columnspan=3, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
         rowcounter += 1
 
@@ -420,6 +418,16 @@ class ElveflowDisplay(tk.Canvas):
         tempThread = threading.Thread(target=thisIsDumb, daemon=True)
         tempThread.start()
 
+        # also update the main tab's sheath pressure display
+        # TODO!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        try:
+            self.maingui.initialize_sheath_display_var.set('Sheath pressure:\n%d' % self.data[-1][
+                "Pressure %s [mbar]" %
+                (FileIO.ELVEFLOW_DATA_COLUMNS["Pressure 1 [mbar]"] + int(self.elveflow_config["elveflow_sheath_channel"]) - 1)
+                ])
+        except IndexError:
+            pass
+
     def start_pressure(self, channel=1, isPressure=True):
         i = channel - 1
         pressureValue = self.pressureValue_var[i]
@@ -472,8 +480,9 @@ class ElveflowDisplay(tk.Canvas):
         except AttributeError:
             pass
 
-    def run_volume(self, channel=1, target=0, margin=0.1):
-        """run a volume PID loop until you are within +/- margin of the target.
+    def run_volume(self, channel=1, target=0, margin=0.15, stable_time=0.5):
+        """run a volume PID loop until you are within +/- margin of the target
+        for at least stable_time (in seconds) amount of time.
 
         Unlike start_pressure(isPressure=False), this stops when it reaches the
         target and blocks until then.
@@ -507,7 +516,9 @@ class ElveflowDisplay(tk.Canvas):
             self.kd_var.set("0.0")
         self.pressureValue_var[i].set(target)
         pressureValue.set(str(target))
-        self.elveflow_handler.run_volume(channel, target, interrupt_event=self.setPressureStop_flag[i], pid_constants=(kp, ki, kd), margin=0.1)
+        end_pressure = self.elveflow_handler.run_volume(channel, target, interrupt_event=self.setPressureStop_flag[i], pid_constants=(kp, ki, kd), margin=margin, stable_time=stable_time)
+        self.errorlogger.info("Done setting the pressure in Channel %s to %.3f" % (channel, end_pressure))
+        self.pressureValue_var[i].set(round(end_pressure))
 
     def set_axis_limits(self):
         for i, x in enumerate(self.axisLimits_var):

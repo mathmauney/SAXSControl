@@ -125,6 +125,7 @@ class Main:
         self.spec_fileno_box = tk.Entry(self.auto_page, textvariable=self.spec_fileno,  width=spec_width)
         # Auto buttons
         auto_button_font = 'Arial 20 bold'
+        auto_button_half_font = 'Arial 14 bold'
         auto_button_width = 10
         self.buffer_sample_buffer_button = tk.Button(self.auto_page, text='Auto Run', command=self.buffer_sample_buffer_command, font=auto_button_font, width=auto_button_width, height=3)
         self.clean_button = tk.Button(self.auto_page, text='Clean/Refill', command=self.clean_and_refill_command, font=auto_button_font, width=auto_button_width, height=3)
@@ -135,7 +136,9 @@ class Main:
         self.purge_button = tk.Button(self.auto_page, text='Purge', command=self.purge_command, font=auto_button_font, width=auto_button_width, height=3)
         self.purge_soap_button = tk.Button(self.auto_page, text='Purge Soap', command=self.purge_soap_command, font=auto_button_font, width=auto_button_width)
         self.purge_dry_button = tk.Button(self.auto_page, text='Dry Sheath', command=self.purge_dry_command, font=auto_button_font, width=auto_button_width)
-        self.initialize_sheath_button = tk.Button(self.auto_page, text='Initialize Sheath', command=self.initialize_sheath_command, font=auto_button_font, width=auto_button_width)
+        self.initialize_sheath_button = tk.Button(self.auto_page, text='Initialize\nSheath', command=self.initialize_sheath_command, font=auto_button_font, width=auto_button_width)
+        self.initialize_sheath_display_var = tk.StringVar(value='Sheath pressure:\n--')
+        self.initialize_sheath_display = tk.Label(self.auto_page, textvariable=self.initialize_sheath_display_var, font=auto_button_half_font, bg=self.label_bg_color)
         # Elveflow Plots
         self.fig_dpi = 96  # this shouldn't matter too much (because we normalize against it) except in how font sizes are handled in the plot
         self.main_tab_fig = plt.Figure(figsize=(core_width*2/3/self.fig_dpi, core_height*3/4/self.fig_dpi), dpi=self.fig_dpi)
@@ -297,7 +300,7 @@ class Main:
         self.refresh_dropdown(self.oil_valve_name_boxes, self.flowpath.valve2.gui_names, self.oil_valve_names)
         self.refresh_dropdown(self.loading_valve_name_boxes, self.flowpath.valve4.gui_names, self.loading_valve_names)
         self.draw_static()
-        self.elveflow_display = ElveflowDisplay(self.elveflow_page, core_height, core_width, self.config['Elveflow'], self.python_logger)
+        self.elveflow_display = ElveflowDisplay(self.elveflow_page, core_height, core_width, self.config['Elveflow'], self.python_logger, self)
         self.elveflow_display.grid(row=0, column=0)
         self.queue = solocomm.controlQueue
         self.manual_queue = solocomm.ManualControlQueue
@@ -351,7 +354,8 @@ class Main:
         self.purge_dry_button.grid(row=12, column=5)
         self.canvas.get_tk_widget().grid(row=0, column=2, rowspan=10, columnspan=8, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
 
-        self.initialize_sheath_button.grid(row=8, column=0, columnspan=2, sticky=tk.W+tk.E+tk.N+tk.S)  # TODO: make buttons play nice with Josue's buttons
+        self.initialize_sheath_button.grid(row=8, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.initialize_sheath_display.grid(row=8, column=1, sticky=tk.W+tk.E+tk.N+tk.S)
         # Manual page
         # Config page
         rowcounter = 0
@@ -1013,7 +1017,7 @@ class Main:
         # TODO: graph this?
         self.manual_queue.put((self.python_logger.info, "Starting to set sheath flow to %s µL/min..." % elveflow_sheath_volume))
         self.manual_queue.put((self.elveflow_display.run_volume, elveflow_sheath_channel, elveflow_sheath_volume))
-        self.manual_queue.put((self.python_logger.info, "Done setting sheath flow to %s µL/min" % elveflow_sheath_volume))
+        # self.manual_queue.put((self.python_logger.info, "Done setting sheath flow to %s µL/min" % elveflow_sheath_volume))
 
     def toggle_buttons(self):
         """Toggle certain buttons on and off when they should not be allowed to add to queue."""
