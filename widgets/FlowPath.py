@@ -294,7 +294,7 @@ class FlowPath(tk.Canvas):
                 self.canvas.delete(self.arc3)
             except AttributeError:
                 pass
-            if self.position == 1:
+            if self.position == 0:
                 self.arc1 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=300+self.angle_off, extent=60, fill=self.color2, outline=self.color2)
                 self.arc2 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=180+self.angle_off, extent=60, fill=self.color1, outline=self.color1)
                 self.arc3 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=60+self.angle_off, extent=60, fill=self.color3, outline=self.color3)
@@ -308,7 +308,7 @@ class FlowPath(tk.Canvas):
                 self.canvas.itemconfig(self.circles[3], fill=self.color1, outline=self.color1)
                 self.canvas.itemconfig(self.circles[4], fill=self.color3, outline=self.color3)
                 self.canvas.itemconfig(self.circles[5], fill=self.color3, outline=self.color3)
-            elif self.position == 0:
+            elif self.position == 1:
                 self.arc1 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=0, extent=60, fill=self.color3, outline=self.color3)
                 self.arc2 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=240, extent=60, fill=self.color2, outline=self.color2)
                 self.arc3 = self.canvas.create_arc(self.x-self.arc_radius, self.y-self.arc_radius, self.x+self.arc_radius, self.y+self.arc_radius, start=120, extent=60, fill=self.color1, outline=self.color1)
@@ -330,10 +330,10 @@ class FlowPath(tk.Canvas):
                 self.canvas.tag_raise(self.circles[i])
 
         def propagate_fluid(self, port, fluid_color):
-            if self.position == 1:
+            if self.position == 0:
                 pairs = [1, 0, 3, 2, 5, 4]
                 colors = [self.color2, self.color2, self.color1, self.color1, self.color3, self.color3]
-            elif self.position == 0:
+            elif self.position == 1:
                 pairs = [5, 2, 1, 4, 3, 0]
                 colors = [self.color3, self.color2, self.color2, self.color1, self.color1, self.color3]
             colors[port] = fluid_color
@@ -531,9 +531,9 @@ class FlowPath(tk.Canvas):
         self.valve8.gui_names[5] = 'Run'
         self.valve8.gui_names[0] = 'Load'
         self.valve8.colors[0] = self.sheath_color
-        self.valve8.gui_names[3] = 'Low Flow Soap'
+        self.valve8.gui_names[3] = 'High Flow Soap'
         self.valve8.colors[3] = self.soap_color
-        self.valve8.gui_names[4] = 'High Flow Soap'
+        self.valve8.gui_names[4] = 'Low Flow Soap'
         self.valve8.colors[4] = self.soap_color
         self.valve8.gui_names[2] = 'Water'
         self.valve8.colors[2] = self.water_color
@@ -552,7 +552,7 @@ class FlowPath(tk.Canvas):
         # Line from syringe to valve 1
         self.syringe_line = self.create_fluid_line('x', 150, 100, 110, color='black')
         self.tag_lower(self.syringe_line)
-        self.valve2.connect(self.syringe_line, 3)
+        # self.valve2.connect(self.syringe_line, 3)
         # From Valve 2 to Waste
         x0, y0, x1, y1 = self.coords(self.valve2.circles[5])
         x_avg = math.floor((x0 + x1) / 2)
@@ -659,7 +659,7 @@ class FlowPath(tk.Canvas):
         # Line from syringe to valve 6
         self.syringe_line_2 = self.create_fluid_line('x', 150, 300, 110, color='black')
         self.tag_lower(self.syringe_line_2)
-        self.valve6.connect(self.syringe_line_2, 3)
+        # self.valve6.connect(self.syringe_line_2, 3)
         # From Valve 6 to Waste
         x0, y0, x1, y1 = self.coords(self.valve6.circles[5])
         x_avg = math.floor((x0 + x1) / 2)
