@@ -10,7 +10,7 @@ Josue San Emeterio
 """
 import serial
 import serial.tools.list_ports
-import time
+import time, os
 
 
 def list_available_ports(optional_list=[]):   # Does the optional list input do anything? Should we just initialize an empty list for the output?
@@ -36,6 +36,8 @@ class SAXSController(serial.Serial):
         super().__init__(**kwargs)
         self.logger = logger
         self.enabled = False
+        self.temp_logger = open('log/pump_%d.log' % time.time(), 'w+')
+        # TODO: close properly
 
     def set_port(self, port, instrument_list=[]):
         """Set the serial port."""
@@ -71,6 +73,22 @@ class SAXSController(serial.Serial):
         self.write(b'I')
         while self.in_waiting > 0:
             self.logger.info(self.readline().decode())
+
+    def read_check(self):
+        value = self.read()
+        self.temp_logger.write("%d:   "%time.time() + repr(value) + "\n")
+        self.temp_logger.flush()
+        os.fsync(self.temp_logger.fileno())
+        return value
+
+    def readline_check(self):
+        value = self.readline()
+        self.temp_logger.write("%d:   "%time.time() + repr(value) + "\n")
+        self.temp_logger.flush()
+        os.fsync(self.temp_logger.fileno())
+        return value
+
+
 
 
 class HPump:
@@ -165,14 +183,14 @@ class HPump:
                 if not self.controller.is_open:
                     self.controller.open()
                 while self.controller.in_waiting > 0:  # Clear Buffer
-                    self.controller.readline()
+                    self.controller.readline_check()
                 self.controller.write(("-"+self.address+"RUN\n\r").encode())
                 time.sleep(0.2)
                 if self.controller.in_waiting == 0:  # give more time if it hasn't finished
                     self.logger.debug("No responce: Waiting")
                     time.sleep(0.2)
                 while self.controller.in_waiting > 0:
-                    pumpanswer = self.controller.readline()
+                    pumpanswer = self.controller.readline_check()
                     if (self.address+"<").encode() in pumpanswer:
                         self.running = True
                         self.logger.info("Refilling " + self.name)
@@ -214,14 +232,14 @@ class HPump:
                 if not self.controller.is_open:
                     self.controller.open()
                 while self.controller.in_waiting > 0:  # Clear Buffer
-                    self.controller.readline()
+                    self.controller.readline_check()
                 self.controller.write(("-"+self.address+"STP\n\r").encode())
                 time.sleep(0.2)
                 if self.controller.in_waiting == 0:  # give more time if it hasn't finished
                     self.logger.debug("No responce: Waiting")
                     time.sleep(0.4)
                 while self.controller.in_waiting > 0:
-                    pumpanswer = self.controller.readline()
+                    pumpanswer = self.controller.readline_check()
                     if (self.address+":").encode() in pumpanswer:
                         self.running = False
                         self.logger.info("Paused " + self.name)
@@ -474,12 +492,12 @@ class HPump:
                 if not self.controller.is_open:
                     self.controller.open()
                 while self.controller.in_waiting > 0:   # Clear Buffer
-                    self.controller.read()
+                    self.controller.read_check()
                 self.controller.write(("-"+self.address+"\n\r").encode())
                 time.sleep(0.2)
                 while self.controller.in_waiting > 0:
-                    if self.controller.read() == self.address.encode():
-                        answer = self.controller.read()
+                    if self.controller.read_check() == self.address.encode():
+                        answer = self.controller.read_check()
                         if b"<" == answer:
                             running = True
                             success = True
@@ -563,14 +581,14 @@ class HPump:
             if not self.controller.is_open:
                 self.controller.open()
             while self.controller.in_waiting > 0:   # Clear Buffer
-                self.controller.read()
+                self.controller.read_check()
             self.controller.write(("-"+self.address+"DIR"+"\n\r").encode())
             time.sleep(0.2)
             if self.controller.in_waiting == 0:
                 self.logger.debug("No responce: waiting")
                 time.sleep(0.4)
             while self.controller.in_waiting > 0:
-                if dirstr.encode() in self.controller.readline():
+                if dirstr.encode() in self.controller.readline_check():
                     success = True
             if not success:
                 if retry:
@@ -603,14 +621,14 @@ class HPump:
             if not self.controller.is_open:
                 self.controller.open()
             while self.controller.in_waiting > 0:   # Clear Buffer
-                self.controller.read()
+                self.controller.read_check()
             self.controller.write(("-"+self.address+"MOD"+"\n\r").encode())
             time.sleep(0.2)
             if self.controller.in_waiting == 0:
                 self.logger.debug("No responce: waiting")
                 time.sleep(0.4)
             while self.controller.in_waiting > 0:
-                if modestr.encode() in self.controller.readline():
+                if modestr.encode() in self.controller.readline_check():
                     success = True
             if not success:
                 if retry:
@@ -643,14 +661,14 @@ class HPump:
             if not self.controller.is_open:
                 self.controller.open()
             while self.controller.in_waiting > 0:   # Clear Buffer
-                self.controller.read()
+                self.controller.read_check()
             self.controller.write(("-"+self.address+"TGT"+"\n\r").encode())
             time.sleep(0.2)
             if self.controller.in_waiting == 0:
                 self.logger.debug("No responce: waiting")
                 time.sleep(0.4)
             while self.controller.in_waiting > 0:
-                answer = (self.controller.readline())
+                answer = (self.controller.readline_check())
                 if b"." in answer:
                     value = float(answer)
                     success = True
@@ -687,14 +705,14 @@ class HPump:
             if not self.controller.is_open:
                 self.controller.open()
             while self.controller.in_waiting > 0:   # Clear Buffer
-                self.controller.read()
+                self.controller.read_check()
             self.controller.write(("-"+self.address+"RAT"+"\n\r").encode())
             time.sleep(0.2)
             if self.controller.in_waiting == 0:
                 self.logger.debug("No responce: waiting")
                 time.sleep(0.4)
             while self.controller.in_waiting > 0:
-                answer = (self.controller.readline())
+                answer = (self.controller.readline_check())
                 if b"." in answer:
                     value = float(answer[0:-7])
                     success = True
@@ -727,14 +745,14 @@ class HPump:
             if not self.controller.is_open:
                 self.controller.open()
             while self.controller.in_waiting > 0:   # Clear Buffer
-                self.controller.read()
+                self.controller.read_check()
             self.controller.write(("-"+self.address+"RFR"+"\n\r").encode())
             time.sleep(0.2)
             if self.controller.in_waiting == 0:
                 self.logger.debug("No responce: waiting")
                 time.sleep(0.4)
             while self.controller.in_waiting > 0:
-                answer = (self.controller.readline())
+                answer = (self.controller.readline_check())
                 if b"." in answer:
                     value = float(answer[0:-7])
                     success = True
@@ -769,14 +787,14 @@ class HPump:
             if not self.controller.is_open:
                 self.controller.open()
             while self.controller.in_waiting > 0:   # Clear Buffer
-                self.controller.read()
+                self.controller.read_check()
             self.controller.write(("-"+self.address+"DEL"+"\n\r").encode())
             time.sleep(0.2)
             if self.controller.in_waiting == 0:
                 self.logger.debug("No responce: waiting")
                 time.sleep(0.4)
             while self.controller.in_waiting > 0:
-                answer = (self.controller.readline())
+                answer = (self.controller.readline_check())
                 if b"." in answer:
                     value = float(answer)
                     success = True
@@ -882,7 +900,7 @@ class Rheodyne:
                 if not self.controller.is_open:
                     self.controller.open()
                 self.controller.write(("P%03i%i" % (self.address_I2C, position)).encode())
-                self.controller.read()
+                self.controller.read_check()
 
             # check if switched
             time.sleep(0.1)
@@ -926,9 +944,9 @@ class Rheodyne:
             if not self.controller.is_open:
                 self.controller.open()
             while self.controller.in_waiting > 0:
-                self.controller.read()
+                self.controller.read_check()
             self.controller.write(("S%03i" % self.address_I2C).encode())
-            ans = self.controller.read().decode()  # need to ensure thwt buffer doesnt build up-> if so switch to readln
+            ans = self.controller.read_check().decode()  # need to ensure thwt buffer doesnt build up-> if so switch to readln
             while ans not in ["1", "2", "3", "4", "5", "6"]:
                 self.logger.debug("Rechecking Valve: iteration " + str(iter+1))
                 if iter == maxiterations:
@@ -940,7 +958,7 @@ class Rheodyne:
         # TODO: add error handlers
 
             self.controller.write(("S%03i" % self.address_I2C).encode())
-            ans = self.controller.read()  # need to ensure thwt buffer doesnt build up-> if so switch to readln
+            ans = self.controller.read_check()  # need to ensure thwt buffer doesnt build up-> if so switch to readln
             # self.controller.close()
         return int(ans)   # returns valve position
         # TODO: add error handlers
@@ -964,7 +982,7 @@ class Rheodyne:
                     self.controller.open()
                 self.controller.write(("N%03i%03i" % (self.address_I2C, address)).encode())
                 while(self.controller.in_waiting > 0):
-                    print(self.controller.readline())
+                    print(self.controller.readline_check())
                 # self.controller.close()
                 return 0
         else:
