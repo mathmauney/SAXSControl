@@ -902,8 +902,17 @@ class Main:
             tk.messagebox.showinfo('Error', 'Filename is blank or contains invalid characters. \nThese include: %s (includes spaces).' % (self.illegal_chars))
             return
 
+        if np.abs(
+            self.elveflow_display.elveflow_handler.getPressure(int(self.elveflow_sheath_channel.get()))
+             - float(self.elveflow_sheath_volume.get()) ) > 1:
+         MsgBox = messagebox.askquestion('Warning', 'Sheath may not be running; continue with buffer/sample/buffer?', icon='warning')
+         if MsgBox == 'yes':
+             pass
+         else:
+             return
+
         if not self.oil_refill_flag:
-            MsgBox = messagebox.askquestion('Warning', 'Oil may not be full, continue with buffer/sample/buffer?', icon='warning')
+            MsgBox = messagebox.askquestion('Warning', 'Oil may not be full; continue with buffer/sample/buffer?', icon='warning')
             if MsgBox == 'yes':
                 pass
             else:
@@ -988,8 +997,17 @@ class Main:
             tk.messagebox.showinfo('Error', 'Filename is blank or contains invalid characters. \nThese include: %s (includes spaces).' % (self.illegal_chars))
             return
 
+        if np.abs(
+                self.elveflow_display.elveflow_handler.getPressure(int(self.elveflow_sheath_channel.get()))
+                 - float(self.elveflow_sheath_volume.get()) ) > 1:
+             MsgBox = messagebox.askquestion('Warning', 'Sheath may not be running; continue with buffer/sample/buffer?', icon='warning')
+             if MsgBox == 'yes':
+                 pass
+             else:
+                 return
+
         if not self.oil_refill_flag:
-            MsgBox = messagebox.askquestion('Warning', 'Oil may not be full, continue with buffer/sample/buffer?', icon='warning')
+            MsgBox = messagebox.askquestion('Warning', 'Oil may not be full; continue with buffer/sample/buffer?', icon='warning')
             if MsgBox == 'yes':
                 pass
             else:

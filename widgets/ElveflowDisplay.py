@@ -306,6 +306,9 @@ class ElveflowDisplay(tk.Canvas):
             self.saveFileNameSuffix_var.set("_%d.csv" % time.time())
 
     def stop(self, shutdown=False):
+        import traceback
+        self.errorlogger.debug(f"Elveflow Display is stopping now. Shutdown flag={shutdown}; current thread is {threading.current_thread()}")
+        self.errorlogger.debug('\n'.join(traceback.format_stack()))
         if self.elveflow_handler is not None:
             self.elveflow_handler.stop()
         if FileIO.USE_SDK:
