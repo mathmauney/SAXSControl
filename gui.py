@@ -236,7 +236,7 @@ class Main:
         self.air_time = tk.IntVar(value=0)
         self.air_time_box = tk.Spinbox(self.config_page, from_=0, to=1000, textvariable=self.air_time)
 
-        self.purge_possition_label = tk.Label(self.config_page, text="Purge valve possitions:", bg=self.label_bg_color)
+        self.purge_possition_label = tk.Label(self.config_page, text="Purge valve positions:", bg=self.label_bg_color)
         self.purge_running_label = tk.Label(self.config_page, text="running:", bg=self.label_bg_color)
         self.purge_running_pos = tk.IntVar(value=0)
         self.purge_running_box = tk.Spinbox(self.config_page, from_=0, to=100, textvariable=self.purge_running_pos)
@@ -609,6 +609,11 @@ class Main:
                 self.loading_valve_names[i].set(loading_config.get(field, ''))
                 self.cerberus_oil_valve_names[i].set(cerberus_oil_config.get(field, ''))
                 self.cerberus_loading_valve_names[i].set(cerberus_loading_config.get(field, ''))
+            # Purge valve config
+            self.purge_running_pos.set(cerberus_config.get('Purge Running',1))
+            self.purge_water_pos.set(cerberus_config.get('Purge Water', 1))
+            self.purge_soap_pos.set(cerberus_config.get('Purge Soap', 1))
+            self.purge_air_pos.set(cerberus_config.get('Purge Air', 1))
 
         if not preload:
             self.set_oil_valve_names()
@@ -712,6 +717,11 @@ class Main:
                 cerberus_loading_name = self.cerberus_loading_valve_names[i].get()
                 if cerberus_loading_name != '':
                     cerberus_loading_config[field] = cerberus_loading_name
+            # Purge Valve config
+            cerberus_config['Purge Running'] = str(self.purge_running_pos.get())
+            cerberus_config['Purge Water'] = str(self.purge_water_pos.get())
+            cerberus_config['Purge Soap'] = str(self.purge_soap_pos.get())
+            cerberus_config['Purge Air'] = str(self.purge_air_pos.get())
 
             elveflow_config['elveflow_sourcename'] = self.elveflow_sourcename.get()
 
