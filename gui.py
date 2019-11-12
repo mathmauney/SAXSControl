@@ -902,8 +902,17 @@ class Main:
             tk.messagebox.showinfo('Error', 'Filename is blank or contains invalid characters. \nThese include: %s (includes spaces).' % (self.illegal_chars))
             return
 
+        if np.abs(
+            self.elveflow_display.elveflow_handler.getPressure(int(self.elveflow_sheath_channel.get()))
+             - float(self.elveflow_sheath_volume.get()) ) > 1:
+         MsgBox = messagebox.askquestion('Warning', 'Sheath may not be running; continue with buffer/sample/buffer?', icon='warning')
+         if MsgBox == 'yes':
+             pass
+         else:
+             return
+
         if not self.oil_refill_flag:
-            MsgBox = messagebox.askquestion('Warning', 'Oil may not be full, continue with buffer/sample/buffer?', icon='warning')
+            MsgBox = messagebox.askquestion('Warning', 'Oil may not be full; continue with buffer/sample/buffer?', icon='warning')
             if MsgBox == 'yes':
                 pass
             else:
@@ -988,8 +997,17 @@ class Main:
             tk.messagebox.showinfo('Error', 'Filename is blank or contains invalid characters. \nThese include: %s (includes spaces).' % (self.illegal_chars))
             return
 
+        if np.abs(
+                self.elveflow_display.elveflow_handler.getPressure(int(self.elveflow_sheath_channel.get()))
+                 - float(self.elveflow_sheath_volume.get()) ) > 1:
+             MsgBox = messagebox.askquestion('Warning', 'Sheath may not be running; continue with buffer/sample/buffer?', icon='warning')
+             if MsgBox == 'yes':
+                 pass
+             else:
+                 return
+
         if not self.oil_refill_flag:
-            MsgBox = messagebox.askquestion('Warning', 'Oil may not be full, continue with buffer/sample/buffer?', icon='warning')
+            MsgBox = messagebox.askquestion('Warning', 'Oil may not be full; continue with buffer/sample/buffer?', icon='warning')
             if MsgBox == 'yes':
                 pass
             else:
@@ -1426,6 +1444,10 @@ class Main:
             [(587, 200),(659, 200),(698, 200),(784, 200),(659, 400),(523, 200),(587, 500)], # The Lick
             [(740, 400),(1109, 200),(932, 200),(932, 400),(831, 200),(740, 200),(740, 200),(988, 400),(932, 200),(932, 200),(831, 200),(831, 200),(740, 200)], # All Star
             [(466, 100),(523, 100),(554, 100),(466, 100),(698, 400),(698, 200),(622, 600),(415, 100),(466, 100),(523, 100),(415, 100),(622, 400),(622, 200),(554, 600)], # Never Gonna Give You Up
+            [(740, 200),(659, 200),(587, 200),(554, 200),(587, 200),(659, 200),(587, 200),(440, 200),(370, 200),(392, 200),(440, 200),(494, 200),(440, 200),(370, 200),(440, 400)], # Turkey in the Straw
+            [(494, 125),(440, 125),(415, 125),(440, 125),(523, 500),(587, 125),(523, 125),(494, 125),(523, 125),(659, 500)], # Rondo Alla Turca
+            [(294, 100),(294, 100),(587, 200),(440, 400),(415, 200),(392, 200),(349, 200),(294, 100),(349, 100),(392, 300)], # Megalovania
+            [(932, 900),(831, 150),(740, 150),(831, 150),(740, 150),(831, 150),(740, 150),(698, 225),(622, 225),(587, 225),(554, 600)], # Rhapsody in Blue
         ]
         notes = random.choice(possible_songs)
         for (note, duration) in notes:

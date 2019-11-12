@@ -324,6 +324,14 @@ class ElveflowHandler_SDK:
         if error != 0:
             self.errorlogger.warning('ERROR CODE SET PRESSURE CHANNEL %i: %s' % (channel_number, error))
 
+    def getPressure(self, channel_number=4):
+        """ask the Elveflow to tell us the pressure directly"""
+        get_pressure = c_double()
+        error = Elveflow_SDK.OB1_Get_Press(self.instr_ID.value, c_int32(channel_number), 1, byref(self.calib), byref(get_pressure), 1000)
+        if error != 0:
+            self.errorlogger.warning('ERROR CODE PRESSURE %i: %s' % (channel_number, error))
+        return get_pressure.value
+
     def set_pressure_loop(self, channel_number, value, interrupt_event=None, on_finish=None):
         """starts a thread that raises the Elveflow pressure without a big spike"""
         if interrupt_event is None:
