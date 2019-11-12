@@ -440,10 +440,10 @@ class ElveflowHandler_SDK:
         self.reading_thread = threading.Thread(target=start_thread, args=(channel_number, value, interrupt_event, pid_constants))
         self.reading_thread.start()
 
-    def run_volume(self, channel_number, value, interrupt_event=None, pid_constants=None, margin=0.5, stable_time=0.5):
-        """in the calling thread, set the Elveflow flow rate
+    def run_volume(self, channel_number, value, interrupt_event=None, pid_constants=None, margin=0.5, stable_time=0.5, timeout=60):
+        """in the calling thread (i.e. this function is blocking), set the Elveflow flow rate
         Run a volume PID loop until you are within +/- margin of the target value
-        for at least stable_time amout of seconds
+        for at least stable_time amout of seconds OR until timeout amount of seconds has passed
 
         Return the last pressure reading"""
         if interrupt_event is None:
@@ -463,7 +463,10 @@ class ElveflowHandler_SDK:
 
         pressure_to_set = value
         amount_of_time_stable = 0
+        init_time = time.time()
         while self.run_flag.is_set() and not interrupt_event.is_set():
+            if time.time() - init_time > timeout:
+                break
             time.sleep(ElveflowHandler_SDK.PID_SLEEPTIME)
             get_flowrate = c_double()
             error = Elveflow_SDK.OB1_Get_Sens_Data(self.instr_ID.value, c_int32(channel_number), 1, byref(get_flowrate))

@@ -915,7 +915,7 @@ class Main:
         if np.abs(
             self.elveflow_display.elveflow_handler.getPressure(int(self.elveflow_sheath_channel.get()))
              - float(self.elveflow_sheath_volume.get()) ) > 1:
-         MsgBox = messagebox.askquestion('Warning', 'Sheath may not be running; continue with buffer/sample/buffer?', icon='warning')
+         MsgBox = messagebox.askquestion('Warning', 'Sheath flow rate is not the expected sheath flow rate; continue with buffer/sample/buffer?', icon='warning')
          if MsgBox == 'yes':
              pass
          else:
@@ -1355,55 +1355,68 @@ class Main:
             self.queue.put((self.flowpath.valve8.set_auto_position, "Load"))
             self.queue.put((self.flowpath.valve6.set_auto_position, "Waste"))
 
+    def unset_purge(self):
+        self.purge_valve.switchvalve(self.purge_running_pos.get())
+        self.purge_button.configure(bg="white smoke")
+        self.purge_soap_button.configure(bg="white smoke")
+        self.purge_dry_button.configure(bg="white smoke")
+
+
     def purge_command(self):
         run_position = self.purge_running_pos.get()
         purge_position = self.purge_water_pos.get()
         if self.purge_valve.position == purge_position:
             self.manual_queue.put((self.purge_valve.switchvalve, run_position))
-            self.purge_button.configure(bg="white smoke")
-            self.python_logger.info("Purge stopped")
+            self.manual_queue.put(lambda:self.purge_button.configure(bg="white smoke"))
+            self.manual_queue.put((self.python_logger.info, "Purge stopped"))
         else:
             self.manual_queue.put((self.purge_valve.switchvalve, purge_position))
-            self.purge_button.configure(bg="green")
-            self.purge_soap_button.configure(bg="white smoke")
-            self.purge_dry_button.configure(bg="white smoke")
-            self.python_logger.info("Purging")
+            self.manual_queue.put(lambda:self.purge_button.configure(bg="green"))
+            self.manual_queue.put(lambda:self.purge_soap_button.configure(bg="white smoke"))
+            self.manual_queue.put(lambda:self.purge_dry_button.configure(bg="white smoke"))
+            self.manual_queue.put((self.python_logger.info, "Purging"))
 
     def purge_soap_command(self):
         run_position = self.purge_running_pos.get()
         purge_position = self.purge_soap_pos.get()
         if self.purge_valve.position == purge_position:
             self.manual_queue.put((self.purge_valve.switchvalve, run_position))
-            self.purge_soap_button.configure(bg="white smoke")
-            self.python_logger.info("Purge stopped")
+            self.manual_queue.put(lambda:self.purge_soap_button.configure(bg="white smoke"))
+            self.manual_queue.put((self.python_logger.info, "Purge stopped"))
         else:
             self.manual_queue.put((self.purge_valve.switchvalve, purge_position))
-            self.purge_soap_button.configure(bg="green")
-            self.purge_button.configure(bg="white smoke")
-            self.purge_dry_button.configure(bg="white smoke")
-            self.python_logger.info("Purging soap")
+            self.manual_queue.put(lambda:self.purge_soap_button.configure(bg="green"))
+            self.manual_queue.put(lambda:self.purge_button.configure(bg="white smoke"))
+            self.manual_queue.put(lambda:self.purge_dry_button.configure(bg="white smoke"))
+            self.manual_queue.put((self.python_logger.info, "Purging soap"))
 
     def purge_dry_command(self):
         run_position = self.purge_running_pos.get()
         purge_position = self.purge_air_pos.get()
         if self.purge_valve.position == purge_position:
             self.manual_queue.put((self.purge_valve.switchvalve, run_position))
-            self.purge_dry_button.configure(bg="white smoke")
-            self.python_logger.info("Purge stopped")
+            self.manual_queue.put(lambda:self.purge_dry_button.configure(bg="white smoke"))
+            self.manual_queue.put((self.python_logger.info, "Purge stopped"))
         else:
             self.manual_queue.put((self.purge_valve.switchvalve, purge_position))
-            self.purge_dry_button.configure(bg="green")
-            self.purge_soap_button.configure(bg="white smoke")
-            self.purge_button.configure(bg="white smoke")
-            self.python_logger.info("Purging soap")
+            self.manual_queue.put(lambda:self.purge_dry_button.configure(bg="green"))
+            self.manual_queue.put(lambda:self.purge_soap_button.configure(bg="white smoke"))
+            self.manual_queue.put(lambda:self.purge_button.configure(bg="white smoke"))
+            self.manual_queue.put((self.python_logger.info, "Purging soap"))
 
     def initialize_sheath_command(self):
         # TODO: make this a toggle button instead
         elveflow_sheath_channel = int(self.elveflow_sheath_channel.get())
         elveflow_sheath_volume = float(self.elveflow_sheath_volume.get())
         # TODO: graph this?
+        self.initialize_sheath_button.configure(bg="green")
+        if self.purge_running_pos.get()>0 and self.purge_valve and self.purge_valve.enabled:
+            self.manual_queue.put(self.unset_purge)
+        else:
+            self.python_logger.warning("Purge valve not configured")
         self.manual_queue.put((self.python_logger.info, "Starting to set sheath flow to %s µL/min..." % elveflow_sheath_volume))
         self.manual_queue.put((self.elveflow_display.run_volume, elveflow_sheath_channel, elveflow_sheath_volume))
+        self.manual_queue.put(lambda: self.initialize_sheath_button.configure(bg="white smoke"))
         # self.manual_queue.put((self.python_logger.info, "Done setting sheath flow to %s µL/min" % elveflow_sheath_volume))
 
     def toggle_sucrose(self):
