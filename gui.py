@@ -126,8 +126,10 @@ class Main:
         auto_button_width = 10
         self.buffer_sample_buffer_button = tk.Button(self.auto_page, text='Auto Run', command=self.auto_run_choice, font=auto_button_font, width=auto_button_width, height=3)
         self.clean_button = tk.Button(self.auto_page, text='Clean/Refill', command=self.choose_clean_and_refill_command, font=auto_button_font, width=auto_button_width, height=3)
-        self.load_sample_button = tk.Button(self.auto_page, text='Load Sample', command=self.load_sample_command, font=auto_button_font, width=auto_button_width)
-        self.load_buffer_button = tk.Button(self.auto_page, text='Load Buffer', command=self.load_buffer_command, font=auto_button_font, width=auto_button_width)
+        self.load_sample_button = tk.Button(self.auto_page, text='Load Sample', command=self.load_sample_command, font=auto_button_font, width=auto_button_width+2)
+        self.load_buffer_button = tk.Button(self.auto_page, text='Load Buffer', command=self.load_buffer_command, font=auto_button_font, width=auto_button_width+2)
+        self.take_sample_button = tk.Button(self.auto_page, text='Manual Buffer', command=lambda: self.python_logger.warning("Dummy Command"), font=auto_button_font, width=auto_button_width+2)
+        self.take_buffer_button = tk.Button(self.auto_page, text='Manual Sample', command=lambda: self.python_logger.warning("Dummy Command"), font=auto_button_font, width=auto_button_width+2)
         self.clean_only_button = tk.Button(self.auto_page, text='Clean Only', command=self.choose_cleaning, font=auto_button_font, width=auto_button_width)
         self.refill_only_button = tk.Button(self.auto_page, text='Refill Only', command=self.choice_refill_only_command, font=auto_button_font, width=auto_button_width)
         self.purge_button = tk.Button(self.auto_page, text='Purge', command=self.purge_command, font=auto_button_font, width=auto_button_width, height=3)
@@ -371,19 +373,24 @@ class Main:
         self.spec_fileno_label.grid(row=2, column=1)
         self.spec_fileno_box.grid(row=3, column=1)
         # Main Page Buttons
-        self.buffer_sample_buffer_button.grid(row=11, column=0, rowspan=2)
-        self.load_sample_button.grid(row=11, column=3)
-        self.load_buffer_button.grid(row=12, column=3)
-        self.clean_button.grid(row=11, column=1, rowspan=2)
-        self.clean_only_button.grid(row=11, column=2)
-        self.refill_only_button.grid(row=12, column=2)
-        self.purge_button.grid(row=11, column=4, rowspan=2)
-        self.purge_soap_button.grid(row=11, column=5)
-        self.purge_dry_button.grid(row=12, column=5)
+        self.buffer_sample_buffer_button.grid(row=8, column=0, columnspan=2, rowspan=2, sticky=tk.W+tk.E+tk.N+tk.S)
+
+        self.clean_button.grid(row=11, column=0, rowspan=2)
+        self.clean_only_button.grid(row=11, column=1, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.refill_only_button.grid(row=12, column=1, sticky=tk.W+tk.E+tk.N+tk.S)
+
+        self.load_sample_button.grid(row=11, column=2, sticky=tk.E+tk.N+tk.S)
+        self.load_buffer_button.grid(row=12, column=2, sticky=tk.E+tk.N+tk.S)
+        self.take_sample_button.grid(row=11, column=3, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.take_buffer_button.grid(row=12, column=3, sticky=tk.W+tk.E+tk.N+tk.S)
+
+        self.purge_button.grid(row=11, column=8, rowspan=2, sticky=tk.E+tk.N+tk.S)
+        self.purge_soap_button.grid(row=11, column=9, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.purge_dry_button.grid(row=12, column=9, sticky=tk.W+tk.E+tk.N+tk.S)
         self.canvas.get_tk_widget().grid(row=0, column=2, rowspan=10, columnspan=8, padx=ElveflowDisplay.PADDING, pady=ElveflowDisplay.PADDING)
 
-        self.initialize_sheath_button.grid(row=8, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
-        self.initialize_sheath_display.grid(row=8, column=1, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.initialize_sheath_button.grid(row=6, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.initialize_sheath_display.grid(row=6, column=1, sticky=tk.W+tk.E+tk.N+tk.S)
         # Manual page
         # Config page
         rowcounter = 0
@@ -1098,6 +1105,292 @@ class Main:
 
     def save_last_delivered_volume(self):
         self.last_delivered_volume = self.cerberus_pump.get_delivered_volume()
+
+    def choose_take_buffer_command(self):
+        if self.sucrose:
+            cerberus_take_buffer_command()
+        else:
+            take_buffer_command()
+
+    def take_buffer_command(self):
+        """Run a buffer-sample-buffer cycle."""
+        if self.elveflow_display is None or self.elveflow_display.elveflow_handler is None:
+            # TODO: make us not need to do this twice?
+            self.python_logger.warning("Elveflow connection not initialized! Please start the connection on the Elveflow tab.")
+            raise RuntimeError("Elveflow connection not initialized! Please start the connection on the Elveflow tab.")
+
+        if not self.is_filename_safe():
+            tk.messagebox.showinfo('Error', 'Filename is blank or contains invalid characters. \nThese include: %s (includes spaces).' % (self.illegal_chars))
+            return
+
+        if np.abs(
+            self.elveflow_display.elveflow_handler.getPressure(int(self.elveflow_sheath_channel.get()))
+             - float(self.elveflow_sheath_volume.get()) ) > 1:
+         MsgBox = messagebox.askquestion('Warning', 'Sheath flow rate is not the expected sheath flow rate; continue with buffer/sample/buffer?', icon='warning')
+         if MsgBox == 'yes':
+             pass
+         else:
+             return
+
+        if not self.oil_refill_flag:
+            MsgBox = messagebox.askquestion('Warning', 'Oil may not be full; continue with buffer/sample/buffer?', icon='warning')
+            if MsgBox == 'yes':
+                pass
+            else:
+                return
+
+        MsgBox = messagebox.askquestion('Warning', 'Take manual buffer', icon='warning')
+        if MsgBox == 'yes':
+            pass
+        else:
+            return
+
+        # before scheduling anything, clear the graph
+        self.main_tab_ax1.clear()
+        self.main_tab_ax2.clear()
+        self.main_tab_ax3.clear()
+        self.main_tab_ax3.spines["right"].set_position(("outward", 60)) # offset second right axis
+        self.the_line1 = self.main_tab_ax1.plot([], [], color=ElveflowDisplay.COLOR_Y1)[0]
+        self.the_line2 = self.main_tab_ax2.plot([], [], color=ElveflowDisplay.COLOR_Y2)[0]
+        self.the_line3 = self.main_tab_ax3.plot([], [], color=ElveflowDisplay.COLOR_Y3)[0]
+        self.graph_start_time = int(time.time())
+        self.graph_end_time = np.inf
+        self.python_logger.debug("main page graph start time: %s" % self.graph_start_time)
+        self.flowpath.set_unlock_state(False)
+
+        self.update_graph()
+        self.oil_refill_flag = False
+
+        self.queue.put((self.python_logger.info, "Starting to run buffer-sample-buffer"))
+        self.queue.put(self.update_graph)
+        self.queue.put(self.elveflow_display.start_saving)
+
+        # prebuffer
+        self.queue.put((self.python_logger.info, "Starting to run pre-buffer"))
+        self.queue.put((self.flowpath.valve2.set_auto_position, "Run"))
+        self.queue.put((self.flowpath.valve3.set_auto_position, 0))
+        self.queue.put((self.flowpath.valve4.set_auto_position, "Run"))
+        self.queue.put((self.pump.infuse_volume, self.first_buffer_volume.get()/1000, self.sample_flowrate.get()))
+        self.queue.put((self.python_logger.debug, f'Calculated equilibration time: {self.first_buffer_eq_volume.get()/self.sample_flowrate.get()*60}'))
+        self.queue.put((self.pump.wait_until_time, self.first_buffer_eq_volume.get()/self.sample_flowrate.get()*60, self.update_graph)) # wait some amount of time until stable
+        self.queue.put((self.graph_vline, 'chartreuse'))
+        self.run_tseries(postfix="pre")
+        self.queue.put((self.pump.wait_until_stopped, self.first_buffer_volume.get()/self.sample_flowrate.get()*60, self.update_graph)) # wait the remaining amount of time
+
+
+    def cerberus_take_buffer_command(self):
+        if self.elveflow_display is None or self.elveflow_display.elveflow_handler is None:
+            # TODO: make us not need to do this twice?
+            self.python_logger.warning("Elveflow connection not initialized! Please start the connection on the Elveflow tab.")
+            raise RuntimeError("Elveflow connection not initialized! Please start the connection on the Elveflow tab.")
+
+        if not self.is_filename_safe():
+            tk.messagebox.showinfo('Error', 'Filename is blank or contains invalid characters. \nThese include: %s (includes spaces).' % (self.illegal_chars))
+            return
+
+        if np.abs(
+                self.elveflow_display.elveflow_handler.getPressure(int(self.elveflow_sheath_channel.get()))
+                 - float(self.elveflow_sheath_volume.get()) ) > 1:
+             MsgBox = messagebox.askquestion('Warning', 'Sheath may not be running; continue with buffer/sample/buffer?', icon='warning')
+             if MsgBox == 'yes':
+                 pass
+             else:
+                 return
+
+        if not self.oil_refill_flag:
+            MsgBox = messagebox.askquestion('Warning', 'Oil may not be full; continue with buffer/sample/buffer?', icon='warning')
+            if MsgBox == 'yes':
+                pass
+            else:
+                return
+        MsgBox = messagebox.askquestion('Warning', 'Take Manual Buffer?', icon='warning')
+        if MsgBox == 'yes':
+            pass
+        else:
+            return
+
+        # before scheduling anything, clear the graph
+        self.main_tab_ax1.clear()
+        self.main_tab_ax2.clear()
+        self.main_tab_ax3.clear()
+        self.main_tab_ax3.spines["right"].set_position(("outward", 60)) # offset second right axis
+        self.the_line1 = self.main_tab_ax1.plot([], [], color=ElveflowDisplay.COLOR_Y1)[0]
+        self.the_line2 = self.main_tab_ax2.plot([], [], color=ElveflowDisplay.COLOR_Y2)[0]
+        self.the_line3 = self.main_tab_ax3.plot([], [], color=ElveflowDisplay.COLOR_Y3)[0]
+        self.graph_start_time = int(time.time())
+        self.graph_end_time = np.inf
+        self.python_logger.debug("main page graph start time: %s" % self.graph_start_time)
+        self.flowpath.set_unlock_state(False)
+
+        self.update_graph()
+        self.oil_refill_flag = False
+
+        self.queue.put((self.python_logger.info, "Starting to run buffer-sample-buffer"))
+        self.queue.put(self.update_graph)
+        self.queue.put(self.elveflow_display.start_saving)
+
+        self.queue.put((self.python_logger.info, "Starting to run pre-buffer"))
+        # Start cerberus
+        self.queue.put((self.flowpath.valve6.set_auto_position, "Run"))
+        self.queue.put((self.flowpath.valve8.set_auto_position, "Run"))
+        self.queue.put((self.cerberus_pump.infuse_volume, self.cerberus_volume.get()/1000, self.cerberus_flowrate.get()))
+        # start regular
+        self.queue.put((self.flowpath.valve2.set_auto_position, "Run"))
+        self.queue.put((self.flowpath.valve3.set_auto_position, 0))
+        self.queue.put((self.flowpath.valve4.set_auto_position, "Run"))
+        self.queue.put((self.pump.infuse_volume, self.first_buffer_volume.get()/1000, self.sample_flowrate.get()))
+        self.queue.put((self.pump.wait_until_time, self.first_buffer_eq_volume.get()/self.sample_flowrate.get()*60, self.update_graph)) # wait some amount of time until stable
+        self.queue.put((self.graph_vline, 'chartreuse'))
+        self.run_tseries(postfix="pre")
+        self.queue.put((self.pump.wait_until_stopped, self.first_buffer_volume.get()/self.sample_flowrate.get()*60, self.update_graph)) # wait the remaining amount of time
+
+        self.queue.put(self.cerberus_pump.stop_pump)
+        self.queue.put(self.elveflow_display.stop_saving)
+        self.queue.put(self.update_graph)
+
+    def choose_take_sample_command(self):
+        if self.sucrose:
+            cerberus_take_sample_command()
+        else:
+            take_sample_command()
+
+    def take_sample_command(self):
+        """Run a buffer-sample-buffer cycle."""
+        if self.elveflow_display is None or self.elveflow_display.elveflow_handler is None:
+            # TODO: make us not need to do this twice?
+            self.python_logger.warning("Elveflow connection not initialized! Please start the connection on the Elveflow tab.")
+            raise RuntimeError("Elveflow connection not initialized! Please start the connection on the Elveflow tab.")
+
+        if not self.is_filename_safe():
+            tk.messagebox.showinfo('Error', 'Filename is blank or contains invalid characters. \nThese include: %s (includes spaces).' % (self.illegal_chars))
+            return
+
+        if np.abs(
+            self.elveflow_display.elveflow_handler.getPressure(int(self.elveflow_sheath_channel.get()))
+             - float(self.elveflow_sheath_volume.get()) ) > 1:
+         MsgBox = messagebox.askquestion('Warning', 'Sheath flow rate is not the expected sheath flow rate; continue with buffer/sample/buffer?', icon='warning')
+         if MsgBox == 'yes':
+             pass
+         else:
+             return
+
+        if not self.oil_refill_flag:
+            MsgBox = messagebox.askquestion('Warning', 'Oil may not be full; continue with buffer/sample/buffer?', icon='warning')
+            if MsgBox == 'yes':
+                pass
+            else:
+                return
+
+        MsgBox = messagebox.askquestion('Warning', 'Take manual sample', icon='warning')
+        if MsgBox == 'yes':
+            pass
+        else:
+            return
+
+        # before scheduling anything, clear the graph
+        self.main_tab_ax1.clear()
+        self.main_tab_ax2.clear()
+        self.main_tab_ax3.clear()
+        self.main_tab_ax3.spines["right"].set_position(("outward", 60)) # offset second right axis
+        self.the_line1 = self.main_tab_ax1.plot([], [], color=ElveflowDisplay.COLOR_Y1)[0]
+        self.the_line2 = self.main_tab_ax2.plot([], [], color=ElveflowDisplay.COLOR_Y2)[0]
+        self.the_line3 = self.main_tab_ax3.plot([], [], color=ElveflowDisplay.COLOR_Y3)[0]
+        self.graph_start_time = int(time.time())
+        self.graph_end_time = np.inf
+        self.python_logger.debug("main page graph start time: %s" % self.graph_start_time)
+        self.flowpath.set_unlock_state(False)
+
+        self.update_graph()
+        self.oil_refill_flag = False
+
+        self.queue.put((self.python_logger.info, "Starting to run buffer-sample-buffer"))
+        self.queue.put(self.update_graph)
+        self.queue.put(self.elveflow_display.start_saving)
+
+        # sample
+        self.queue.put((self.python_logger.info, "Starting to run sample"))
+        self.queue.put((self.flowpath.valve2.set_auto_position, "Run"))
+        self.queue.put((self.flowpath.valve3.set_auto_position, 1))
+        self.queue.put((self.flowpath.valve4.set_auto_position, "Run"))
+        self.queue.put((self.pump.infuse_volume, self.sample_volume.get()/1000, self.sample_flowrate.get()))
+        self.queue.put((self.python_logger.debug, f'Calculated equilibration time: {self.first_buffer_eq_volume.get()/self.sample_flowrate.get()*60}'))
+        self.queue.put((self.pump.wait_until_time, self.sample_eq_volume.get()/self.sample_flowrate.get()*60, self.update_graph)) # wait some amount of time until stable
+        self.queue.put((self.graph_vline, 'chartreuse'))
+        self.run_tseries(postfix="sample")
+        self.queue.put((self.pump.wait_until_stopped, self.sample_volume.get()/self.sample_flowrate.get()*60, self.update_graph))
+
+
+    def cerberus_take_sample_command(self):
+        if self.elveflow_display is None or self.elveflow_display.elveflow_handler is None:
+            # TODO: make us not need to do this twice?
+            self.python_logger.warning("Elveflow connection not initialized! Please start the connection on the Elveflow tab.")
+            raise RuntimeError("Elveflow connection not initialized! Please start the connection on the Elveflow tab.")
+
+        if not self.is_filename_safe():
+            tk.messagebox.showinfo('Error', 'Filename is blank or contains invalid characters. \nThese include: %s (includes spaces).' % (self.illegal_chars))
+            return
+
+        if np.abs(
+                self.elveflow_display.elveflow_handler.getPressure(int(self.elveflow_sheath_channel.get()))
+                 - float(self.elveflow_sheath_volume.get()) ) > 1:
+             MsgBox = messagebox.askquestion('Warning', 'Sheath may not be running; continue with buffer/sample/buffer?', icon='warning')
+             if MsgBox == 'yes':
+                 pass
+             else:
+                 return
+
+        if not self.oil_refill_flag:
+            MsgBox = messagebox.askquestion('Warning', 'Oil may not be full; continue with buffer/sample/buffer?', icon='warning')
+            if MsgBox == 'yes':
+                pass
+            else:
+                return
+        MsgBox = messagebox.askquestion('Warning', 'Take Manual Buffer?', icon='warning')
+        if MsgBox == 'yes':
+            pass
+        else:
+            return
+
+        # before scheduling anything, clear the graph
+        self.main_tab_ax1.clear()
+        self.main_tab_ax2.clear()
+        self.main_tab_ax3.clear()
+        self.main_tab_ax3.spines["right"].set_position(("outward", 60)) # offset second right axis
+        self.the_line1 = self.main_tab_ax1.plot([], [], color=ElveflowDisplay.COLOR_Y1)[0]
+        self.the_line2 = self.main_tab_ax2.plot([], [], color=ElveflowDisplay.COLOR_Y2)[0]
+        self.the_line3 = self.main_tab_ax3.plot([], [], color=ElveflowDisplay.COLOR_Y3)[0]
+        self.graph_start_time = int(time.time())
+        self.graph_end_time = np.inf
+        self.python_logger.debug("main page graph start time: %s" % self.graph_start_time)
+        self.flowpath.set_unlock_state(False)
+
+        self.update_graph()
+        self.oil_refill_flag = False
+
+        self.queue.put((self.python_logger.info, "Starting to run buffer-sample-buffer"))
+        self.queue.put(self.update_graph)
+        self.queue.put(self.elveflow_display.start_saving)
+
+        self.queue.put((self.python_logger.info, "Starting to run pre-buffer"))
+        # Start cerberus
+        self.queue.put((self.flowpath.valve6.set_auto_position, "Run"))
+        self.queue.put((self.flowpath.valve8.set_auto_position, "Run"))
+        self.queue.put((self.cerberus_pump.infuse_volume, self.cerberus_volume.get()/1000, self.cerberus_flowrate.get()))
+        # Run Sample
+        self.queue.put((self.python_logger.info, "Starting to run sample"))
+        self.queue.put((self.flowpath.valve2.set_auto_position, "Run"))
+        self.queue.put((self.flowpath.valve3.set_auto_position, 1))
+        self.queue.put((self.flowpath.valve4.set_auto_position, "Run"))
+        self.queue.put((self.pump.infuse_volume, self.sample_volume.get()/1000, self.sample_flowrate.get()))
+        self.queue.put((self.pump.wait_until_time, self.sample_eq_volume.get()/self.sample_flowrate.get()*60, self.update_graph)) # wait some amount of time until stable
+        self.queue.put((self.graph_vline, 'chartreuse'))
+        self.run_tseries(postfix="sample")
+        self.queue.put((self.pump.wait_until_stopped, self.sample_volume.get()/self.sample_flowrate.get()*60, self.update_graph)) # wait the remaining amount of time
+
+        self.queue.put(self.cerberus_pump.stop_pump)
+        self.queue.put(self.elveflow_display.stop_saving)
+        self.queue.put(self.update_graph)
+
 
     def choose_clean_and_refill_command(self):
         if self.sucrose:
