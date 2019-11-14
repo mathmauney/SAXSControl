@@ -149,14 +149,14 @@ class Main:
         # Manual Page
         self.manual_button_font = 'Arial 10 bold'
         self.tseries_button = tk.Button(self.manual_page, text='Take t-series', command=lambda: self.python_logger.warning("Dummy Command"), font=auto_button_font, width=auto_button_width+2)
-        self.take_sample_button = tk.Button(self.manual_page, text='Manual Buffer', command=self.choose_take_buffer_command, font=auto_button_font, width=auto_button_width+2)
-        self.take_buffer_button = tk.Button(self.manual_page, text='Manual Sample', command=self.choose_take_sample_command, font=auto_button_font, width=auto_button_width+2)
-        self.clean_sample_button = tk.Button(self.manual_page, text='Clean Buffer', command=lambda: self.clean_loop(1), font=auto_button_font, width=auto_button_width+2)
-        self.clean_buffer_button = tk.Button(self.manual_page, text='Clean Sample', command=lambda: self.clean_loop(0), font=auto_button_font, width=auto_button_width+2)
+        self.take_buffer_button = tk.Button(self.manual_page, text='Manual Buffer', command=self.choose_take_buffer_command, font=auto_button_font, width=auto_button_width+2)
+        self.take_sample_button = tk.Button(self.manual_page, text='Manual Sample', command=self.choose_take_sample_command, font=auto_button_font, width=auto_button_width+2)
+        self.clean_sample_button = tk.Button(self.manual_page, text='Clean Sample', command=lambda: self.clean_loop(1), font=auto_button_font, width=auto_button_width+2)
+        self.clean_buffer_button = tk.Button(self.manual_page, text='Clean Buffer', command=lambda: self.clean_loop(0), font=auto_button_font, width=auto_button_width+2)
         self.purge_insert_soap_button = tk.Button(self.manual_page, text='Soap insert', command=lambda: self.insert_purge("Soap"), font=auto_button_font, width=auto_button_width+2)
         self.purge_insert_water_button = tk.Button(self.manual_page, text='Water insert', command=lambda: self.insert_purge("Water"), font=auto_button_font, width=auto_button_width+2)
-        self.purge_sheath_insert_soap_button = tk.Button(self.manual_page, text='Soap insert sheath', command=lambda: self.insert_sheat_purge("Soap"), font=auto_button_font, width=auto_button_width+2)
-        self.purge_sheath_insert_water_button = tk.Button(self.manual_page, text='Water insert sheath', command=lambda: self.insert_sheat_purge("Water"), font=auto_button_font, width=auto_button_width+2)
+        self.purge_sheath_insert_soap_button = tk.Button(self.manual_page, text='Soap insert sheath', command=lambda: self.insert_sheath_purge("Soap"), font=auto_button_font, width=auto_button_width+5)
+        self.purge_sheath_insert_water_button = tk.Button(self.manual_page, text='Water insert sheath', command=lambda: self.insert_sheath_purge("Water"), font=auto_button_font, width=auto_button_width+5)
         self.manual_page_buttons = []
         self.manual_page_variables = []
         # Config page
@@ -1792,6 +1792,8 @@ class Main:
         self.queue.put((self.flowpath.valve2.set_auto_position, fluid))
 
     def insert_sheath_purge(self, fluid=""):
+        if not self.sucrose:
+            self.info.warning("Button only for sucrose mode")
         self.queue.put((self.python_logger.info, "Purgin insert with "+fluid))
         self.queue.put((self.flowpath.valve8.set_auto_position, "Run"))
         self.queue.put((self.flowpath.valve6.set_auto_position, fluid))
