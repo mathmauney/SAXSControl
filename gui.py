@@ -128,8 +128,6 @@ class Main:
         self.clean_button = tk.Button(self.auto_page, text='Clean/Refill', command=self.choose_clean_and_refill_command, font=auto_button_font, width=auto_button_width, height=3)
         self.load_sample_button = tk.Button(self.auto_page, text='Load Sample', command=self.load_sample_command, font=auto_button_font, width=auto_button_width+2)
         self.load_buffer_button = tk.Button(self.auto_page, text='Load Buffer', command=self.load_buffer_command, font=auto_button_font, width=auto_button_width+2)
-        self.take_sample_button = tk.Button(self.manual_page, text='Manual Buffer', command=lambda: self.python_logger.warning("Dummy Command"), font=auto_button_font, width=auto_button_width+2)
-        self.take_buffer_button = tk.Button(self.manual_page, text='Manual Sample', command=lambda: self.python_logger.warning("Dummy Command"), font=auto_button_font, width=auto_button_width+2)
         self.clean_only_button = tk.Button(self.auto_page, text='Clean Only', command=self.choose_cleaning, font=auto_button_font, width=auto_button_width)
         self.refill_only_button = tk.Button(self.auto_page, text='Refill Only', command=self.choice_refill_only_command, font=auto_button_font, width=auto_button_width)
         self.purge_button = tk.Button(self.auto_page, text='Purge', command=self.purge_command, font=auto_button_font, width=auto_button_width, height=3)
@@ -149,6 +147,16 @@ class Main:
         self.canvas = matplotlib.backends.backend_tkagg.FigureCanvasTkAgg(self.main_tab_fig, self.auto_page)
         self.canvas.draw()
         # Manual Page
+        self.manual_button_font = 'Arial 10 bold'
+        self.tseries_button = tk.Button(self.manual_page, text='Take t-series', command=lambda: self.python_logger.warning("Dummy Command"), font=auto_button_font, width=auto_button_width+2)
+        self.take_sample_button = tk.Button(self.manual_page, text='Manual Buffer', command=self.choose_take_buffer_command, font=auto_button_font, width=auto_button_width+2)
+        self.take_buffer_button = tk.Button(self.manual_page, text='Manual Sample', command=self.choose_take_sample_command, font=auto_button_font, width=auto_button_width+2)
+        self.clean_sample_button = tk.Button(self.manual_page, text='Clean Buffer', command=lambda: self.clean_loop(1), font=auto_button_font, width=auto_button_width+2)
+        self.clean_buffer_button = tk.Button(self.manual_page, text='Clean Sample', command=lambda: self.clean_loop(0), font=auto_button_font, width=auto_button_width+2)
+        self.purge_insert_soap_button = tk.Button(self.manual_page, text='Soap insert', command=lambda: self.insert_purge("Soap"), font=auto_button_font, width=auto_button_width+2)
+        self.purge_insert_water_button = tk.Button(self.manual_page, text='Water insert', command=lambda: self.insert_purge("Water"), font=auto_button_font, width=auto_button_width+2)
+        self.purge_sheath_insert_soap_button = tk.Button(self.manual_page, text='Soap insert sheath', command=lambda: self.insert_sheat_purge("Soap"), font=auto_button_font, width=auto_button_width+2)
+        self.purge_sheath_insert_water_button = tk.Button(self.manual_page, text='Water insert sheath', command=lambda: self.insert_sheat_purge("Water"), font=auto_button_font, width=auto_button_width+2)
         self.manual_page_buttons = []
         self.manual_page_variables = []
         # Config page
@@ -390,8 +398,16 @@ class Main:
         self.initialize_sheath_button.grid(row=6, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
         self.initialize_sheath_display.grid(row=6, column=1, sticky=tk.W+tk.E+tk.N+tk.S)
         # Manual page
-        self.take_sample_button.grid(row=0, column=10, columnspan=4, sticky=tk.W+tk.E+tk.N+tk.S)
-        self.take_buffer_button.grid(row=0, column=14, columnspan=4, sticky=tk.W+tk.E+tk.N+tk.S)
+        tk.Label(self.manual_page, textvariable="", height=6, bg=self.label_bg_color).grid(row=99, column=0)  # I'm just adding space
+        self.tseries_button.grid(row=100, column=0, columnspan=4, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.take_sample_button.grid(row=101, column=0, columnspan=4, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.take_buffer_button.grid(row=102, column=0, columnspan=4, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.clean_sample_button.grid(row=101, column=4, columnspan=4, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.clean_buffer_button.grid(row=102, column=4, columnspan=4, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.purge_insert_soap_button.grid(row=101, column=11, columnspan=4, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.purge_insert_water_button.grid(row=102, column=11, columnspan=4, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.purge_sheath_insert_soap_button.grid(row=101, column=15, columnspan=4, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.purge_sheath_insert_water_button.grid(row=102, column=15, columnspan=4, sticky=tk.W+tk.E+tk.N+tk.S)
 
         # Config page
         rowcounter = 0
@@ -562,6 +578,7 @@ class Main:
             with open(filename, encoding='utf-8') as f:
                 # why does it only sometimes find the file?
                 self.config.read_file(f)
+            self.python_logger.info("Loading config: "+filename)
             main_config = self.config['Main']
             elveflow_config = self.config['Elveflow']
             spec_config = self.config['SPEC']
@@ -1109,9 +1126,9 @@ class Main:
 
     def choose_take_buffer_command(self):
         if self.sucrose:
-            cerberus_take_buffer_command()
+            self.cerberus_take_buffer_command()
         else:
-            take_buffer_command()
+            self.take_buffer_command()
 
     def take_buffer_command(self):
         """Run a buffer-sample-buffer cycle."""
@@ -1251,9 +1268,9 @@ class Main:
 
     def choose_take_sample_command(self):
         if self.sucrose:
-            cerberus_take_sample_command()
+            self.cerberus_take_sample_command()
         else:
-            take_sample_command()
+            self.take_sample_command()
 
     def take_sample_command(self):
         """Run a buffer-sample-buffer cycle."""
@@ -1587,6 +1604,76 @@ class Main:
         self.queue.put((self.python_logger.info, "Finished cleaning sample"))
         self.load_sample_command()
 
+    def clean_loop(self, loop=0):
+        if loop == 0:
+            loop_name = "buffer"
+            if self.sucrose:
+                self.queue.put((self.python_logger.info, "Starting to clean buffer"))
+                self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
+                self.queue.put((self.flowpath.valve3.set_auto_position, 0))
+                self.queue.put((self.flowpath.valve4.set_auto_position, "Low Flow Soap"))
+                self.queue.put((time.sleep, self.low_soap_time.get()))
+                self.queue.put((self.flowpath.valve4.set_auto_position, "Water"))  # to avoid passing oil
+                self.queue.put((self.flowpath.valve4.set_auto_position, "Load"))
+
+                self.queue.put((self.python_logger.info, "Cleaning cerberus"))
+                self.queue.put((self.flowpath.valve6.set_auto_position, "Waste"))
+                self.queue.put((self.flowpath.valve8.set_auto_position, "Low Flow Soap"))
+                self.queue.put((time.sleep, self.low_soap_time.get()))
+
+                self.queue.put((self.python_logger.info, "Flushing High Flow Soap"))
+                self.queue.put((self.flowpath.valve6.set_auto_position, "Waste"))
+                self.queue.put((self.flowpath.valve8.set_auto_position, "High Flow Soap"))
+                self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
+                self.queue.put((self.flowpath.valve3.set_auto_position, 0))
+                self.queue.put((self.flowpath.valve4.set_auto_position, "High Flow Soap"))
+                self.queue.put((time.sleep, self.high_soap_time.get()))
+
+                self.queue.put((self.python_logger.info, "Flushing Water"))
+                self.queue.put((self.flowpath.valve6.set_auto_position, "Waste"))
+                self.queue.put((self.flowpath.valve8.set_auto_position, "Water"))
+                self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
+                self.queue.put((self.flowpath.valve3.set_auto_position, 0))
+                self.queue.put((self.flowpath.valve4.set_auto_position, "Water"))
+                self.queue.put((time.sleep, self.water_time.get()))
+
+                self.queue.put((self.python_logger.info, "Air drying loops"))
+                self.queue.put((self.flowpath.valve6.set_auto_position, "Waste"))
+                self.queue.put((self.flowpath.valve8.set_auto_position, "Air"))
+                self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
+                self.queue.put((self.flowpath.valve3.set_auto_position, 0))
+                self.queue.put((self.flowpath.valve4.set_auto_position, "Air"))
+                self.queue.put((time.sleep, self.air_time.get()))
+                self.queue.put((self.flowpath.valve4.set_auto_position, "Load"))
+                self.queue.put((self.flowpath.valve8.set_auto_position, "Load"))
+                self.queue.put((self.python_logger.info, "Done cleaning"))
+                return
+        else:
+            loop_name = "sample"
+        self.queue.put((self.python_logger.info, "Starting to clean "+loop_name))
+        self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
+        self.queue.put((self.flowpath.valve3.set_auto_position, loop))
+        self.queue.put((self.flowpath.valve4.set_auto_position, "Low Flow Soap"))
+        self.queue.put((time.sleep, self.low_soap_time.get()))
+
+        self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
+        self.queue.put((self.flowpath.valve3.set_auto_position, loop))
+        self.queue.put((self.flowpath.valve4.set_auto_position, "High Flow Soap"))
+        self.queue.put((time.sleep, self.high_soap_time.get()))
+
+        self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
+        self.queue.put((self.flowpath.valve3.set_auto_position, loop))
+        self.queue.put((self.flowpath.valve4.set_auto_position, "Water"))
+        self.queue.put((time.sleep, self.water_time.get()))
+
+        self.queue.put((self.flowpath.valve2.set_auto_position, "Waste"))
+        self.queue.put((self.flowpath.valve3.set_auto_position, loop))
+        self.queue.put((self.flowpath.valve4.set_auto_position, "Air"))
+        self.queue.put((time.sleep, self.air_time.get()))
+        self.queue.put((self.python_logger.info, "Finished cleaning "+loop_name))
+        self.queue.put((self.flowpath.valve4.set_auto_position, "Load"))
+
+
 
     def choice_refill_only_command(self):
         if self.sucrose:
@@ -1689,14 +1776,25 @@ class Main:
         purge_position = self.purge_air_pos.get()
         if self.purge_valve.position == purge_position:
             self.manual_queue.put((self.purge_valve.switchvalve, run_position))
-            self.manual_queue.put(lambda:self.purge_dry_button.configure(bg="white smoke"))
+            self.manual_queue.put(lambda: self.purge_dry_button.configure(bg="white smoke"))
             self.manual_queue.put((self.python_logger.info, "Purge stopped"))
         else:
             self.manual_queue.put((self.purge_valve.switchvalve, purge_position))
-            self.manual_queue.put(lambda:self.purge_dry_button.configure(bg="green"))
-            self.manual_queue.put(lambda:self.purge_soap_button.configure(bg="white smoke"))
-            self.manual_queue.put(lambda:self.purge_button.configure(bg="white smoke"))
+            self.manual_queue.put(lambda: self.purge_dry_button.configure(bg="green"))
+            self.manual_queue.put(lambda: self.purge_soap_button.configure(bg="white smoke"))
+            self.manual_queue.put(lambda: self.purge_button.configure(bg="white smoke"))
             self.manual_queue.put((self.python_logger.info, "Purging soap"))
+
+    def insert_purge(self, fluid=""):
+        self.queue.put((self.python_logger.info, "Purgin insert with "+fluid))
+        self.queue.put((self.flowpath.valve4.set_auto_position, "Run"))
+        self.queue.put((self.flowpath.valve3.set_auto_position, 0))
+        self.queue.put((self.flowpath.valve2.set_auto_position, fluid))
+
+    def insert_sheath_purge(self, fluid=""):
+        self.queue.put((self.python_logger.info, "Purgin insert with "+fluid))
+        self.queue.put((self.flowpath.valve8.set_auto_position, "Run"))
+        self.queue.put((self.flowpath.valve6.set_auto_position, fluid))
 
     def initialize_sheath_command(self):
         # TODO: make this a toggle button instead
@@ -1886,25 +1984,25 @@ class Main:
         newvars[0].set(self.instruments[instrument_index].name+":  ")
         self.manual_page_variables.append(newvars)
         newbuttons = [
-         tk.Label(self.manual_page, textvariable=self.manual_page_variables[instrument_index][0], bg=self.label_bg_color),
-         tk.Button(self.manual_page, text="Run", command=lambda: self.manual_queue.put(self.instruments[instrument_index].start_pump), width=6),
-         tk.Button(self.manual_page, text="Stop", command=lambda:self.manual_queue.put(self.instruments[instrument_index].stop_pump), width=6),
-         tk.Label(self.manual_page, text="  Infuse Rate:", bg=self.label_bg_color),
-         tk.Spinbox(self.manual_page, from_=0, to=1000, textvariable=self.manual_page_variables[instrument_index][1], width=10),
-         tk.Button(self.manual_page, text="Set", command=lambda: self.manual_queue.put((self.instruments[instrument_index].set_infuse_rate, self.manual_page_variables[instrument_index][1].get()))),
-         tk.Label(self.manual_page, text="  Refill Rate:", bg=self.label_bg_color),
-         tk.Spinbox(self.manual_page, from_=0, to=1000, textvariable=self.manual_page_variables[instrument_index][2], width=10),
-         tk.Button(self.manual_page, text="Set", command=lambda: self.manual_queue.put((self.instruments[instrument_index].set_refill_rate, self.manual_page_variables[instrument_index][2].get()))),
-         tk.Label(self.manual_page, text="  Direction:", bg=self.label_bg_color),
-         tk.Button(self.manual_page, text="Infuse", command=lambda: self.manual_queue.put(self.instruments[instrument_index].infuse)),
-         tk.Button(self.manual_page, text="Refill", command=lambda: self.manual_queue.put(self.instruments[instrument_index].refill)),
-         tk.Label(self.manual_page, text="Mode", bg=self.label_bg_color),
-         tk.Button(self.manual_page, text="Pump", command=lambda: self.manual_queue.put(self.instruments[instrument_index].set_mode_pump)),
-         tk.Button(self.manual_page, text="Vol", command=lambda: self.manual_queue.put(self.instruments[instrument_index].set_mode_vol)),
-         tk.Label(self.manual_page, text="  Target Vol (ml):", bg=self.label_bg_color, width=12),
-         tk.Spinbox(self.manual_page, from_=0, to=1000, textvariable=self.manual_page_variables[instrument_index][3]),
+         tk.Label(self.manual_page, textvariable=self.manual_page_variables[instrument_index][0], bg=self.label_bg_color, font=self.manual_button_font),
+         tk.Button(self.manual_page, text="Run", command=lambda: self.manual_queue.put(self.instruments[instrument_index].start_pump), width=6, font=self.manual_button_font),
+         tk.Button(self.manual_page, text="Stop", command=lambda:self.manual_queue.put(self.instruments[instrument_index].stop_pump), width=6, font=self.manual_button_font),
+         tk.Label(self.manual_page, text="  Infuse Rate:", bg=self.label_bg_color, font=self.manual_button_font),
+         tk.Spinbox(self.manual_page, from_=0, to=1000, textvariable=self.manual_page_variables[instrument_index][1], width=10, font=self.manual_button_font),
+         tk.Button(self.manual_page, text="Set", command=lambda: self.manual_queue.put((self.instruments[instrument_index].set_infuse_rate, self.manual_page_variables[instrument_index][1].get())), font=self.manual_button_font),
+         tk.Label(self.manual_page, text="  Refill Rate:", bg=self.label_bg_color, font=self.manual_button_font),
+         tk.Spinbox(self.manual_page, from_=0, to=1000, textvariable=self.manual_page_variables[instrument_index][2], width=10, font=self.manual_button_font),
+         tk.Button(self.manual_page, text="Set", command=lambda: self.manual_queue.put((self.instruments[instrument_index].set_refill_rate, self.manual_page_variables[instrument_index][2].get())), font=self.manual_button_font),
+         tk.Label(self.manual_page, text="  Direction:", bg=self.label_bg_color, font=self.manual_button_font),
+         tk.Button(self.manual_page, text="Infuse", command=lambda: self.manual_queue.put(self.instruments[instrument_index].infuse), font=self.manual_button_font),
+         tk.Button(self.manual_page, text="Refill", command=lambda: self.manual_queue.put(self.instruments[instrument_index].refill), font=self.manual_button_font),
+         tk.Label(self.manual_page, text="Mode", bg=self.label_bg_color, font=self.manual_button_font),
+         tk.Button(self.manual_page, text="Pump", command=lambda: self.manual_queue.put(self.instruments[instrument_index].set_mode_pump), font=self.manual_button_font),
+         tk.Button(self.manual_page, text="Vol", command=lambda: self.manual_queue.put(self.instruments[instrument_index].set_mode_vol), font=self.manual_button_font),
+         tk.Label(self.manual_page, text="  Target Vol (ml):", bg=self.label_bg_color, width=12, font=self.manual_button_font),
+         tk.Spinbox(self.manual_page, from_=0, to=1000, textvariable=self.manual_page_variables[instrument_index][3], font=self.manual_button_font),
          # tk.Button(self.manual_page, text="Set", command=lambda: self.queue.put((self.instruments[instrument_index].set_target_vol, self.manual_page_variables[instrument_index][3].get())))
-         tk.Button(self.manual_page, text="Set", command=lambda: self.manual_queue.put((self.instruments[instrument_index].set_target_vol, self.manual_page_variables[instrument_index][3].get())))
+         tk.Button(self.manual_page, text="Set", command=lambda: self.manual_queue.put((self.instruments[instrument_index].set_target_vol, self.manual_page_variables[instrument_index][3].get())), font=self.manual_button_font)
          ]
         # Bind Enter to Spinboxes
         newbuttons[4].bind('<Return>', lambda event: self.manual_queue.put((self.instruments[instrument_index].set_infuse_rate, self.manual_page_variables[instrument_index][1].get())))
@@ -1959,10 +2057,10 @@ class Main:
         self.manual_page_variables.append(newvars)
 
         newbuttons = [
-         tk.Label(self.manual_page, textvariable=self.manual_page_variables[instrument_index][0], bg=self.label_bg_color),
-         tk.Label(self.manual_page, text="   Position:", bg=self.label_bg_color),
-         tk.Spinbox(self.manual_page, from_=1, to=self.setup_page_variables[instrument_index][2].get(), textvariable=self.manual_page_variables[instrument_index][1], width=4),
-         tk.Button(self.manual_page, text="Change", command=lambda: self.manual_queue.put((self.instruments[instrument_index].switchvalve, self.manual_page_variables[instrument_index][1].get()))),
+         tk.Label(self.manual_page, textvariable=self.manual_page_variables[instrument_index][0], bg=self.label_bg_color, font=self.manual_button_font),
+         tk.Label(self.manual_page, text="   Position:", bg=self.label_bg_color, font=self.manual_button_font),
+         tk.Spinbox(self.manual_page, from_=1, to=self.setup_page_variables[instrument_index][2].get(), textvariable=self.manual_page_variables[instrument_index][1], width=4, font=self.manual_button_font),
+         tk.Button(self.manual_page, text="Change", command=lambda: self.manual_queue.put((self.instruments[instrument_index].switchvalve, self.manual_page_variables[instrument_index][1].get())), font=self.manual_button_font),
          ]
         newbuttons[2].bind('<Return>', lambda event: self.manual_queue.put((self.instruments[instrument_index].switchvalve, self.manual_page_variables[instrument_index][1].get())))
         self.manual_page_buttons.append(newbuttons)
@@ -2003,10 +2101,10 @@ class Main:
         self.manual_page_variables.append(newvars)
 
         newbuttons = [
-         tk.Label(self.manual_page, textvariable=self.manual_page_variables[instrument_index][0], bg=self.label_bg_color),
-         tk.Label(self.manual_page, text="   Position:", bg=self.label_bg_color),
-         tk.Spinbox(self.manual_page, values=("A", "B"), textvariable=self.manual_page_variables[instrument_index][1],width=4),
-         tk.Button(self.manual_page, text="Change", command=lambda: self.manual_queue.put((self.instruments[instrument_index].switchvalve, self.manual_page_variables[instrument_index][1].get()))),
+         tk.Label(self.manual_page, textvariable=self.manual_page_variables[instrument_index][0], bg=self.label_bg_color, font=self.manual_button_font),
+         tk.Label(self.manual_page, text="   Position:", bg=self.label_bg_color, font=self.manual_button_font),
+         tk.Spinbox(self.manual_page, values=("A", "B"), textvariable=self.manual_page_variables[instrument_index][1], width=4, font=self.manual_button_font),
+         tk.Button(self.manual_page, text="Change", command=lambda: self.manual_queue.put((self.instruments[instrument_index].switchvalve, self.manual_page_variables[instrument_index][1].get())), font=self.manual_button_font)
          ]
         newbuttons[2].bind('<Return>', lambda event: self.manual_queue.put((self.instruments[instrument_index].switchvalve, self.manual_page_variables[instrument_index][1].get())))
         self.manual_page_buttons.append(newbuttons)

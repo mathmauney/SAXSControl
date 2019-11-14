@@ -502,6 +502,10 @@ class FlowPath(tk.Canvas):
         self.valve2 = self.SelectionValve(self, 300, row1_y, 'valve2')
         self.valve2.gui_names[5] = 'Waste'
         self.valve2.gui_names[3] = 'Run'
+        self.valve2.gui_names[1] = 'Soap'
+        self.valve2.colors[1] = self.soap_color
+        self.valve2.gui_names[2] = 'Water'
+        self.valve2.colors[2] = self.water_color
         self.valve2.propagation[3] = True
         self.valve2.colors[3] = 'black'
         self.valve3 = self.SampleValve(self, 700, row1_y, 'valve3')
@@ -524,6 +528,10 @@ class FlowPath(tk.Canvas):
         self.valve6 = self.SelectionValve(self, 300, row2_y, 'valve5')
         self.valve6.gui_names[5] = 'Waste'
         self.valve6.gui_names[3] = 'Run'
+        self.valve6.gui_names[1] = 'Soap'
+        self.valve6.colors[1] = self.soap_color
+        self.valve6.gui_names[2] = 'Water'
+        self.valve6.colors[3] = self.water_color
         self.valve6.propagation[3] = True
         self.valve6.colors[3] = 'black'
         self.valve7 = self.SampleValve(self, 700, row2_y, 'valve6')
