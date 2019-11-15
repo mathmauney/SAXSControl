@@ -232,6 +232,7 @@ class FlowPath(tk.Canvas):
 
         def set_manual_position(self, position):    # TODO: Add in actual valve switching
             """Change the valve position after being clicked both visually and physically."""
+            position = position % 2
             if self.canvas.window.instruments is None:
                 self.set_position(position)
             elif self.hardware is None:
