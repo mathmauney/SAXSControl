@@ -173,7 +173,7 @@ class ElveflowHandler_SDK:
     QUEUE_MAXLEN = 0  # zero means infinite
 
     PRESSURE_MAXSLOPE = 888 * PID_SLEEPTIME     # in mbar per update frame; the 888 is in mbar/s
-    VOLUME_KP = 0
+    VOLUME_KP = 50
     VOLUME_KI = 50
     VOLUME_KD = 0
 

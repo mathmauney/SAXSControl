@@ -52,6 +52,7 @@ class ElveflowDisplay(tk.Canvas):
         self.saveFileNameSuffix_var = tk.StringVar()
         self.maingui = maingui
         (self.kp_var, self.ki_var, self.kd_var) = (tk.StringVar(), tk.StringVar(), tk.StringVar())
+        self.kp_var.set(50)
         self.ki_var.set(50)
 
         self.dataTitle = "Elveflow data"
@@ -483,7 +484,7 @@ class ElveflowDisplay(tk.Canvas):
         except AttributeError:
             pass
 
-    def run_volume(self, channel=1, target=0, margin=0.15, stable_time=0.5):
+    def run_volume(self, channel=1, target=0, margin=0.15, stable_time=2):
         """run a volume PID loop until you are within +/- margin of the target
         for at least stable_time (in seconds) amount of time.
 

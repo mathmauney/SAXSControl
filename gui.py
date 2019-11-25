@@ -200,6 +200,13 @@ class Main:
         self.cerberus_refill_rate = tk.DoubleVar(value=25)     # May need ot be a doublevar
         self.cerberus_refill_rate_box = tk.Spinbox(self.config_page, textvariable=self.cerberus_refill_rate)
 
+        self.cerberus_init_flowrate_label = tk.Label(self.config_page, text='Init flowrate:', bg=self.label_bg_color)
+        self.cerberus_init_time_label = tk.Label(self.config_page, text='Init time:', bg=self.label_bg_color)
+        self.cerberus_init_flowrate = tk.DoubleVar(value=50)     # May need ot be a doublevar
+        self.cerberus_init_flowrate_box = tk.Spinbox(self.config_page, textvariable=self.cerberus_init_flowrate)
+        self.cerberus_init_time = tk.DoubleVar(value=1)     # May need ot be a doublevar
+        self.cerberus_init_time_box = tk.Spinbox(self.config_page, textvariable=self.cerberus_init_time)
+
         self.oil_valve_names_label = tk.Label(self.config_page, text='Oil Valve Hardware Port Names', bg=self.label_bg_color)
         self.oil_valve_names = []
         self.oil_valve_name_boxes = []
@@ -433,13 +440,18 @@ class Main:
         self.sample_flowrate_box.grid(row=rowcounter, column=1, sticky=tk.W+tk.E+tk.N+tk.S)
         self.oil_refill_flowrate_label.grid(row=rowcounter, column=2, sticky=tk.W+tk.E+tk.N+tk.S)
         self.oil_refill_flowrate_box.grid(row=rowcounter, column=3, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.cerberus_refill_rate_label.grid(row=rowcounter, column=4, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.cerberus_refill_rate_box.grid(row=rowcounter, column=5, sticky=tk.W+tk.E+tk.N+tk.S)
         rowcounter += 1
         self.cerberus_volume_label.grid(row=rowcounter, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
         self.cerberus_volume_box.grid(row=rowcounter, column=1, sticky=tk.W+tk.E+tk.N+tk.S)
         self.cerberus_flowrate_label.grid(row=rowcounter, column=2, sticky=tk.W+tk.E+tk.N+tk.S)
         self.cerberus_flowrate_box.grid(row=rowcounter, column=3, sticky=tk.W+tk.E+tk.N+tk.S)
-        self.cerberus_refill_rate_label.grid(row=rowcounter, column=4, sticky=tk.W+tk.E+tk.N+tk.S)
-        self.cerberus_refill_rate_box.grid(row=rowcounter, column=5, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.cerberus_init_flowrate_label.grid(row=rowcounter, column=4, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.cerberus_init_flowrate_box.grid(row=rowcounter, column=5, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.cerberus_init_time_label.grid(row=rowcounter, column=6, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.cerberus_init_time_box.grid(row=rowcounter, column=7, sticky=tk.W+tk.E+tk.N+tk.S)
+
         rowcounter += 1
         self.oil_valve_names_label.grid(row=rowcounter, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
         self.set_oil_valve_names_button.grid(row=rowcounter, column=7, sticky=tk.W+tk.E+tk.N+tk.S)
@@ -1073,7 +1085,9 @@ class Main:
         # Start cerberus
         self.queue.put((self.flowpath.valve6.set_auto_position, "Run"))
         self.queue.put((self.flowpath.valve8.set_auto_position, "Run"))
-        self.queue.put((self.cerberus_pump.infuse_volume, self.cerberus_volume.get()/1000, self.cerberus_flowrate.get()))
+        self.queue.put((self.cerberus_pump.infuse_volume, self.cerberus_volume.get()/1000, self.cerberus_init_flowrate.get()))
+        self.queue.put((time.sleep,self.cerberus_init_time.get()))
+        self.queue.put((self.cerberus_pump.set_infuse_rate, self.cerberus_flowrate.get()))
         # start regular
         self.queue.put((self.flowpath.valve2.set_auto_position, "Run"))
         self.queue.put((self.flowpath.valve3.set_auto_position, 0))
