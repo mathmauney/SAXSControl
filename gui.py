@@ -639,6 +639,8 @@ class Main:
             self.cerberus_volume.set(cerberus_config.get('Volume', 0))
             self.cerberus_flowrate.set(cerberus_config.get('Flowrate', 0))
             self.cerberus_refill_rate.set(cerberus_config.get('Refill Rate', 0))
+            self.cerberus_init_flowrate.set(cerberus_config.get('Init Flowrate', 0))
+            self.cerberus_init_time.set(cerberus_config.get('Init Time', 0))
             # Valve Config
             for i in range(0, 6):
                 field = 'name'+str(i+1)
@@ -739,6 +741,8 @@ class Main:
             cerberus_config['Volume'] = str(self.cerberus_volume.get())
             cerberus_config['Flowrate'] = str(self.cerberus_flowrate.get())
             cerberus_config['Refill Rate'] = str(self.cerberus_refill_rate.get())
+            cerberus_config["Init Flowrate"] = str(self.cerberus_init_flowrate.get())
+            cerberus_config["Init Time"] = str(self.cerberus_init_time.get())
             # Valve Configs
             for i in range(0, 6):
                 field = 'name'+str(i+1)
