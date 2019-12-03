@@ -450,8 +450,8 @@ class message4(SpecMessage):
         header = struct.pack(self.packedHeaderDataFormat, self.magic, self.vers, self.size,
                              self.sn, self.sec, self.usec, self.cmd, self.type,
                              self.rows, self.cols, datalen, self.err, self.flags, str(self.name).encode('ascii'))
-        print('Header: ' + str(header))
-        print('Data: ' + str(data))
+        # print('Header: ' + str(header))
+        # print('Data: ' + str(data))
         return header + data.encode('ascii')
 
 
