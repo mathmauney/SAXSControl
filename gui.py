@@ -307,6 +307,8 @@ class Main:
         self.purge_valve = None
         self.NumberofPumps = 0
         self.last_delivered_volume = 0
+        self.is_insert_purging = False
+        self.is_insert_sheath_purging = False
         # Setup Page
         self.hardware_config_options = ("Pump", "Oil Valve", "Sample/Buffer Valve", "Loading Valve", "Purge", "cerberus Oil", "cerberus Load", "cerberus Pump")
         self.AvailablePorts = SAXSDrivers.list_available_ports()
@@ -649,7 +651,7 @@ class Main:
                 self.cerberus_oil_valve_names[i].set(cerberus_oil_config.get(field, ''))
                 self.cerberus_loading_valve_names[i].set(cerberus_loading_config.get(field, ''))
             # Purge valve config
-            self.purge_running_pos.set(cerberus_config.get('Purge Running',1))
+            self.purge_running_pos.set(cerberus_config.get('Purge Running', 1))
             self.purge_water_pos.set(cerberus_config.get('Purge Water', 1))
             self.purge_soap_pos.set(cerberus_config.get('Purge Soap', 1))
             self.purge_air_pos.set(cerberus_config.get('Purge Air', 1))
@@ -937,6 +939,10 @@ class Main:
         self.main_tab_ax1.axvline(int(time.time() - self.elveflow_display.starttime), color=color, linewidth=5)
 
     def auto_run_choice(self):
+        self.queue.put((self.set_insert_purge, False))
+        self.queue.put((self.set_insert_sheath_purge, False))
+        self.queue.put(self.unset_insert_purge)
+        self.queue.put(self.unset_insert_sheath_purge)
         if self.sucrose:
             self.cerberus_buffer_sample_buffer_command()
         else:
@@ -1143,6 +1149,10 @@ class Main:
         self.last_delivered_volume = self.cerberus_pump.get_delivered_volume()
 
     def choose_take_buffer_command(self):
+        self.queue.put((self.set_insert_purge, False))
+        self.queue.put((self.set_insert_sheath_purge, False))
+        self.queue.put(self.unset_insert_purge)
+        self.queue.put(self.unset_insert_sheath_purge)
         if self.sucrose:
             self.cerberus_take_buffer_command()
         else:
@@ -1285,6 +1295,10 @@ class Main:
         self.queue.put(self.update_graph)
 
     def choose_take_sample_command(self):
+        self.queue.put((self.set_insert_purge, False))
+        self.queue.put((self.set_insert_sheath_purge, False))
+        self.queue.put(self.unset_insert_purge)
+        self.queue.put(self.unset_insert_sheath_purge)
         if self.sucrose:
             self.cerberus_take_sample_command()
         else:
@@ -1429,6 +1443,11 @@ class Main:
 
 
     def choose_clean_and_refill_command(self):
+        self.queue.put((self.set_insert_purge, False))
+        self.queue.put((self.set_insert_sheath_purge, False))
+        self.queue.put(self.unset_insert_purge)
+        self.queue.put(self.unset_insert_sheath_purge)
+
         if self.sucrose:
             self.cerberus_clean_and_refill_command()
         else:
@@ -1495,6 +1514,11 @@ class Main:
         self.oil_refill_flag = True
 
     def choose_cleaning(self):
+        self.queue.put((self.set_insert_purge, False))
+        self.queue.put((self.set_insert_sheath_purge, False))
+        self.queue.put(self.unset_insert_purge)
+        self.queue.put(self.unset_insert_sheath_purge)
+
         if self.sucrose:
             self.cerberus_clean_only_command()
         else:
@@ -1694,6 +1718,11 @@ class Main:
 
 
     def choice_refill_only_command(self):
+        self.queue.put((self.set_insert_purge, False))
+        self.queue.put((self.set_insert_sheath_purge, False))
+        self.queue.put(self.unset_insert_purge)
+        self.queue.put(self.unset_insert_sheath_purge)
+
         if self.sucrose:
             self.cerberus_refill_only_command()
         else:
@@ -1745,6 +1774,10 @@ class Main:
         if self.sucrose:
             self.queue.put((self.flowpath.valve8.set_auto_position, "Load"))
             self.queue.put((self.flowpath.valve6.set_auto_position, "Waste"))
+        self.queue.put((self.set_insert_purge, False))
+        self.queue.put((self.set_insert_sheath_purge, False))
+        self.queue.put(self.unset_insert_purge)
+        self.queue.put(self.unset_insert_sheath_purge)
 
     def load_buffer_command(self):
         self.queue.put((self.flowpath.valve4.set_auto_position, "Load"))
@@ -1753,6 +1786,10 @@ class Main:
         if self.sucrose:
             self.queue.put((self.flowpath.valve8.set_auto_position, "Load"))
             self.queue.put((self.flowpath.valve6.set_auto_position, "Waste"))
+        self.queue.put((self.set_insert_purge, False))
+        self.queue.put((self.set_insert_sheath_purge, False))
+        self.queue.put(self.unset_insert_purge)
+        self.queue.put(self.unset_insert_sheath_purge)
 
     def unset_purge(self):
         self.purge_valve.switchvalve(self.purge_running_pos.get())
@@ -1803,18 +1840,57 @@ class Main:
             self.manual_queue.put(lambda: self.purge_button.configure(bg="white smoke"))
             self.manual_queue.put((self.python_logger.info, "Purging soap"))
 
+    def unset_insert_purge(self, reset=True):
+        self.purge_insert_soap_button.configure(bg="white smoke")
+        self.purge_insert_water_button.configure(bg="white smoke")
+        #self.is_insert_purging = False
+
+    def unset_insert_sheath_purge(self):
+        self.purge_sheath_insert_soap_button.configure(bg="white smoke")
+        self.purge_sheath_insert_water_button.configure(bg="white smoke")
+        #self.is_insert_sheath_purging = False
+
+    def set_insert_purge(self, option=True):
+        self.is_insert_purging = option
+
+    def set_insert_sheath_purge(self, option=True):
+        self.is_insert_sheath_purging = option
+
     def insert_purge(self, fluid=""):
-        self.queue.put((self.python_logger.info, "Purgin insert with "+fluid))
-        self.queue.put((self.flowpath.valve4.set_auto_position, "Run"))
-        self.queue.put((self.flowpath.valve3.set_auto_position, 0))
-        self.queue.put((self.flowpath.valve2.set_auto_position, fluid))
+        self.unset_insert_purge()
+        if not self.is_insert_purging:
+            self.queue.put((self.python_logger.info, "Purgin insert with "+fluid))
+            #self.queue.put((self.flowpath.valve4.set_auto_position, "Run"))
+            #self.queue.put((self.flowpath.valve3.set_auto_position, 0))
+            #self.queue.put((self.flowpath.valve2.set_auto_position, fluid))
+            if fluid == "Soap":
+                self.queue.put(lambda: self.purge_insert_soap_button.configure(bg="green"))
+            elif fluid == "Water":
+                self.queue.put(lambda: self.purge_insert_water_button.configure(bg="green"))
+            self.queue.put((self.set_insert_purge, True))
+        else:
+            #self.queue.put(self.load_buffer_command)
+            self.queue.put((self.set_insert_purge, False))
+            pass
 
     def insert_sheath_purge(self, fluid=""):
         if not self.sucrose:
-            self.info.warning("Button only for sucrose mode")
-        self.queue.put((self.python_logger.info, "Purgin insert with "+fluid))
-        self.queue.put((self.flowpath.valve8.set_auto_position, "Run"))
-        self.queue.put((self.flowpath.valve6.set_auto_position, fluid))
+            self.python_logger.warning("Button only for sucrose mode")
+            return
+        self.unset_insert_sheath_purge()
+        if not self.is_insert_sheath_purging:
+            self.queue.put((self.python_logger.info, "Purgin insert with "+fluid))
+            #self.queue.put((self.flowpath.valve8.set_auto_position, "Run"))
+            #self.queue.put((self.flowpath.valve6.set_auto_position, fluid))
+            if fluid == "Soap":
+                self.queue.put(lambda: self.purge_sheath_insert_soap_button.configure(bg="green"))
+            elif fluid == "Water":
+                self.queue.put(lambda: self.purge_sheath_insert_water_button.configure(bg="green"))
+            self.queue.put((self.set_insert_sheath_purge, True))
+        else:
+            #self.queue.put(self.load_buffer_command)
+            self.queue.put((self.set_insert_sheath_purge, False))
+            pass
 
     def initialize_sheath_command(self):
         # TODO: make this a toggle button instead
