@@ -148,7 +148,7 @@ class Main:
         self.canvas.draw()
         # Manual Page
         self.manual_button_font = 'Arial 10 bold'
-        self.tseries_button = tk.Button(self.manual_page, text='Take t-series', command=lambda: self.python_logger.warning("Dummy Command"), font=auto_button_font, width=auto_button_width+2)
+        self.tseries_button = tk.Button(self.manual_page, text='Take t-series', command=lambda: self.run_tseries,  font=auto_button_font, width=auto_button_width+2)
         self.take_buffer_button = tk.Button(self.manual_page, text='Manual Buffer', command=self.choose_take_buffer_command, font=auto_button_font, width=auto_button_width+2)
         self.take_sample_button = tk.Button(self.manual_page, text='Manual Sample', command=self.choose_take_sample_command, font=auto_button_font, width=auto_button_width+2)
         self.clean_sample_button = tk.Button(self.manual_page, text='Clean Sample', command=lambda: self.clean_loop(1), font=auto_button_font, width=auto_button_width+2)
@@ -1860,16 +1860,16 @@ class Main:
         self.unset_insert_purge()
         if not self.is_insert_purging:
             self.queue.put((self.python_logger.info, "Purgin insert with "+fluid))
-            #self.queue.put((self.flowpath.valve4.set_auto_position, "Run"))
-            #self.queue.put((self.flowpath.valve3.set_auto_position, 0))
-            #self.queue.put((self.flowpath.valve2.set_auto_position, fluid))
+            self.queue.put((self.flowpath.valve4.set_auto_position, "Run"))
+            self.queue.put((self.flowpath.valve3.set_auto_position, 0))
+            self.queue.put((self.flowpath.valve2.set_auto_position, fluid))
             if fluid == "Soap":
                 self.queue.put(lambda: self.purge_insert_soap_button.configure(bg="green"))
             elif fluid == "Water":
                 self.queue.put(lambda: self.purge_insert_water_button.configure(bg="green"))
             self.queue.put((self.set_insert_purge, True))
         else:
-            #self.queue.put(self.load_buffer_command)
+            self.queue.put(self.load_buffer_command)
             self.queue.put((self.set_insert_purge, False))
             pass
 
@@ -1880,15 +1880,15 @@ class Main:
         self.unset_insert_sheath_purge()
         if not self.is_insert_sheath_purging:
             self.queue.put((self.python_logger.info, "Purgin insert with "+fluid))
-            #self.queue.put((self.flowpath.valve8.set_auto_position, "Run"))
-            #self.queue.put((self.flowpath.valve6.set_auto_position, fluid))
+            self.queue.put((self.flowpath.valve8.set_auto_position, "Run"))
+            self.queue.put((self.flowpath.valve6.set_auto_position, fluid))
             if fluid == "Soap":
                 self.queue.put(lambda: self.purge_sheath_insert_soap_button.configure(bg="green"))
             elif fluid == "Water":
                 self.queue.put(lambda: self.purge_sheath_insert_water_button.configure(bg="green"))
             self.queue.put((self.set_insert_sheath_purge, True))
         else:
-            #self.queue.put(self.load_buffer_command)
+            self.queue.put(self.load_buffer_command)
             self.queue.put((self.set_insert_sheath_purge, False))
             pass
 
