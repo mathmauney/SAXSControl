@@ -124,7 +124,7 @@ class SpecCommand(BaseSpecCommand):
         if self.connection.serverVersion < 3:
             connectionCommand = 'send_msg_cmd_with_return'
         else:
-            if type(command) == bytes:
+            if type(command) == str:
                 connectionCommand = 'send_msg_cmd_with_return'
             else:
                 connectionCommand = 'send_msg_func_with_return'
@@ -240,16 +240,3 @@ class SpecCommandA(BaseSpecCommand):
             return
 
         self.connection.abort()
-
-
-
-
-
-
-
-
-
-
-
-
-

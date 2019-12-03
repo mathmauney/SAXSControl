@@ -237,7 +237,8 @@ class ElveflowHandler_SDK:
                 for i in range(1, 5):
                     error = Elveflow_SDK.OB1_Get_Press(self.instr_ID.value, c_int32(i), 1, byref(self.calib), byref(get_pressure), 1000)
                     if error != 0:
-                        self.errorlogger.warning('ERROR CODE PRESSURE %i: %s' % (i, error))
+                        # self.errorlogger.warning('ERROR CODE PRESSURE %i: %s' % (i, error))
+                        pass
                     newline[self.header[i]] = get_pressure.value
                 for i in range(1, 5):
                     error = Elveflow_SDK.OB1_Get_Sens_Data(self.instr_ID.value, c_int32(i), 1, byref(data_sens))
@@ -329,7 +330,8 @@ class ElveflowHandler_SDK:
         get_pressure = c_double()
         error = Elveflow_SDK.OB1_Get_Press(self.instr_ID.value, c_int32(channel_number), 1, byref(self.calib), byref(get_pressure), 1000)
         if error != 0:
-            self.errorlogger.warning('ERROR CODE PRESSURE %i: %s' % (channel_number, error))
+            # self.errorlogger.warning('ERROR CODE PRESSURE %i: %s' % (channel_number, error))
+            pass
         return get_pressure.value
 
     def set_pressure_loop(self, channel_number, value, interrupt_event=None, on_finish=None):

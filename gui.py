@@ -148,7 +148,7 @@ class Main:
         self.canvas.draw()
         # Manual Page
         self.manual_button_font = 'Arial 10 bold'
-        self.tseries_button = tk.Button(self.manual_page, text='Take t-series', command=lambda: self.python_logger.warning("Dummy Command"), font=auto_button_font, width=auto_button_width+2)
+        self.tseries_button = tk.Button(self.manual_page, text='Take t-series', command=self.run_tseries, font=auto_button_font, width=auto_button_width+2)
         self.take_buffer_button = tk.Button(self.manual_page, text='Manual Buffer', command=self.choose_take_buffer_command, font=auto_button_font, width=auto_button_width+2)
         self.take_sample_button = tk.Button(self.manual_page, text='Manual Sample', command=self.choose_take_sample_command, font=auto_button_font, width=auto_button_width+2)
         self.clean_sample_button = tk.Button(self.manual_page, text='Clean Sample', command=lambda: self.clean_loop(1), font=auto_button_font, width=auto_button_width+2)

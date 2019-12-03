@@ -16,11 +16,11 @@ def robustApply(slot, arguments = ()):
     """Call slot with appropriate number of arguments"""
     if hasattr(slot, '__call__'):
         # Slot is a class instance ?
-        if hasattr( slot.__call__, 'im_func'): # or hasattr( slot.__call__, 'im_code'): WARNING:im_code does not seem to exist?
+        if hasattr( slot.__call__, '__func__'): # or hasattr( slot.__call__, 'im_code'): WARNING:im_code does not seem to exist?
             # Reassign slot to the actual method that will be called
             slot = slot.__call__
 
-    if hasattr(slot, 'im_func'):
+    if hasattr(slot, '__func__'):
         # an instance method
         n_args = slot.__func__.__code__.co_argcount - 1
     else:
@@ -156,9 +156,9 @@ class BoundMethodWeakRef(object):
                 """Return a weak-reference-like instance for a bound method
 
                 target -- the instance-method target for the weak
-                        reference, must have im_self and im_func attributes
+                        reference, must have im_self and __func__ attributes
                         and be reconstructable via:
-                                target.im_func.__get__( target.im_self )
+                                target.__func__.__get__( target.im_self )
                         which is true of built-in instance methods.
                 onDelete -- optional callback which will be called
                         when this weak reference ceases to be valid
