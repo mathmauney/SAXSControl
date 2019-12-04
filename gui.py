@@ -959,6 +959,19 @@ class Main:
             tk.messagebox.showinfo('Error', 'Filename is blank or contains invalid characters. \nThese include: %s (includes spaces).' % (self.illegal_chars))
             return
 
+        if (self.first_buffer_volume.get() / self.sample_flowrate.get() * 60 < self.tseries_frames.get() * self.tseries_time.get()) or \
+            (self.sample_volume.get() / self.sample_flowrate.get() * 60 < self.tseries_frames.get() * self.tseries_time.get()) or\
+            (self.last_buffer_volume.get() / self.sample_flowrate.get() * 60 < self.tseries_frames.get() * self.tseries_time.get()): # CTRL-F ANCHOR
+            self.python_logger.warning(f"t-series time: {self.tseries_frames.get() * self.tseries_time.get()}," +
+                f"pre-buffer time {self.first_buffer_volume.get() / self.sample_flowrate.get() * 60}," +
+                f"sample time {self.sample_volume.get() / self.sample_flowrate.get() * 60}," +
+                f"post-buffer time{self.last_buffer_volume.get() / self.sample_flowrate.get() * 60}")
+            MsgBox = messagebox.askquestion('Warning', 'T-series time is greater than flow time. Continue?', icon='warning')
+            if MsgBox == 'yes':
+                pass
+            else:
+                return
+
         if np.abs(
             self.elveflow_display.elveflow_handler.getPressure(int(self.elveflow_sheath_channel.get()))
              - float(self.elveflow_sheath_volume.get()) ) > 1:
