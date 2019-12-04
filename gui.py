@@ -958,14 +958,14 @@ class Main:
         if not self.is_filename_safe():
             tk.messagebox.showinfo('Error', 'Filename is blank or contains invalid characters. \nThese include: %s (includes spaces).' % (self.illegal_chars))
             return
-
-        if (self.first_buffer_volume.get() / self.sample_flowrate.get() * 60 < self.tseries_frames.get() * self.tseries_time.get()) or \
-            (self.sample_volume.get() / self.sample_flowrate.get() * 60 < self.tseries_frames.get() * self.tseries_time.get()) or\
-            (self.last_buffer_volume.get() / self.sample_flowrate.get() * 60 < self.tseries_frames.get() * self.tseries_time.get()): # CTRL-F ANCHOR
+        
+        if ((self.first_buffer_volume.get()-self.first_buffer_eq_volume.get()) / self.sample_flowrate.get() * 60 < self.tseries_frames.get() * self.tseries_time.get()) or \
+            ((self.sample_volume.get()-self.sample_eq_volume.get()) / self.sample_flowrate.get() * 60 < self.tseries_frames.get() * self.tseries_time.get()) or\
+            ((self.last_buffer_volume.get()-self.last_buffer_eq_volume.get()) / self.sample_flowrate.get() * 60 < self.tseries_frames.get() * self.tseries_time.get()):
             self.python_logger.warning(f"t-series time: {self.tseries_frames.get() * self.tseries_time.get()}," +
-                f"pre-buffer time {self.first_buffer_volume.get() / self.sample_flowrate.get() * 60}," +
-                f"sample time {self.sample_volume.get() / self.sample_flowrate.get() * 60}," +
-                f"post-buffer time{self.last_buffer_volume.get() / self.sample_flowrate.get() * 60}")
+                f"pre-buffer time {(self.first_buffer_volume.get()-self.first_buffer_eq_volume.get()) / self.sample_flowrate.get() * 60}," +
+                f"sample time {(self.sample_volume.get()-self.sample_eq_volume.get()) / self.sample_flowrate.get() * 60}," +
+                f"post-buffer time {(self.last_buffer_volume.get()-self.last_buffer_eq_volume.get()) / self.sample_flowrate.get() * 60}")
             MsgBox = messagebox.askquestion('Warning', 'T-series time is greater than flow time. Continue?', icon='warning')
             if MsgBox == 'yes':
                 pass
@@ -1066,6 +1066,19 @@ class Main:
         if not self.is_filename_safe():
             tk.messagebox.showinfo('Error', 'Filename is blank or contains invalid characters. \nThese include: %s (includes spaces).' % (self.illegal_chars))
             return
+
+        if ((self.first_buffer_volume.get()-self.first_buffer_eq_volume.get()) / self.sample_flowrate.get() * 60 < self.tseries_frames.get() * self.tseries_time.get()) or \
+            ((self.sample_volume.get()-self.sample_eq_volume.get()) / self.sample_flowrate.get() * 60 < self.tseries_frames.get() * self.tseries_time.get()) or\
+            ((self.last_buffer_volume.get()-self.last_buffer_eq_volume.get()) / self.sample_flowrate.get() * 60 < self.tseries_frames.get() * self.tseries_time.get()):
+            self.python_logger.warning(f"t-series time: {self.tseries_frames.get() * self.tseries_time.get()}," +
+                f"pre-buffer time {(self.first_buffer_volume.get()-self.first_buffer_eq_volume.get()) / self.sample_flowrate.get() * 60}," +
+                f"sample time {(self.sample_volume.get()-self.sample_eq_volume.get()) / self.sample_flowrate.get() * 60}," +
+                f"post-buffer time {(self.last_buffer_volume.get()-self.last_buffer_eq_volume.get()) / self.sample_flowrate.get() * 60}")
+            MsgBox = messagebox.askquestion('Warning', 'T-series time is greater than flow time. Continue?', icon='warning')
+            if MsgBox == 'yes':
+                pass
+            else:
+                return
 
         if np.abs(
                 self.elveflow_display.elveflow_handler.getPressure(int(self.elveflow_sheath_channel.get()))
