@@ -6,7 +6,7 @@ Alex Mauney
 
 
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, simpledialog
 from widgets import FlowPath, ElveflowDisplay, MiscLogger, COMPortSelector, ConsoleUi
 import tkinter.ttk as ttk
 import time
@@ -958,6 +958,10 @@ class Main:
         self.queue.put((self.set_insert_sheath_purge, False))
         self.queue.put(self.unset_insert_purge)
         self.queue.put(self.unset_insert_sheath_purge)
+        answer = simpledialog.askstring("Input", "Sample name:")
+        if answer is not None:
+            self.spec_filename.set(answer)
+
         if self.sucrose:
             self.cerberus_buffer_sample_buffer_command()
         else:
@@ -973,7 +977,7 @@ class Main:
         if not self.is_filename_safe():
             tk.messagebox.showinfo('Error', 'Filename is blank or contains invalid characters. \nThese include: %s (includes spaces).' % (self.illegal_chars))
             return
-        
+
         if ((self.first_buffer_volume.get()-self.first_buffer_eq_volume.get()) / self.sample_flowrate.get() * 60 < self.tseries_buffer_frames.get() * self.tseries_buffer_time.get()) or \
             ((self.sample_volume.get()-self.sample_eq_volume.get()) / self.sample_flowrate.get() * 60 < self.tseries_frames.get() * self.tseries_time.get()) or\
             ((self.last_buffer_volume.get()-self.last_buffer_eq_volume.get()) / self.sample_flowrate.get() * 60 < self.tseries_buffer_frames.get() * self.tseries_buffer_time.get()):
