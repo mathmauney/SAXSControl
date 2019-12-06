@@ -241,9 +241,9 @@ class Main:
         self.tseries_label = tk.Label(self.config_page, text='tseries parameters:', bg=self.label_bg_color)
 
         self.tseries_buffer_time = tk.IntVar(value=0)
-        self.tseries_buffer_time_box = tk.Entry(self.config_page, textvariable=self.tseries_time)
+        self.tseries_buffer_time_box = tk.Entry(self.config_page, textvariable=self.tseries_buffer_time)
         self.tseries_buffer_frames = tk.IntVar(value=0)
-        self.tseries_buffer_frames_box = tk.Entry(self.config_page, textvariable=self.tseries_frames)
+        self.tseries_buffer_frames_box = tk.Entry(self.config_page, textvariable=self.tseries_buffer_frames)
         self.tseries_buffer_label = tk.Label(self.config_page, text='Buffer tseries parameters:', bg=self.label_bg_color)
 
         self.elveflow_sourcename = tk.StringVar()
@@ -498,10 +498,10 @@ class Main:
         self.elveflow_sheath_volume_box.grid(row=rowcounter, column=2, sticky=tk.W+tk.E+tk.N+tk.S)
         rowcounter += 1
         self.tseries_label.grid(row=rowcounter, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
-        self.tseries_time_box.grid(row=rowcounter, column=1, sticky=tk.W+tk.E+tk.N+tk.S)
-        self.tseries_frames_box.grid(row=rowcounter, column=2, sticky=tk.W+tk.E+tk.N+tk.S)
-        self.tseries_buffer_label.grid(row=rowcounter, column=3, sticky=tk.W+tk.E+tk.N+tk.S)
-        self.tseries_buffer_time_box.grid(row=rowcounter, column=4, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.tseries_time_box.grid(row=rowcounter, column=2, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.tseries_frames_box.grid(row=rowcounter, column=1, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.tseries_buffer_label.grid(row=rowcounter, column=4, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.tseries_buffer_time_box.grid(row=rowcounter, column=3, sticky=tk.W+tk.E+tk.N+tk.S)
         self.tseries_buffer_frames_box.grid(row=rowcounter, column=5, sticky=tk.W+tk.E+tk.N+tk.S)
 
         rowcounter += 1
@@ -631,8 +631,8 @@ class Main:
             self.spec_address.set(spec_config.get('spec_host', ''))
             self.tseries_time.set(spec_config.get('tseries_time', '10'))
             self.tseries_frames.set(spec_config.get('tseries_frames', '10'))
-            self.tseries_buffer_time.set(spec_config.get('tseries_time', '10'))
-            self.tseries_buffer_frames.set(spec_config.get('tseries_frames', '10'))
+            self.tseries_buffer_time.set(spec_config.get('tseries_buffer_time', '10'))
+            self.tseries_buffer_frames.set(spec_config.get('tseries_buffer_frames', '10'))
             self.spec_sub_directory.set(spec_config.get('sub_dir', self.old_sub_directory))
             self.old_sub_directory = self.spec_sub_directory.get()
             self.spec_base_directory.set(spec_config.get('base_dir', self.old_base_directory))
