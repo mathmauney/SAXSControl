@@ -500,9 +500,9 @@ class Main:
         self.tseries_label.grid(row=rowcounter, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
         self.tseries_time_box.grid(row=rowcounter, column=2, sticky=tk.W+tk.E+tk.N+tk.S)
         self.tseries_frames_box.grid(row=rowcounter, column=1, sticky=tk.W+tk.E+tk.N+tk.S)
-        self.tseries_buffer_label.grid(row=rowcounter, column=4, sticky=tk.W+tk.E+tk.N+tk.S)
-        self.tseries_buffer_time_box.grid(row=rowcounter, column=3, sticky=tk.W+tk.E+tk.N+tk.S)
-        self.tseries_buffer_frames_box.grid(row=rowcounter, column=5, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.tseries_buffer_label.grid(row=rowcounter, column=3, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.tseries_buffer_time_box.grid(row=rowcounter, column=5, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.tseries_buffer_frames_box.grid(row=rowcounter, column=4, sticky=tk.W+tk.E+tk.N+tk.S)
 
         rowcounter += 1
         self.low_soap_time_label.grid(row=rowcounter, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
@@ -958,8 +958,11 @@ class Main:
         self.queue.put((self.set_insert_sheath_purge, False))
         self.queue.put(self.unset_insert_purge)
         self.queue.put(self.unset_insert_sheath_purge)
-        answer = simpledialog.askstring("Input", "Sample name:")
-        if answer is not None:
+        answer = simpledialog.askstring("Input", "Sample name: \n (Leave empty for previously set)")
+        if answer is None:
+            self.python_logger.warning("Cancelled during name pop-up")
+            return
+        elif answer != "":
             self.spec_filename.set(answer)
 
         if self.sucrose:
@@ -1073,6 +1076,9 @@ class Main:
             self.graph_end_time = int(time.time())
         self.queue.put(update_end_time)
         self.queue.put((self.python_logger.info, "Done with running buffer-sample-buffer"))
+        self.queue.put((winsound.Beep,500,300))
+        self.queue.put((winsound.Beep,1000,300))
+        self.queue.put((winsound.Beep,500,300))
 
         self.clean_and_refill_command()  # Run a clean and refill after finishing
 
@@ -1189,6 +1195,9 @@ class Main:
             self.graph_end_time = int(time.time())
         self.queue.put(update_end_time)
         self.queue.put((self.python_logger.info, "Done with running buffer-sample-buffer"))
+        self.queue.put((winsound.Beep,500,300))
+        self.queue.put((winsound.Beep,1000,300))
+        self.queue.put((winsound.Beep,500,300))
 
         self.queue.put((self.cerberus_clean_and_refill_command, False))  # Run a clean and refill after finishing
 
