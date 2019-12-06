@@ -959,12 +959,13 @@ class Main:
             tk.messagebox.showinfo('Error', 'Filename is blank or contains invalid characters. \nThese include: %s (includes spaces).' % (self.illegal_chars))
             return
         
-        if ((self.first_buffer_volume.get()-self.first_buffer_eq_volume.get()) / self.sample_flowrate.get() * 60 < self.tseries_frames.get() * self.tseries_time.get()) or \
+        if ((self.first_buffer_volume.get()-self.first_buffer_eq_volume.get()) / self.sample_flowrate.get() * 60 < self.tseries_buffer_frames.get() * self.tseries_buffer_time.get()) or \
             ((self.sample_volume.get()-self.sample_eq_volume.get()) / self.sample_flowrate.get() * 60 < self.tseries_frames.get() * self.tseries_time.get()) or\
-            ((self.last_buffer_volume.get()-self.last_buffer_eq_volume.get()) / self.sample_flowrate.get() * 60 < self.tseries_frames.get() * self.tseries_time.get()):
-            self.python_logger.warning(f"t-series time: {self.tseries_frames.get() * self.tseries_time.get()}," +
-                f"pre-buffer time {(self.first_buffer_volume.get()-self.first_buffer_eq_volume.get()) / self.sample_flowrate.get() * 60}," +
-                f"sample time {(self.sample_volume.get()-self.sample_eq_volume.get()) / self.sample_flowrate.get() * 60}," +
+            ((self.last_buffer_volume.get()-self.last_buffer_eq_volume.get()) / self.sample_flowrate.get() * 60 < self.tseries_buffer_frames.get() * self.tseries_buffer_time.get()):
+            self.python_logger.warning(f"sample t-series time: {self.tseries_frames.get() * self.tseries_time.get()}\n" +
+                f"buffer t-series time: {self.tseries_frames.get() * self.tseries_time.get()}\n" +
+                f"pre-buffer time {(self.first_buffer_volume.get()-self.first_buffer_eq_volume.get()) / self.sample_flowrate.get() * 60}\n" +
+                f"sample time {(self.sample_volume.get()-self.sample_eq_volume.get()) / self.sample_flowrate.get() * 60}\n" +
                 f"post-buffer time {(self.last_buffer_volume.get()-self.last_buffer_eq_volume.get()) / self.sample_flowrate.get() * 60}")
             MsgBox = messagebox.askquestion('Warning', 'T-series time is greater than flow time. Continue?', icon='warning')
             if MsgBox == 'yes':
@@ -1067,12 +1068,13 @@ class Main:
             tk.messagebox.showinfo('Error', 'Filename is blank or contains invalid characters. \nThese include: %s (includes spaces).' % (self.illegal_chars))
             return
 
-        if ((self.first_buffer_volume.get()-self.first_buffer_eq_volume.get()) / self.sample_flowrate.get() * 60 < self.tseries_frames.get() * self.tseries_time.get()) or \
+        if ((self.first_buffer_volume.get()-self.first_buffer_eq_volume.get()) / self.sample_flowrate.get() * 60 < self.tseries_buffer_frames.get() * self.tseries_buffer_time.get()) or \
             ((self.sample_volume.get()-self.sample_eq_volume.get()) / self.sample_flowrate.get() * 60 < self.tseries_frames.get() * self.tseries_time.get()) or\
-            ((self.last_buffer_volume.get()-self.last_buffer_eq_volume.get()) / self.sample_flowrate.get() * 60 < self.tseries_frames.get() * self.tseries_time.get()):
-            self.python_logger.warning(f"t-series time: {self.tseries_frames.get() * self.tseries_time.get()}," +
-                f"pre-buffer time {(self.first_buffer_volume.get()-self.first_buffer_eq_volume.get()) / self.sample_flowrate.get() * 60}," +
-                f"sample time {(self.sample_volume.get()-self.sample_eq_volume.get()) / self.sample_flowrate.get() * 60}," +
+            ((self.last_buffer_volume.get()-self.last_buffer_eq_volume.get()) / self.sample_flowrate.get() * 60 < self.tseries_buffer_frames.get() * self.tseries_buffer_time.get()):
+            self.python_logger.warning(f"sample t-series time: {self.tseries_frames.get() * self.tseries_time.get()}\n" +
+                f"buffer t-series time: {self.tseries_frames.get() * self.tseries_time.get()}\n" +
+                f"pre-buffer time {(self.first_buffer_volume.get()-self.first_buffer_eq_volume.get()) / self.sample_flowrate.get() * 60}\n" +
+                f"sample time {(self.sample_volume.get()-self.sample_eq_volume.get()) / self.sample_flowrate.get() * 60}\n" +
                 f"post-buffer time {(self.last_buffer_volume.get()-self.last_buffer_eq_volume.get()) / self.sample_flowrate.get() * 60}")
             MsgBox = messagebox.askquestion('Warning', 'T-series time is greater than flow time. Continue?', icon='warning')
             if MsgBox == 'yes':
@@ -2325,12 +2327,27 @@ class Main:
         return True
 
     def run_tseries(self, postfix=None):
-        """Run a tseries."""
+        """Run a tseries. postfix must be 'pre' 'post' or 'sample' (despite the default)"""
         # Input Sanitation
         try:
-            number_of_frames = self.tseries_frames.get()
-            exposure_time = self.tseries_time.get()
-            file_number = self.spec_fileno.get()
+            if postfix == 'pre' or postfix == 'post':
+                number_of_frames = self.tseries_buffer_frames.get()
+                exposure_time = self.tseries_buffer_time.get()
+                file_number = self.spec_fileno.get()
+            elif postfix == 'sample':
+                number_of_frames = self.tseries_frames.get()
+                exposure_time = self.tseries_time.get()
+                file_number = self.spec_fileno.get()
+            else:
+                # Anchor
+                MsgBox = messagebox.askquestion('Warning', f"You shouldn't see this. Call a Python Team member over now. The postfix being passed was `{postfix}`. \n\nBut if it's late and a Python Team member is not available, you can pray to the gods and continue anyway. Continue?", icon='warning')
+                if MsgBox != 'yes':
+                    # flee!
+                    return
+                number_of_frames = self.tseries_frames.get()
+                exposure_time = self.tseries_time.get()
+                file_number = self.spec_fileno.get()
+
 
             if number_of_frames < 1 or file_number < 0:
                 raise ValueError
@@ -2351,9 +2368,6 @@ class Main:
             file_number = file_number = self.spec_fileno.get()
 
             new_dark = '0'
-
-            # print(('A EXPOSE '+filename + '_' + file_number + ',' + str(exposure_time) + ',' + str(number_of_frames)))
-
             file = filename
             file += '_%s' % file_number
             if postfix is not None:
