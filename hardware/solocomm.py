@@ -463,7 +463,7 @@ class ControlThread(threading.Thread):
             commands.append(newdir)
             commands.append(chgdir)
             if com == 'MKDIR':
-                commands.append('p2dir')
+                commands.append('p1dir')  # Change to p2dir if we need to use the 2 detector WAXS
 
         return commands
 
