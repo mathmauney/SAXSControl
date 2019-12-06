@@ -334,6 +334,16 @@ class ElveflowHandler_SDK:
             pass
         return get_pressure.value
 
+    def getVolume(self, channel_number=4):
+        """ask the Elveflow to tell us the volume sensor reading directly"""
+        get_flowrate = c_double()
+        error = Elveflow_SDK.OB1_Get_Sens_Data(self.instr_ID.value, c_int32(channel_number), 1, byref(get_flowrate))
+
+        if error != 0:
+            # self.errorlogger.warning('ERROR CODE VOLUME %i: %s' % (channel_number, error))
+            pass
+        return get_flowrate.value
+
     def set_pressure_loop(self, channel_number, value, interrupt_event=None, on_finish=None):
         """starts a thread that raises the Elveflow pressure without a big spike"""
         if interrupt_event is None:

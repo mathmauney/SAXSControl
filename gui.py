@@ -59,6 +59,7 @@ class Main:
         self.main_window.title('Main Window')
         self.adxIsDone = False
         self.illegal_chars = '!@#$%^&*()."\\|:;<>?=~ ' + "'"
+        self.sheathflow_tolerance = 1
         self.old_base_directory = '/mnt/currentdaq/BioSAXS/'
         self.old_sub_directory = ''
         self.main_window.attributes("-fullscreen", True)  # Makes the window fullscreen
@@ -993,8 +994,8 @@ class Main:
                 return
 
         if np.abs(
-            self.elveflow_display.elveflow_handler.getPressure(int(self.elveflow_sheath_channel.get()))
-             - float(self.elveflow_sheath_volume.get()) ) > 1:
+            self.elveflow_display.elveflow_handler.getVolume(int(self.elveflow_sheath_channel.get()))
+             - float(self.elveflow_sheath_volume.get()) ) > self.sheathflow_tolerance:
          MsgBox = messagebox.askquestion('Warning', 'Sheath flow rate is not the expected sheath flow rate; continue with buffer/sample/buffer?', icon='warning')
          if MsgBox == 'yes':
              pass
@@ -1102,8 +1103,8 @@ class Main:
                 return
 
         if np.abs(
-                self.elveflow_display.elveflow_handler.getPressure(int(self.elveflow_sheath_channel.get()))
-                 - float(self.elveflow_sheath_volume.get()) ) > 1:
+                self.elveflow_display.elveflow_handler.getVolume(int(self.elveflow_sheath_channel.get()))
+                 - float(self.elveflow_sheath_volume.get()) ) > self.sheathflow_tolerance:
              MsgBox = messagebox.askquestion('Warning', 'Sheath may not be running; continue with buffer/sample/buffer?', icon='warning')
              if MsgBox == 'yes':
                  pass
@@ -1217,8 +1218,8 @@ class Main:
             return
 
         if np.abs(
-            self.elveflow_display.elveflow_handler.getPressure(int(self.elveflow_sheath_channel.get()))
-             - float(self.elveflow_sheath_volume.get()) ) > 1:
+            self.elveflow_display.elveflow_handler.getVolume(int(self.elveflow_sheath_channel.get()))
+             - float(self.elveflow_sheath_volume.get()) ) > self.sheathflow_tolerance:
          MsgBox = messagebox.askquestion('Warning', 'Sheath flow rate is not the expected sheath flow rate; continue with buffer/sample/buffer?', icon='warning')
          if MsgBox == 'yes':
              pass
@@ -1282,8 +1283,8 @@ class Main:
             return
 
         if np.abs(
-                self.elveflow_display.elveflow_handler.getPressure(int(self.elveflow_sheath_channel.get()))
-                 - float(self.elveflow_sheath_volume.get()) ) > 1:
+                self.elveflow_display.elveflow_handler.getVolume(int(self.elveflow_sheath_channel.get()))
+                 - float(self.elveflow_sheath_volume.get()) ) > self.sheathflow_tolerance:
              MsgBox = messagebox.askquestion('Warning', 'Sheath may not be running; continue with buffer/sample/buffer?', icon='warning')
              if MsgBox == 'yes':
                  pass
@@ -1363,8 +1364,8 @@ class Main:
             return
 
         if np.abs(
-            self.elveflow_display.elveflow_handler.getPressure(int(self.elveflow_sheath_channel.get()))
-             - float(self.elveflow_sheath_volume.get()) ) > 1:
+            self.elveflow_display.elveflow_handler.getVolume(int(self.elveflow_sheath_channel.get()))
+             - float(self.elveflow_sheath_volume.get()) ) > self.sheathflow_tolerance:
          MsgBox = messagebox.askquestion('Warning', 'Sheath flow rate is not the expected sheath flow rate; continue with buffer/sample/buffer?', icon='warning')
          if MsgBox == 'yes':
              pass
@@ -1428,8 +1429,8 @@ class Main:
             return
 
         if np.abs(
-                self.elveflow_display.elveflow_handler.getPressure(int(self.elveflow_sheath_channel.get()))
-                 - float(self.elveflow_sheath_volume.get()) ) > 1:
+                self.elveflow_display.elveflow_handler.getVolume(int(self.elveflow_sheath_channel.get()))
+                 - float(self.elveflow_sheath_volume.get()) ) > self.sheathflow_tolerance:
              MsgBox = messagebox.askquestion('Warning', 'Sheath may not be running; continue with buffer/sample/buffer?', icon='warning')
              if MsgBox == 'yes':
                  pass
