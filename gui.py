@@ -51,6 +51,7 @@ class Main:
             raise FileNotFoundError("%s folder not found" % ElveflowDisplay.OUTPUT_FOLDER)
         elif not os.path.isdir(ElveflowDisplay.OUTPUT_FOLDER):
             raise NotADirectoryError("%s is not a folder" % ElveflowDisplay.OUTPUT_FOLDER)
+        print("help")
         self._lock = threading.RLock()
         self.python_logger = logging.getLogger("python")
         self.main_window = window
@@ -80,7 +81,7 @@ class Main:
             log_width = window_width - core_width - 3
             core_height = window_height - state_height - 50
             log_height = core_height
-
+        print("haaalp")
         # Make it pretty
         self.gui_bg_color = "thistle3"
         self.label_bg_color = self.gui_bg_color
@@ -94,7 +95,7 @@ class Main:
         self.stop_button = tk.Button(self.main_window, text='STOP', command=self.stop, fg='red', font='Arial 16 bold')
 
         # Main Structures
-
+        print("main structures")
         self.core = ttk.Notebook(self.main_window, width=core_width, height=core_height)
         self.auto_page = tk.Frame(self.core, bg=self.gui_bg_color)
         self.config_page = tk.Frame(self.core, bg=self.gui_bg_color)
@@ -107,6 +108,7 @@ class Main:
         # self.instrument_logs = tk.Frame(self.logs)
         self.state_frame = tk.Frame(self.main_window, width=window_width, height=state_height, bg=self.gui_bg_color)
         # Widgets on Main page
+        print("main widgets")
         spec_width = 20
         self.spec_base_directory_label = tk.Label(self.auto_page, text='Spec Base Directory:', width=spec_width, bg=self.label_bg_color)
         self.spec_base_directory = tk.StringVar(value='')
@@ -138,6 +140,7 @@ class Main:
         self.initialize_sheath_display_var = tk.StringVar(value='Sheath pressure:\n--')
         self.initialize_sheath_display = tk.Label(self.auto_page, textvariable=self.initialize_sheath_display_var, font=auto_button_half_font, bg=self.label_bg_color)
         # Elveflow Plots
+        print("LV stuff")
         self.fig_dpi = 96  # this shouldn't matter too much (because we normalize against it) except in how font sizes are handled in the plot
         self.main_tab_fig = plt.Figure(figsize=(core_width*2/3/self.fig_dpi, core_height*3/4/self.fig_dpi), dpi=self.fig_dpi)
         self.main_tab_ax1 = self.main_tab_fig.add_subplot(111)
@@ -161,6 +164,7 @@ class Main:
         self.manual_page_buttons = []
         self.manual_page_variables = []
         # Config page
+        print("config page")
         self.config = None
         self.sucrose_button = tk.Button(self.config_page, text='Sucrose Off', command=self.toggle_sucrose)
 
@@ -307,6 +311,7 @@ class Main:
         self.elveflow_sheath_volume_box = tk.Entry(self.config_page, textvariable=self.elveflow_sheath_volume)
 
         # Make Instrument
+        print("make instrumets")
         self.AvailablePorts = SAXSDrivers.list_available_ports()
         self.controller = SAXSDrivers.SAXSController(timeout=0.1)
         self.instruments = []
@@ -319,7 +324,7 @@ class Main:
         self.is_insert_sheath_purging = False
         # Setup Page
         self.hardware_config_options = ("Pump", "Oil Valve", "Sample/Buffer Valve", "Loading Valve", "Purge", "cerberus Oil", "cerberus Load", "cerberus Pump")
-        self.AvailablePorts = SAXSDrivers.list_available_ports()
+        #self.AvailablePorts = SAXSDrivers.list_available_ports()
         self.setup_page_buttons = []
         self.setup_page_variables = []
         self.refresh_com_ports = tk.Button(self.setup_page, text="Refresh COM", command=lambda: self.refresh_com_list())
@@ -330,6 +335,7 @@ class Main:
         self.ControllerSet = tk.Button(self.setup_page, text="Set Microntroller", command=lambda: self.controller.set_port(self.AvailablePorts[int(self.ControllerCOM.curselection()[0])].device, self.instruments))
         self.I2CScanButton = tk.Button(self.setup_page, text="Scan I2C line", command=lambda: self.controller.scan_i2c())
 
+        print("can i make logs?")
         # logs
         log_length = 39  # in lines
         self.user_logger_gui = ConsoleUi(self.user_logs, True)
@@ -337,7 +343,7 @@ class Main:
         self.advanced_logger_gui = ConsoleUi(self.advanced_logs)
         # self.instrument_logger = MiscLogger(self.instrument_logs, state='disabled', height=log_length)
         # self.instrument_logger.configure(font='TkFixedFont')
-
+        print("loggers done")
         #
         # Flow setup frames
         self.sucrose = False
@@ -354,7 +360,9 @@ class Main:
         self.refresh_dropdown(self.loading_valve_name_boxes, self.flowpath.valve4.gui_names, self.loading_valve_names)
         self.refresh_dropdown(self.cerberus_oil_valve_name_boxes, self.flowpath.valve6.gui_names, self.cerberus_oil_valve_names)
         self.refresh_dropdown(self.cerberus_loading_valve_name_boxes, self.flowpath.valve8.gui_names, self.cerberus_loading_valve_names)
+        print("can I draw?")
         self.draw_static()
+        print("yes")
         self.elveflow_display = ElveflowDisplay(self.elveflow_page, core_height, core_width, self.config['Elveflow'], self.python_logger, self)
         self.elveflow_display.grid(row=0, column=0)
         self.queue = solocomm.controlQueue
@@ -378,6 +386,7 @@ class Main:
         self.state_frame.grid(row=2, column=0, columnspan=2)
         self.stop_button.lift()
         # Main Tab Bar
+        print("drawing the main tab bar...")
         self.core.add(self.auto_page, text='Auto')
         self.core.add(self.manual_page, text='Manual')
         self.core.add(self.config_page, text='Config')
@@ -388,6 +397,7 @@ class Main:
         self.logs.add(self.advanced_logs, text='Advanced')
         # self.logs.add(self.instrument_logs, text='Instruments')
         # Main Page
+        print("drawing the main page...")
         self.spec_base_directory_label.grid(row=0, column=0)
         self.spec_base_directory_box.grid(row=1, column=0)
         self.spec_sub_directory_label.grid(row=0, column=1)
@@ -415,6 +425,7 @@ class Main:
         self.initialize_sheath_button.grid(row=6, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
         self.initialize_sheath_display.grid(row=6, column=1, sticky=tk.W+tk.E+tk.N+tk.S)
         # Manual page
+        print("drawing the manual page...")
         tk.Label(self.manual_page, textvariable="", height=6, bg=self.label_bg_color).grid(row=99, column=0)  # I'm just adding space
         self.tseries_button.grid(row=100, column=0, columnspan=4, sticky=tk.W+tk.E+tk.N+tk.S)
         self.take_sample_button.grid(row=101, column=0, columnspan=4, sticky=tk.W+tk.E+tk.N+tk.S)
@@ -427,6 +438,7 @@ class Main:
         self.purge_sheath_insert_water_button.grid(row=102, column=15, columnspan=4, sticky=tk.W+tk.E+tk.N+tk.S)
 
         # Config page
+        print("drawing the config page...")
         rowcounter = 0
         self.save_config_button.grid(row=rowcounter, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
         self.load_config_button.grid(row=rowcounter, column=1, sticky=tk.W+tk.E+tk.N+tk.S)
@@ -536,6 +548,7 @@ class Main:
         # FlowPath
         self.flowpath.grid(row=0, column=0)
         # Python Log
+        print("setting up the python log...")
         nowtime = time.time()
         file_handler = logging.FileHandler(os.path.join(LOG_FOLDER, "log%010d.txt" % nowtime), encoding='utf-8')
         file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
@@ -544,11 +557,13 @@ class Main:
         # self.instrument_logger.grid(row=0, column=0, sticky='NSEW')
         # Should logger definition be in draw function?
 
+        print("about to do some stuff")
         self.python_logger.setLevel(logging.DEBUG)
         self.user_logger_gui.pass_logger(self.python_logger)
         self.advanced_logger_gui.pass_logger(self.python_logger)
         self.python_logger.addHandler(file_handler)  # logging to a file
         self.controller.logger = self.python_logger  # Pass the logger to the controller
+        print("about to load the config")
         self.load_config(filename='config.ini', preload=False)
 
     def stop(self):
@@ -600,10 +615,12 @@ class Main:
             self.config = ConfigParser()
         if filename is None:
             filename = filedialog.askopenfilename(initialdir=".", title="Select file", filetypes=(("config files", "*.ini"), ("all files", "*.*")))
+        print("GUAAAAAA")
         if filename != '':
-            with open(filename, encoding='utf-8') as f:
+            with open(filename, encoding='utf-8-sig') as f:
                 # why does it only sometimes find the file?
                 self.config.read_file(f)
+            print("OPENED THE FILE THING")
             self.python_logger.info("Loading config: "+filename)
             main_config = self.config['Main']
             elveflow_config = self.config['Elveflow']
@@ -619,6 +636,7 @@ class Main:
             self.sucrose = main_config.getboolean('Sucrose', False)
             self.color_sucrose_button()
             # Elveflow Config
+            print("ELVELELELELELELVFLOW CONFIG LOADING ABOUT TO START")
             self.elveflow_sourcename.set(elveflow_config.get('elveflow_sourcename', b''))
             self.elveflow_sensortypes[0].set(elveflow_config.get('sensor1_type', 'none'))
             self.elveflow_sensortypes[1].set(elveflow_config.get('sensor2_type', 'none'))
@@ -658,6 +676,7 @@ class Main:
             self.cerberus_init_flowrate.set(cerberus_config.get('Init Flowrate', 0))
             self.cerberus_init_time.set(cerberus_config.get('Init Time', 0))
             # Valve Config
+            print("VALVE STUFF")
             for i in range(0, 6):
                 field = 'name'+str(i+1)
                 self.oil_valve_names[i].set(oil_config.get(field, ''))
@@ -670,6 +689,7 @@ class Main:
             self.purge_soap_pos.set(cerberus_config.get('Purge Soap', 1))
             self.purge_air_pos.set(cerberus_config.get('Purge Air', 1))
 
+        print("HERE's a point at which stuff happened")
         if not preload:
             self.set_oil_valve_names()
             self.set_loading_valve_names()
@@ -681,8 +701,10 @@ class Main:
                 self.elveflow_display.start()
             except Exception as e:
                 self.python_logger.warning("Something went wrong when restarting the Elveflow")
+        """
         # Instrument Config
         # Clear existing devices
+        print("HERE's another point at which stuff happened")
         for line in self.manual_page_buttons:
             for button in line:
                 button.destroy()
@@ -696,6 +718,7 @@ class Main:
         self.setup_page_buttons = []
         self.setup_page_variables = []
         self.NumberofPumps = 0
+        print("Whoohoo!")
         for i in range(int(instrument_config.get("n_pumps", 0))):
             field = "Pump"+str(i)
             self.add_pump_set_buttons(int(instrument_config.get(field+"_address", 0)), instrument_config.get(field+"_name", ""), instrument_config.get(field+"_hardware", ""), pc_connect=instrument_config.getboolean(field+"_pc_connect", True))
@@ -704,10 +727,11 @@ class Main:
             field = "Rheodyne"+str(i)
             self.add_rheodyne_set_buttons(int(instrument_config.get(field+"_address", -1)), instrument_config.get(field+"_name", ""), instrument_config.get(field+"_hardware", ""), pc_connect=instrument_config.getboolean(field+"_pc_connect", True))
 
+        print("Guauauauauahahahahahah!")
         for i in range(int(instrument_config.get("n_vici", 0))):
             field = "VICI"+str(i)
             self.AddVICISetButtons(instrument_config.get(field+"_name", ''), instrument_config.get(field+"_hardware", ""), pc_connect=instrument_config.getboolean(field+"_pc_connect", True))
-
+        """
     def save_config(self):
         """Save a config.ini file."""
         filename = filedialog.asksaveasfilename(initialdir=".", title="Select file", filetypes=(("config files", "*.ini"), ("all files", "*.*")))
@@ -2082,6 +2106,7 @@ class Main:
 
     def add_pump_set_buttons(self, address=0, name="Pump", hardware="", pc_connect=True):
         """Add pump buttons to the setup page."""
+        print("Making Pump Buttons")
         self.instruments.append(SAXSDrivers.HPump(logger=self.python_logger, name=name, address=address, hardware_configuration=hardware, lock=self._lock, pc_connect=pc_connect))
         self.NumberofPumps += 1
         instrument_index = len(self.instruments)-1
@@ -2117,6 +2142,7 @@ class Main:
         self.add_pump_control_buttons()
         if hardware != "":
             self.configure_to_hardware(hardware, instrument_index)
+        print("Done pumps")
 
     def refresh_dropdown(self, option_menu_list, options_to_put, VariableLocation):
         # Update Values in Config Selector
@@ -2178,6 +2204,7 @@ class Main:
                 button[0].updatelist(SAXSDrivers.list_available_ports(self.AvailablePorts))
 
     def add_rheodyne_set_buttons(self, address=-1, name="Rheodyne", hardware="", pc_connect=True):
+        print("Add rheodyne set buttons")
         self.instruments.append(SAXSDrivers.Rheodyne(logger=self.python_logger, address_I2C=address, name=name, hardware_configuration=hardware, lock=self._lock, pc_connect=pc_connect))
         instrument_index = len(self.instruments)-1
         newvars = [tk.IntVar(value=address), tk.StringVar(value=name), tk.IntVar(value=2), tk.StringVar(value=hardware)]
@@ -2205,6 +2232,7 @@ class Main:
         self.refresh_com_list()
         if hardware != "":
             self.configure_to_hardware(hardware, instrument_index)
+        print("Done")
         # self.refresh_dropdown()
 
     def AddRheodyneControlButtons(self):
@@ -2227,6 +2255,7 @@ class Main:
                 self.manual_page_buttons[i][y].grid(row=i+1, column=y)
 
     def AddVICISetButtons(self, name="VICI", hardware="", pc_connect=True):
+        print("Adding Rheodyne Buttons")
         self.instruments.append(SAXSDrivers.VICI(logger=self.python_logger, name=name, hardware_configuration=hardware, lock=self._lock, pc_connect=pc_connect))
         instrument_index = len(self.instruments)-1
         newvars = [tk.IntVar(value=-1), tk.StringVar(value=name), tk.StringVar(value=hardware)]
@@ -2250,7 +2279,7 @@ class Main:
         self.refresh_com_list()
         if hardware != "":
             self.configure_to_hardware(hardware, instrument_index)
-
+        print("done")
     def AddVICIControlButtons(self):
         instrument_index = len(self.instruments)-1
         newvars = [tk.StringVar(), tk.StringVar(value="A")]
