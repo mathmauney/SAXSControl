@@ -701,7 +701,7 @@ class Main:
                 self.elveflow_display.start()
             except Exception as e:
                 self.python_logger.warning("Something went wrong when restarting the Elveflow")
-        """
+
         # Instrument Config
         # Clear existing devices
         print("HERE's another point at which stuff happened")
@@ -731,7 +731,7 @@ class Main:
         for i in range(int(instrument_config.get("n_vici", 0))):
             field = "VICI"+str(i)
             self.AddVICISetButtons(instrument_config.get(field+"_name", ''), instrument_config.get(field+"_hardware", ""), pc_connect=instrument_config.getboolean(field+"_pc_connect", True))
-        """
+
     def save_config(self):
         """Save a config.ini file."""
         filename = filedialog.asksaveasfilename(initialdir=".", title="Select file", filetypes=(("config files", "*.ini"), ("all files", "*.*")))
@@ -2113,7 +2113,7 @@ class Main:
         self.python_logger.info("Added pump")
         newvars = [tk.IntVar(value=address), tk.StringVar(value=name), tk.StringVar(value=hardware)]
         self.setup_page_variables.append(newvars)
-
+        print("Make buttons")
         newbuttons = [
          COMPortSelector(self.setup_page, exportselection=0, height=4),
          tk.Button(self.setup_page, text="Set Port", command=lambda: self.instruments[instrument_index].set_port(self.AvailablePorts[int(self.setup_page_buttons[instrument_index][0].curselection()[0])].device)),
@@ -2138,7 +2138,7 @@ class Main:
         for i in range(len(self.setup_page_buttons)):
             for y in range(len(self.setup_page_buttons[i])):
                 self.setup_page_buttons[i][y].grid(row=i+2, column=y, sticky=tk.W+tk.E)
-        self.refresh_com_list()
+        #self.refresh_com_list()
         self.add_pump_control_buttons()
         if hardware != "":
             self.configure_to_hardware(hardware, instrument_index)
@@ -2229,7 +2229,7 @@ class Main:
             for y in range(len(self.setup_page_buttons[i])):
                 self.setup_page_buttons[i][y].grid(row=i+2, column=y, sticky=tk.W+tk.E)
         self.AddRheodyneControlButtons()
-        self.refresh_com_list()
+        #self.refresh_com_list()
         if hardware != "":
             self.configure_to_hardware(hardware, instrument_index)
         print("Done")
@@ -2276,7 +2276,7 @@ class Main:
             for y in range(len(self.setup_page_buttons[i])):
                 self.setup_page_buttons[i][y].grid(row=i+2, column=y, sticky=tk.W+tk.E)
         self.AddVICIControlButtons()
-        self.refresh_com_list()
+        #self.refresh_com_list()
         if hardware != "":
             self.configure_to_hardware(hardware, instrument_index)
         print("done")
