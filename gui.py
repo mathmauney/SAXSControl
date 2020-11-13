@@ -313,7 +313,9 @@ class Main:
         # Make Instrument
         print("make instrumets")
         self.AvailablePorts = SAXSDrivers.list_available_ports()
+        print("Found Ports")
         self.controller = SAXSDrivers.SAXSController(timeout=0.1)
+        print("Made controller")
         self.instruments = []
         self.pump = None
         self.cerberus_pump = None
@@ -323,6 +325,7 @@ class Main:
         self.is_insert_purging = False
         self.is_insert_sheath_purging = False
         # Setup Page
+        print("326")
         self.hardware_config_options = ("Pump", "Oil Valve", "Sample/Buffer Valve", "Loading Valve", "Purge", "cerberus Oil", "cerberus Load", "cerberus Pump")
         #self.AvailablePorts = SAXSDrivers.list_available_ports()
         self.setup_page_buttons = []
@@ -473,7 +476,7 @@ class Main:
         self.cerberus_init_flowrate_box.grid(row=rowcounter, column=5, sticky=tk.W+tk.E+tk.N+tk.S)
         self.cerberus_init_time_label.grid(row=rowcounter, column=6, sticky=tk.W+tk.E+tk.N+tk.S)
         self.cerberus_init_time_box.grid(row=rowcounter, column=7, sticky=tk.W+tk.E+tk.N+tk.S)
-
+        print("row 476")
         rowcounter += 1
         self.oil_valve_names_label.grid(row=rowcounter, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
         self.set_oil_valve_names_button.grid(row=rowcounter, column=7, sticky=tk.W+tk.E+tk.N+tk.S)
@@ -516,7 +519,7 @@ class Main:
         self.tseries_buffer_label.grid(row=rowcounter, column=3, sticky=tk.W+tk.E+tk.N+tk.S)
         self.tseries_buffer_time_box.grid(row=rowcounter, column=5, sticky=tk.W+tk.E+tk.N+tk.S)
         self.tseries_buffer_frames_box.grid(row=rowcounter, column=4, sticky=tk.W+tk.E+tk.N+tk.S)
-
+        print("row 519")
         rowcounter += 1
         self.low_soap_time_label.grid(row=rowcounter, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
         self.low_soap_time_box.grid(row=rowcounter, column=1, sticky=tk.W+tk.E+tk.N+tk.S)
@@ -537,6 +540,7 @@ class Main:
         self.purge_air_label.grid(row=rowcounter, column=7, sticky=tk.W+tk.E+tk.N+tk.S)
         self.purge_air_box.grid(row=rowcounter, column=8, sticky=tk.W+tk.E+tk.N+tk.S)
         # Setup page
+        print("Setup Page")
         self.refresh_com_ports.grid(row=0, column=0)
         self.AddPump.grid(row=0, column=1)
         self.AddRheodyne.grid(row=0, column=2)
@@ -544,8 +548,8 @@ class Main:
         self.ControllerCOM.grid(row=1, column=0)
         self.ControllerSet.grid(row=1, column=2)
         self.I2CScanButton.grid(row=1, column=3)
-        self.refresh_com_list()
         # FlowPath
+        print("Flowpath")
         self.flowpath.grid(row=0, column=0)
         # Python Log
         print("setting up the python log...")
@@ -565,6 +569,9 @@ class Main:
         self.controller.logger = self.python_logger  # Pass the logger to the controller
         print("about to load the config")
         self.load_config(filename='config.ini', preload=False)
+        print("Before com list")
+        self.refresh_com_list()
+        print("Done updating COM Ports")
 
     def stop(self):
         """Stop all running widgets."""
@@ -2198,10 +2205,11 @@ class Main:
                 self.manual_page_buttons[i][y].grid(row=i+1, column=y, sticky=tk.W+tk.E)
 
     def refresh_com_list(self):
-        self.ControllerCOM.updatelist(SAXSDrivers.list_available_ports(self.AvailablePorts))
+        SAXSDrivers.list_available_ports(self.AvailablePorts)
+        self.ControllerCOM.updatelist(self.AvailablePorts)
         for button in self.setup_page_buttons:
             if isinstance(button[0], COMPortSelector):
-                button[0].updatelist(SAXSDrivers.list_available_ports(self.AvailablePorts))
+                button[0].updatelist(self.AvailablePorts)
 
     def add_rheodyne_set_buttons(self, address=-1, name="Rheodyne", hardware="", pc_connect=True):
         print("Add rheodyne set buttons")

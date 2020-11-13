@@ -16,7 +16,9 @@ import time, os
 def list_available_ports(optional_list=[]):   # Does the optional list input do anything? Should we just initialize an empty list for the output?
     """Find and return all available COM ports. If passed a list will update that list with the current set of COM ports."""
     optional_list.clear()
-    for item in list(serial.tools.list_ports.comports()):
+    print("Calling comports")
+    for item in serial.tools.list_ports.comports():
+        print("Adding comport to list")
         optional_list.append(item)
     return optional_list
 
@@ -179,6 +181,8 @@ class HPump:
                         self.running = True
                         self.logger.info("Infusing " + self.name)
                         responceflag = True
+                    else:
+                        print(pumpanswer)
             else:
                 if not self.controller.is_open:
                     self.controller.open()
