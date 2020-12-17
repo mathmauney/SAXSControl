@@ -224,7 +224,7 @@ class ElveflowHandler_SDK:
         self.run_flag = threading.Event()
         self.run_flag.set()
 
-    def start(self, getheader_handler=None):
+    def start(self):
         def start_thread():
             print("STARTING HANDLER THREAD %s" % threading.current_thread())
             while self.run_flag.is_set():
@@ -276,8 +276,6 @@ class ElveflowHandler_SDK:
 
         self.reading_thread = threading.Thread(target=start_thread)
         self.reading_thread.start()
-        if getheader_handler is not None:
-            getheader_handler()
 
     def stop(self):
         """Stops the reading thread."""
@@ -398,9 +396,9 @@ class ElveflowHandler_SDK:
             except RuntimeError:
                 print("Runtime error detected in pressure loop channel %s thread %s while trying to close. Ignoring." % (channel_number, threading.current_thread()))
 
-        self.reading_thread = threading.Thread(target=start_thread, args=(channel_number, value, interrupt_event))
-        self.reading_thread.start()
-        return self.reading_thread
+        self.command_thread = threading.Thread(target=start_thread, args=(channel_number, value, interrupt_event))
+        self.command_thread.start()
+        return self.command_thread
 
     def set_volume_loop(self, channel_number, value, interrupt_event=None, pid_constants=None):
         """starts a thread that sets the Elveflow flow rate"""

@@ -41,7 +41,7 @@ class ElveflowDisplay(tk.Canvas):
         self.data_y1_label_var = tk.StringVar()
         self.data_y2_label_var = tk.StringVar()
         self.data_y3_label_var = tk.StringVar()
-        self.sensorTypes_var = [tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar()]
+        self.sensorTypes_var = [tk. StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar()]
         self.pressureValue_var = [tk.StringVar(), tk.StringVar(), tk.StringVar(), tk.StringVar()]
         self.isPressure_var = [tk.BooleanVar(), tk.BooleanVar(), tk.BooleanVar(), tk.BooleanVar()]
         self.pressureSettingActive_var = [tk.BooleanVar(), tk.BooleanVar(), tk.BooleanVar(), tk.BooleanVar()]
@@ -55,6 +55,7 @@ class ElveflowDisplay(tk.Canvas):
         self.kp_var.set(50)
         self.ki_var.set(50)
 
+        # internal variables
         self.dataTitle = "Elveflow data"
         self.errorlogger = errorlogger
         self.elveflow_config = elveflow_config
@@ -73,6 +74,7 @@ class ElveflowDisplay(tk.Canvas):
 
         # tkinter elements
         # https://stackoverflow.com/questions/31440167/placing-plot-on-tkinter-main-window-in-python
+        # https://matplotlib.org/3.3.3/gallery/user_interfaces/embedding_in_tk_sgskip.html
         remaining_width_per_column = width / 9
         dpi = 96  # this shouldn't matter too much (because we normalize against it) except in how font sizes are handled in the plot
         self.the_fig = plt.Figure(figsize=(width*2/3/dpi, height*3/4/dpi), dpi=dpi)
@@ -225,7 +227,7 @@ class ElveflowDisplay(tk.Canvas):
         self.data_y1_label_optionmenu['menu'].delete(0, 'end')
         self.data_y2_label_optionmenu['menu'].delete(0, 'end')
         self.data_y3_label_optionmenu['menu'].delete(0, 'end')  # these deletions shouldn't be necessary, but I'm afraid of weird race conditions that realistically won't happen even if they're possible
-        for item in self.elveflow_handler.header:
+        for item in self.elveflow_handler.getHeader():
             self.data_x_label_optionmenu['menu'].add_command(label=item, command=lambda item=item: self.data_x_label_var.set(item))  # weird default argument for scoping
             self.data_y1_label_optionmenu['menu'].add_command(label=item, command=lambda item=item: self.data_y1_label_var.set(item))
             self.data_y2_label_optionmenu['menu'].add_command(label=item, command=lambda item=item: self.data_y2_label_var.set(item))
@@ -271,7 +273,8 @@ class ElveflowDisplay(tk.Canvas):
         self.data_y1_label_var.set(ElveflowDisplay.DEFAULT_Y1_LABEL)
         self.data_y2_label_var.set(ElveflowDisplay.DEFAULT_Y2_LABEL)
         self.data_y3_label_var.set(ElveflowDisplay.DEFAULT_Y3_LABEL)
-        self.elveflow_handler.start(getheader_handler=self.populate_dropdowns)
+        self.elveflow_handler.start()
+        self.populate_dropdowns()
 
         self.run_flag.set()  # reset in preparation for if we start up the connection again
         def pollElveflowThread(run_flag, save_flag):
@@ -390,6 +393,7 @@ class ElveflowDisplay(tk.Canvas):
                 data_y3 -= self.starttime
             extremes = [np.nanmin(data_x), np.nanmax(data_x), np.nanmin(data_y1), np.nanmax(data_y1), np.nanmin(data_y2), np.nanmax(data_y2), np.nanmin(data_y3), np.nanmax(data_y3)]
             if len(data_x) > 0:
+                # https://stackoverflow.com/questions/4098131/how-to-update-a-plot-in-matplotlib/4098938#4098938
                 self.the_line1.set_data(data_x, data_y1)
                 self.the_line2.set_data(data_x, data_y2)
                 self.the_line3.set_data(data_x, data_y3)
