@@ -678,14 +678,13 @@ class Main:
         self.set_cerberus_oil_valve_names()
         self.set_cerberus_loading_valve_names()
         if not preload:
-            # restart Elevflow
-            pass
-
-        try:
-            self.elveflow_display.stop()
-            self.elveflow_display.start()
-        except Exception as e:
-            self.python_logger.warning("Something went wrong when restarting the Elveflow: %s" % e)
+            # only try to start the Elveflow if it exists.
+            # during preload, we haven't created the self.elveflow_display object yet
+            try:
+                self.elveflow_display.stop()
+                self.elveflow_display.start()
+            except Exception as e:
+                self.python_logger.warning("Something went wrong when restarting the Elveflow: %s" % e)
         
         # Instrument Config
         # Clear existing devices
