@@ -1960,7 +1960,7 @@ class Main:
         # TODO: graph this?
         self.initialize_sheath_button.configure(bg="green")
         # be able to stop prematurely
-        self.initialize_sheath_button.configure(command=lambda: self.setPressureStop_flag[elveflow_sheath_channel].set())
+        self.initialize_sheath_button.configure(command=lambda: self.elveflow_display.setPressureStop_flag[elveflow_sheath_channel-1].set())
 
         if self.purge_running_pos.get()>0 and self.purge_valve and self.purge_valve.enabled:
             self.manual_queue.put(self.unset_purge)
