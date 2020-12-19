@@ -187,7 +187,7 @@ class SpecCommThread(threading.Thread):
         self.specCommand.ClearReply()
         while waitingForAnswer and loopcount < loopmax:
             SpecEventsDispatcher.dispatch()
-            time.sleep(0.01)
+            time.sleep(sleeptime)
 
             answer = self.specCommand.GetReply()
             if answer is not None:

@@ -1859,7 +1859,6 @@ class Main:
         self.purge_soap_button.configure(bg="white smoke")
         self.purge_dry_button.configure(bg="white smoke")
 
-
     def purge_command(self):
         run_position = self.purge_running_pos.get()
         purge_position = self.purge_water_pos.get()
