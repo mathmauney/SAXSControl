@@ -549,7 +549,7 @@ class Main:
         self.advanced_logger_gui.pass_logger(self.python_logger)
         self.python_logger.addHandler(file_handler)  # logging to a file
         self.controller.logger = self.python_logger  # Pass the logger to the controller
-        self.load_config(filename='config.ini', preload=False)
+        self.load_config(filename='config.ini', preload=True)
 
     def stop(self):
         """Stop all running widgets."""
@@ -600,87 +600,92 @@ class Main:
             self.config = ConfigParser()
         if filename is None:
             filename = filedialog.askopenfilename(initialdir=".", title="Select file", filetypes=(("config files", "*.ini"), ("all files", "*.*")))
-        if filename != '':
-            with open(filename, encoding='utf-8') as f:
-                # why does it only sometimes find the file?
-                self.config.read_file(f)
-            self.python_logger.info("Loading config: "+filename)
-            main_config = self.config['Main']
-            elveflow_config = self.config['Elveflow']
-            spec_config = self.config['SPEC']
-            run_config = self.config['Run Params']
-            oil_config = self.config['Oil Valve']
-            loading_config = self.config['Loading Valve']
-            instrument_config = self.config['Instruments']
-            cerberus_config = self.config['Cerberus']
-            cerberus_oil_config = self.config['Cerberus Oil Valve']
-            cerberus_loading_config = self.config['Cerberus Loading Valve']
-            # Main Config
-            self.sucrose = main_config.getboolean('Sucrose', False)
-            self.color_sucrose_button()
-            # Elveflow Config
-            self.elveflow_sourcename.set(elveflow_config.get('elveflow_sourcename', b''))
-            self.elveflow_sensortypes[0].set(elveflow_config.get('sensor1_type', 'none'))
-            self.elveflow_sensortypes[1].set(elveflow_config.get('sensor2_type', 'none'))
-            self.elveflow_sensortypes[2].set(elveflow_config.get('sensor3_type', 'none'))
-            self.elveflow_sensortypes[3].set(elveflow_config.get('sensor4_type', 'none'))
-            self.elveflow_oil_channel.set(elveflow_config.get('elveflow_oil_channel', -1))
-            self.elveflow_oil_pressure.set(elveflow_config.get('elveflow_oil_pressure', 0))
-            self.elveflow_sheath_channel.set(elveflow_config.get('elveflow_sheath_channel', -1))
-            self.elveflow_sheath_volume.set(elveflow_config.get('elveflow_sheath_volume', 0))
-            # SPEC Config
-            self.spec_address.set(spec_config.get('spec_host', ''))
-            self.tseries_time.set(spec_config.get('tseries_time', '10'))
-            self.tseries_frames.set(spec_config.get('tseries_frames', '10'))
-            self.tseries_buffer_time.set(spec_config.get('tseries_buffer_time', '10'))
-            self.tseries_buffer_frames.set(spec_config.get('tseries_buffer_frames', '10'))
-            self.spec_sub_directory.set(spec_config.get('sub_dir', self.old_sub_directory))
-            self.old_sub_directory = self.spec_sub_directory.get()
-            self.spec_base_directory.set(spec_config.get('base_dir', self.old_base_directory))
-            self.old_base_directory = self.spec_base_directory.get()
-            # Run Config
-            self.sample_flowrate.set(run_config.get('sample_rate', 10))
-            self.oil_refill_flowrate.set(run_config.get('oil_rate', 10))
-            self.first_buffer_volume.set(run_config.get('buffer1_vol', 25))
-            self.sample_volume.set(run_config.get('sample_vol', 25))
-            self.last_buffer_volume.set(run_config.get('buffer2_vol', 25))
-            self.first_buffer_eq_volume.set(run_config.get('buffer1_eq_vol', 0))
-            self.sample_eq_volume.set(run_config.get('sample_eq_vol', 0))
-            self.last_buffer_eq_volume.set(run_config.get('buffer2_eq_vol', 0))
-            self.low_soap_time.set(run_config.get('low_soap_time', 0))
-            self.high_soap_time.set(run_config.get('high_soap_time', 0))
-            self.water_time.set(run_config.get('water_time', 0))
-            self.air_time.set(run_config.get('air_time', 0))
-            # Cerberus Config
-            self.cerberus_volume.set(cerberus_config.get('Volume', 0))
-            self.cerberus_flowrate.set(cerberus_config.get('Flowrate', 0))
-            self.cerberus_refill_rate.set(cerberus_config.get('Refill Rate', 0))
-            self.cerberus_init_flowrate.set(cerberus_config.get('Init Flowrate', 0))
-            self.cerberus_init_time.set(cerberus_config.get('Init Time', 0))
-            # Valve Config
-            for i in range(0, 6):
-                field = 'name'+str(i+1)
-                self.oil_valve_names[i].set(oil_config.get(field, ''))
-                self.loading_valve_names[i].set(loading_config.get(field, ''))
-                self.cerberus_oil_valve_names[i].set(cerberus_oil_config.get(field, ''))
-                self.cerberus_loading_valve_names[i].set(cerberus_loading_config.get(field, ''))
-            # Purge valve config
-            self.purge_running_pos.set(cerberus_config.get('Purge Running', 1))
-            self.purge_water_pos.set(cerberus_config.get('Purge Water', 1))
-            self.purge_soap_pos.set(cerberus_config.get('Purge Soap', 1))
-            self.purge_air_pos.set(cerberus_config.get('Purge Air', 1))
+        if filename == '':
+            self.python_logger.warning("Config was NOT loaded (user pressed cancel)")
+            return
 
+        with open(filename, encoding='utf-8') as f:
+            # why does it only sometimes find the file?
+            self.config.read_file(f)
+        self.python_logger.info("Loading config: "+filename)
+        main_config = self.config['Main']
+        elveflow_config = self.config['Elveflow']
+        spec_config = self.config['SPEC']
+        run_config = self.config['Run Params']
+        oil_config = self.config['Oil Valve']
+        loading_config = self.config['Loading Valve']
+        instrument_config = self.config['Instruments']
+        cerberus_config = self.config['Cerberus']
+        cerberus_oil_config = self.config['Cerberus Oil Valve']
+        cerberus_loading_config = self.config['Cerberus Loading Valve']
+        # Main Config
+        self.sucrose = main_config.getboolean('Sucrose', False)
+        self.color_sucrose_button()
+        # Elveflow Config
+        self.elveflow_sourcename.set(elveflow_config.get('elveflow_sourcename', b''))
+        self.elveflow_sensortypes[0].set(elveflow_config.get('sensor1_type', 'none'))
+        self.elveflow_sensortypes[1].set(elveflow_config.get('sensor2_type', 'none'))
+        self.elveflow_sensortypes[2].set(elveflow_config.get('sensor3_type', 'none'))
+        self.elveflow_sensortypes[3].set(elveflow_config.get('sensor4_type', 'none'))
+        self.elveflow_oil_channel.set(elveflow_config.get('elveflow_oil_channel', -1))
+        self.elveflow_oil_pressure.set(elveflow_config.get('elveflow_oil_pressure', 0))
+        self.elveflow_sheath_channel.set(elveflow_config.get('elveflow_sheath_channel', -1))
+        self.elveflow_sheath_volume.set(elveflow_config.get('elveflow_sheath_volume', 0))
+        # SPEC Config
+        self.spec_address.set(spec_config.get('spec_host', ''))
+        self.tseries_time.set(spec_config.get('tseries_time', '10'))
+        self.tseries_frames.set(spec_config.get('tseries_frames', '10'))
+        self.tseries_buffer_time.set(spec_config.get('tseries_buffer_time', '10'))
+        self.tseries_buffer_frames.set(spec_config.get('tseries_buffer_frames', '10'))
+        self.spec_sub_directory.set(spec_config.get('sub_dir', self.old_sub_directory))
+        self.old_sub_directory = self.spec_sub_directory.get()
+        self.spec_base_directory.set(spec_config.get('base_dir', self.old_base_directory))
+        self.old_base_directory = self.spec_base_directory.get()
+        # Run Config
+        self.sample_flowrate.set(run_config.get('sample_rate', 10))
+        self.oil_refill_flowrate.set(run_config.get('oil_rate', 10))
+        self.first_buffer_volume.set(run_config.get('buffer1_vol', 25))
+        self.sample_volume.set(run_config.get('sample_vol', 25))
+        self.last_buffer_volume.set(run_config.get('buffer2_vol', 25))
+        self.first_buffer_eq_volume.set(run_config.get('buffer1_eq_vol', 0))
+        self.sample_eq_volume.set(run_config.get('sample_eq_vol', 0))
+        self.last_buffer_eq_volume.set(run_config.get('buffer2_eq_vol', 0))
+        self.low_soap_time.set(run_config.get('low_soap_time', 0))
+        self.high_soap_time.set(run_config.get('high_soap_time', 0))
+        self.water_time.set(run_config.get('water_time', 0))
+        self.air_time.set(run_config.get('air_time', 0))
+        # Cerberus Config
+        self.cerberus_volume.set(cerberus_config.get('Volume', 0))
+        self.cerberus_flowrate.set(cerberus_config.get('Flowrate', 0))
+        self.cerberus_refill_rate.set(cerberus_config.get('Refill Rate', 0))
+        self.cerberus_init_flowrate.set(cerberus_config.get('Init Flowrate', 0))
+        self.cerberus_init_time.set(cerberus_config.get('Init Time', 0))
+        # Valve Config
+        for i in range(0, 6):
+            field = 'name'+str(i+1)
+            self.oil_valve_names[i].set(oil_config.get(field, ''))
+            self.loading_valve_names[i].set(loading_config.get(field, ''))
+            self.cerberus_oil_valve_names[i].set(cerberus_oil_config.get(field, ''))
+            self.cerberus_loading_valve_names[i].set(cerberus_loading_config.get(field, ''))
+        # Purge valve config
+        self.purge_running_pos.set(cerberus_config.get('Purge Running', 1))
+        self.purge_water_pos.set(cerberus_config.get('Purge Water', 1))
+        self.purge_soap_pos.set(cerberus_config.get('Purge Soap', 1))
+        self.purge_air_pos.set(cerberus_config.get('Purge Air', 1))
+
+        self.set_oil_valve_names()
+        self.set_loading_valve_names()
+        self.set_cerberus_oil_valve_names()
+        self.set_cerberus_loading_valve_names()
         if not preload:
-            self.set_oil_valve_names()
-            self.set_loading_valve_names()
-            self.set_cerberus_oil_valve_names()
-            self.set_cerberus_loading_valve_names()
-            # restart Elevflow
+            # only try to start the Elveflow if it exists.
+            # during preload, we haven't created the self.elveflow_display object yet
             try:
                 self.elveflow_display.stop()
                 self.elveflow_display.start()
             except Exception as e:
-                self.python_logger.warning("Something went wrong when restarting the Elveflow")
+                self.python_logger.warning("Something went wrong when restarting the Elveflow: %s" % e)
+        
         # Instrument Config
         # Clear existing devices
         for line in self.manual_page_buttons:
@@ -1854,7 +1859,6 @@ class Main:
         self.purge_soap_button.configure(bg="white smoke")
         self.purge_dry_button.configure(bg="white smoke")
 
-
     def purge_command(self):
         run_position = self.purge_running_pos.get()
         purge_position = self.purge_water_pos.get()
@@ -1955,6 +1959,9 @@ class Main:
         elveflow_sheath_volume = float(self.elveflow_sheath_volume.get())
         # TODO: graph this?
         self.initialize_sheath_button.configure(bg="green")
+        # be able to stop prematurely
+        self.initialize_sheath_button.configure(command=lambda: self.elveflow_display.setPressureStop_flag[elveflow_sheath_channel-1].set())
+
         if self.purge_running_pos.get()>0 and self.purge_valve and self.purge_valve.enabled:
             self.manual_queue.put(self.unset_purge)
         else:
@@ -1962,6 +1969,7 @@ class Main:
         self.manual_queue.put((self.python_logger.info, "Starting to set sheath flow to %s µL/min..." % elveflow_sheath_volume))
         self.manual_queue.put((self.elveflow_display.run_volume, elveflow_sheath_channel, elveflow_sheath_volume))
         self.manual_queue.put(lambda: self.initialize_sheath_button.configure(bg="white smoke"))
+        self.manual_queue.put(lambda: self.initialize_sheath_button.configure(command=self.initialize_sheath_command))
         # self.manual_queue.put((self.python_logger.info, "Done setting sheath flow to %s µL/min" % elveflow_sheath_volume))
 
     def toggle_sucrose(self):
