@@ -1959,6 +1959,9 @@ class Main:
         elveflow_sheath_volume = float(self.elveflow_sheath_volume.get())
         # TODO: graph this?
         self.initialize_sheath_button.configure(bg="green")
+        # be able to stop prematurely
+        self.initialize_sheath_button.configure(command=lambda: self.setPressureStop_flag[elveflow_sheath_channel].set())
+
         if self.purge_running_pos.get()>0 and self.purge_valve and self.purge_valve.enabled:
             self.manual_queue.put(self.unset_purge)
         else:
@@ -1966,6 +1969,7 @@ class Main:
         self.manual_queue.put((self.python_logger.info, "Starting to set sheath flow to %s µL/min..." % elveflow_sheath_volume))
         self.manual_queue.put((self.elveflow_display.run_volume, elveflow_sheath_channel, elveflow_sheath_volume))
         self.manual_queue.put(lambda: self.initialize_sheath_button.configure(bg="white smoke"))
+        self.manual_queue.put(lambda: self.initialize_sheath_button.configure(command=self.initialize_sheath_command))
         # self.manual_queue.put((self.python_logger.info, "Done setting sheath flow to %s µL/min" % elveflow_sheath_volume))
 
     def toggle_sucrose(self):
